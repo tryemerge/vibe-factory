@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ApiResponse } from "shared/types";
 import { authStorage, makeAuthenticatedRequest } from "@/lib/auth";
 import {
@@ -22,7 +21,6 @@ import {
   AlertCircle,
   Zap,
   Shield,
-  Code,
 } from "lucide-react";
 
 export function HomePage() {

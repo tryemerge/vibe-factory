@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Project, ApiResponse } from 'shared/types'
 import { ProjectForm } from './project-form'
-import { Plus, Edit, Trash2, Calendar, AlertCircle, Loader2, CheckSquare } from 'lucide-react'
+import { Plus, Edit, Trash2, Calendar, AlertCircle, Loader2, CheckSquare, GitBranch, ExternalLink } from 'lucide-react'
 
 export function ProjectList() {
   const navigate = useNavigate()
@@ -130,9 +130,23 @@ export function ProjectList() {
                     Active
                   </Badge>
                 </div>
-                <CardDescription className="flex items-center">
-                  <Calendar className="mr-1 h-3 w-3" />
-                  Created {new Date(project.created_at).toLocaleDateString()}
+                <CardDescription className="space-y-1">
+                  <div className="flex items-center">
+                    <Calendar className="mr-1 h-3 w-3" />
+                    Created {new Date(project.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center">
+                    <GitBranch className="mr-1 h-3 w-3" />
+                    <a 
+                      href={project.repo_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="hover:text-primary flex items-center text-sm"
+                    >
+                      {project.repo_provider.toUpperCase()}
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </div>
                 </CardDescription>
               </CardHeader>
               <CardContent>

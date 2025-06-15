@@ -10,13 +10,13 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use chrono::Utc;
 
-use crate::models::{ApiResponse, project::{Project, CreateProject, UpdateProject}};
+use crate::models::{ApiResponse, project::{Project, CreateProject, UpdateProject}, git_credential::GitProvider};
 use crate::auth::AuthUser;
 
 pub async fn get_projects(Extension(pool): Extension<PgPool>) -> Result<ResponseJson<ApiResponse<Vec<Project>>>, StatusCode> {
     match sqlx::query_as!(
         Project,
-        "SELECT id, name, owner_id, created_at, updated_at FROM projects ORDER BY created_at DESC"
+        "SELECT id, name, owner_id, repo_url, repo_provider as \"repo_provider: GitProvider\", git_credential_id, created_at, updated_at FROM projects ORDER BY created_at DESC"
     )
     .fetch_all(&pool)
     .await
@@ -39,7 +39,7 @@ pub async fn get_project(
 ) -> Result<ResponseJson<ApiResponse<Project>>, StatusCode> {
     match sqlx::query_as!(
         Project,
-        "SELECT id, name, owner_id, created_at, updated_at FROM projects WHERE id = $1",
+        "SELECT id, name, owner_id, repo_url, repo_provider as \"repo_provider: GitProvider\", git_credential_id, created_at, updated_at FROM projects WHERE id = $1",
         id
     )
     .fetch_optional(&pool)
@@ -70,10 +70,13 @@ pub async fn create_project(
 
     match sqlx::query_as!(
         Project,
-        "INSERT INTO projects (id, name, owner_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, owner_id, created_at, updated_at",
+        "INSERT INTO projects (id, name, owner_id, repo_url, repo_provider, git_credential_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, owner_id, repo_url, repo_provider as \"repo_provider: GitProvider\", git_credential_id, created_at, updated_at",
         id,
         payload.name,
         auth.user_id,
+        payload.repo_url,
+        payload.repo_provider as _,
+        payload.git_credential_id,
         now,
         now
     )
@@ -102,7 +105,7 @@ pub async fn update_project(
     // Check if project exists first
     let existing_project = sqlx::query_as!(
         Project,
-        "SELECT id, name, owner_id, created_at, updated_at FROM projects WHERE id = $1",
+        "SELECT id, name, owner_id, repo_url, repo_provider as \"repo_provider: GitProvider\", git_credential_id, created_at, updated_at FROM projects WHERE id = $1",
         id
     )
     .fetch_optional(&pool)
@@ -117,14 +120,20 @@ pub async fn update_project(
         }
     };
 
-    // Use existing name if not provided in update
+    // Use existing values if not provided in update
     let name = payload.name.unwrap_or(existing_project.name);
+    let repo_url = payload.repo_url.unwrap_or(existing_project.repo_url);
+    let repo_provider = payload.repo_provider.unwrap_or(existing_project.repo_provider);
+    let git_credential_id = payload.git_credential_id.unwrap_or(existing_project.git_credential_id);
 
     match sqlx::query_as!(
         Project,
-        "UPDATE projects SET name = $2, updated_at = $3 WHERE id = $1 RETURNING id, name, owner_id, created_at, updated_at",
+        "UPDATE projects SET name = $2, repo_url = $3, repo_provider = $4, git_credential_id = $5, updated_at = $6 WHERE id = $1 RETURNING id, name, owner_id, repo_url, repo_provider as \"repo_provider: GitProvider\", git_credential_id, created_at, updated_at",
         id,
         name,
+        repo_url,
+        repo_provider as _,
+        git_credential_id,
         now
     )
     .fetch_one(&pool)

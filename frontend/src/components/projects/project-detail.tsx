@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Project, ApiResponse } from 'shared/types'
 import { ProjectForm } from './project-form'
-import { ArrowLeft, Edit, Trash2, Calendar, Clock, User, AlertCircle, Loader2, CheckSquare } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Calendar, Clock, User, AlertCircle, Loader2, CheckSquare, GitBranch, ExternalLink } from 'lucide-react'
 
 interface ProjectDetailProps {
   projectId: string
@@ -178,29 +178,44 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Project Details</CardTitle>
+            <CardTitle className="flex items-center">
+              <GitBranch className="mr-2 h-5 w-5" />
+              Repository Information
+            </CardTitle>
             <CardDescription>
-              Technical information about this project
+              Git repository details and connection
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground">Repository URL</h4>
+              <div className="mt-1 flex items-center space-x-2">
+                <code className="flex-1 text-xs bg-muted p-2 rounded font-mono">
+                  {project.repo_url}
+                </code>
+                <a 
+                  href={project.repo_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground">Git Provider</h4>
+              <div className="mt-1">
+                <Badge variant="outline" className="capitalize">
+                  {project.repo_provider}
+                </Badge>
+              </div>
+            </div>
             <div>
               <h4 className="text-sm font-medium text-muted-foreground">Project ID</h4>
               <code className="mt-1 block text-xs bg-muted p-2 rounded font-mono">
                 {project.id}
               </code>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground">Created At</h4>
-              <p className="mt-1 text-sm">
-                {new Date(project.created_at).toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground">Last Modified</h4>
-              <p className="mt-1 text-sm">
-                {new Date(project.updated_at).toLocaleString()}
-              </p>
             </div>
           </CardContent>
         </Card>
