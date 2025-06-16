@@ -72,6 +72,31 @@ pub async fn create_project(
 
     tracing::debug!("Creating project '{}' for user {}", payload.name, auth.user_id);
 
+    // Check if git repo path is already used by another project
+    let existing_project = sqlx::query!(
+        "SELECT id FROM projects WHERE git_repo_path = $1",
+        payload.git_repo_path
+    )
+    .fetch_optional(&pool)
+    .await;
+
+    match existing_project {
+        Ok(Some(_)) => {
+            return Ok(ResponseJson(ApiResponse {
+                success: false,
+                data: None,
+                message: Some("A project with this git repository path already exists".to_string()),
+            }));
+        }
+        Ok(None) => {
+            // Path is available, continue
+        }
+        Err(e) => {
+            tracing::error!("Failed to check for existing git repo path: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // Validate and setup git repository
     let path = std::path::Path::new(&payload.git_repo_path);
     
@@ -166,9 +191,39 @@ pub async fn update_project(
         }
     };
 
+    // If git_repo_path is being changed, check if the new path is already used by another project
+    if let Some(new_git_repo_path) = &payload.git_repo_path {
+        if new_git_repo_path != &existing_project.git_repo_path {
+            let duplicate_project = sqlx::query!(
+                "SELECT id FROM projects WHERE git_repo_path = $1 AND id != $2",
+                new_git_repo_path,
+                id
+            )
+            .fetch_optional(&pool)
+            .await;
+
+            match duplicate_project {
+                Ok(Some(_)) => {
+                    return Ok(ResponseJson(ApiResponse {
+                        success: false,
+                        data: None,
+                        message: Some("A project with this git repository path already exists".to_string()),
+                    }));
+                }
+                Ok(None) => {
+                    // Path is available, continue
+                }
+                Err(e) => {
+                    tracing::error!("Failed to check for existing git repo path: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            }
+        }
+    }
+
     // Use existing values if not provided in update
     let name = payload.name.unwrap_or(existing_project.name);
-    let git_repo_path = payload.git_repo_path.unwrap_or(existing_project.git_repo_path);
+    let git_repo_path = payload.git_repo_path.unwrap_or(existing_project.git_repo_path.clone());
 
     match sqlx::query_as!(
         Project,
