@@ -100,43 +100,72 @@ pub async fn create_project(
     // Validate and setup git repository
     let path = std::path::Path::new(&payload.git_repo_path);
     
-    // Create directory if it doesn't exist
-    if !path.exists() {
-        if let Err(e) = std::fs::create_dir_all(path) {
-            tracing::error!("Failed to create directory: {}", e);
+    if payload.use_existing_repo {
+        // For existing repos, validate that the path exists and is a git repository
+        if !path.exists() {
             return Ok(ResponseJson(ApiResponse {
                 success: false,
                 data: None,
-                message: Some(format!("Failed to create directory: {}", e)),
+                message: Some("The specified path does not exist".to_string()),
             }));
         }
-    }
 
-    // Check if it's already a git repo, if not initialize it
-    if !path.join(".git").exists() {
-        match std::process::Command::new("git")
-            .arg("init")
-            .current_dir(path)
-            .output()
-        {
-            Ok(output) => {
-                if !output.status.success() {
-                    let error_msg = String::from_utf8_lossy(&output.stderr);
-                    tracing::error!("Git init failed: {}", error_msg);
-                    return Ok(ResponseJson(ApiResponse {
-                        success: false,
-                        data: None,
-                        message: Some(format!("Git init failed: {}", error_msg)),
-                    }));
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to run git init: {}", e);
+        if !path.is_dir() {
+            return Ok(ResponseJson(ApiResponse {
+                success: false,
+                data: None,
+                message: Some("The specified path is not a directory".to_string()),
+            }));
+        }
+
+        if !path.join(".git").exists() {
+            return Ok(ResponseJson(ApiResponse {
+                success: false,
+                data: None,
+                message: Some("The specified directory is not a git repository".to_string()),
+            }));
+        }
+    } else {
+        // For new repos, create directory and initialize git
+        
+        // Create directory if it doesn't exist
+        if !path.exists() {
+            if let Err(e) = std::fs::create_dir_all(path) {
+                tracing::error!("Failed to create directory: {}", e);
                 return Ok(ResponseJson(ApiResponse {
                     success: false,
                     data: None,
-                    message: Some(format!("Failed to run git init: {}", e)),
+                    message: Some(format!("Failed to create directory: {}", e)),
                 }));
+            }
+        }
+
+        // Check if it's already a git repo, if not initialize it
+        if !path.join(".git").exists() {
+            match std::process::Command::new("git")
+                .arg("init")
+                .current_dir(path)
+                .output()
+            {
+                Ok(output) => {
+                    if !output.status.success() {
+                        let error_msg = String::from_utf8_lossy(&output.stderr);
+                        tracing::error!("Git init failed: {}", error_msg);
+                        return Ok(ResponseJson(ApiResponse {
+                            success: false,
+                            data: None,
+                            message: Some(format!("Git init failed: {}", error_msg)),
+                        }));
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Failed to run git init: {}", e);
+                    return Ok(ResponseJson(ApiResponse {
+                        success: false,
+                        data: None,
+                        message: Some(format!("Failed to run git init: {}", e)),
+                    }));
+                }
             }
         }
     }

@@ -3,7 +3,7 @@
 
 export type ApiResponse<T> = { success: boolean, data: T | null, message: string | null, };
 
-export type CreateProject = { name: string, git_repo_path: string, };
+export type CreateProject = { name: string, git_repo_path: string, use_existing_repo: boolean, };
 
 export type Project = { id: string, name: string, git_repo_path: string, owner_id: string, created_at: Date, updated_at: Date, };
 
