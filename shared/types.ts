@@ -17,6 +17,18 @@ export type Task = { id: string, project_id: string, title: string, description:
 
 export type UpdateTask = { title: string | null, description: string | null, status: TaskStatus | null, };
 
+export type TaskAttemptStatus = "init" | "inprogress" | "paused";
+
+export type TaskAttempt = { id: string, task_id: string, worktree_path: string, base_commit: string | null, merge_commit: string | null, created_at: string, updated_at: string, };
+
+export type CreateTaskAttempt = { task_id: string, worktree_path: string, base_commit: string | null, merge_commit: string | null, };
+
+export type UpdateTaskAttempt = { worktree_path: string | null, base_commit: string | null, merge_commit: string | null, };
+
+export type TaskAttemptActivity = { id: string, task_attempt_id: string, status: TaskAttemptStatus, note: string | null, created_at: string, };
+
+export type CreateTaskAttemptActivity = { task_attempt_id: string, status: TaskAttemptStatus | null, note: string | null, };
+
 export type CreateUser = { email: string, password: string, is_admin: boolean | null, };
 
 export type LoginRequest = { email: string, password: string, };

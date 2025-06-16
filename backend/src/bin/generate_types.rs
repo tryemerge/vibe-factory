@@ -57,6 +57,18 @@ export {}
 
 export {}
 
+export {}
+
+export {}
+
+export {}
+
+export {}
+
+export {}
+
+export {}
+
 export {}"#,
         bloop_backend::models::ApiResponse::<()>::decl(),
         bloop_backend::models::project::CreateProject::decl(),
@@ -66,6 +78,12 @@ export {}"#,
         bloop_backend::models::task::TaskStatus::decl(),
         bloop_backend::models::task::Task::decl(),
         bloop_backend::models::task::UpdateTask::decl(),
+        bloop_backend::models::task_attempt::TaskAttemptStatus::decl(),
+        bloop_backend::models::task_attempt::TaskAttempt::decl(),
+        bloop_backend::models::task_attempt::CreateTaskAttempt::decl(),
+        bloop_backend::models::task_attempt::UpdateTaskAttempt::decl(),
+        bloop_backend::models::task_attempt_activity::TaskAttemptActivity::decl(),
+        bloop_backend::models::task_attempt_activity::CreateTaskAttemptActivity::decl(),
         bloop_backend::models::user::CreateUser::decl(),
         bloop_backend::models::user::LoginRequest::decl(),
         bloop_backend::models::user::LoginResponse::decl(),
