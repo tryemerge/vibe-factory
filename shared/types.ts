@@ -3,11 +3,11 @@
 
 export type ApiResponse<T> = { success: boolean, data: T | null, message: string | null, };
 
-export type CreateProject = { name: string, };
+export type CreateProject = { name: string, git_repo_path: string, };
 
-export type Project = { id: string, name: string, owner_id: string, created_at: Date, updated_at: Date, };
+export type Project = { id: string, name: string, git_repo_path: string, owner_id: string, created_at: Date, updated_at: Date, };
 
-export type UpdateProject = { name: string | null, };
+export type UpdateProject = { name: string | null, git_repo_path: string | null, };
 
 export type CreateTask = { project_id: string, title: string, description: string | null, };
 
@@ -26,3 +26,5 @@ export type LoginResponse = { user: User, token: string, };
 export type UpdateUser = { email: string | null, password: string | null, is_admin: boolean | null, };
 
 export type User = { id: string, email: string, is_admin: boolean, created_at: Date, updated_at: Date, };
+
+export type DirectoryEntry = { name: string, path: string, is_directory: boolean, is_git_repo: boolean, };

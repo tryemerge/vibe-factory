@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { FolderPicker } from '@/components/ui/folder-picker'
 import { Project, CreateProject, UpdateProject } from 'shared/types'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Folder } from 'lucide-react'
 import { makeAuthenticatedRequest } from '@/lib/auth'
 
 interface ProjectFormProps {
@@ -17,8 +18,10 @@ interface ProjectFormProps {
 
 export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormProps) {
   const [name, setName] = useState(project?.name || '')
+  const [gitRepoPath, setGitRepoPath] = useState(project?.git_repo_path || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showFolderPicker, setShowFolderPicker] = useState(false)
 
   const isEditing = !!project
 
@@ -29,7 +32,10 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
 
     try {
       if (isEditing) {
-        const updateData: UpdateProject = { name }
+        const updateData: UpdateProject = { 
+          name,
+          git_repo_path: gitRepoPath
+        }
         const response = await makeAuthenticatedRequest(`/api/projects/${project.id}`, {
           method: 'PUT',
           body: JSON.stringify(updateData),
@@ -40,7 +46,8 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
         }
       } else {
         const createData: CreateProject = { 
-          name
+          name,
+          git_repo_path: gitRepoPath
         }
         const response = await makeAuthenticatedRequest('/api/projects', {
           method: 'POST',
@@ -54,6 +61,7 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
 
       onSuccess()
       setName('')
+      setGitRepoPath('')
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -63,6 +71,7 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
 
   const handleClose = () => {
     setName(project?.name || '')
+    setGitRepoPath(project?.git_repo_path || '')
     setError('')
     onClose()
   }
@@ -95,6 +104,28 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="git-repo-path">Git Repository Path</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="git-repo-path"
+                type="text"
+                value={gitRepoPath}
+                onChange={(e) => setGitRepoPath(e.target.value)}
+                placeholder="/path/to/your/project"
+                required
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowFolderPicker(true)}
+              >
+                <Folder className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -113,12 +144,24 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
+            <Button type="submit" disabled={loading || !name.trim() || !gitRepoPath.trim()}>
               {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Project'}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
+      
+      <FolderPicker
+        open={showFolderPicker}
+        onClose={() => setShowFolderPicker(false)}
+        onSelect={(path) => {
+          setGitRepoPath(path)
+          setShowFolderPicker(false)
+        }}
+        value={gitRepoPath}
+        title="Select Git Repository Path"
+        description="Choose or create a folder for your git repository"
+      />
     </Dialog>
   )
 }
