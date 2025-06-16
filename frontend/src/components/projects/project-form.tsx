@@ -25,6 +25,24 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
 
   const isEditing = !!project
 
+  // Auto-populate project name from directory name
+  const handleGitRepoPathChange = (path: string) => {
+    setGitRepoPath(path)
+    
+    // Only auto-populate name for new projects
+    if (!isEditing && path) {
+      // Extract the last part of the path (directory name)
+      const dirName = path.split('/').filter(Boolean).pop() || ''
+      if (dirName) {
+        // Clean up the directory name for a better project name
+        const cleanName = dirName
+          .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
+          .replace(/\b\w/g, l => l.toUpperCase()) // Capitalize first letter of each word
+        setName(cleanName)
+      }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -86,24 +104,12 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
           <DialogDescription>
             {isEditing 
               ? 'Make changes to your project here. Click save when you\'re done.'
-              : 'Add a new project to your workspace. You can always edit it later.'
+              : 'First, select the git repository path. The project name will be auto-populated from the directory name.'
             }
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Project Name</Label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter project name"
-              required
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="git-repo-path">Git Repository Path</Label>
             <div className="flex space-x-2">
@@ -111,7 +117,7 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
                 id="git-repo-path"
                 type="text"
                 value={gitRepoPath}
-                onChange={(e) => setGitRepoPath(e.target.value)}
+                onChange={(e) => handleGitRepoPathChange(e.target.value)}
                 placeholder="/path/to/your/project"
                 required
                 className="flex-1"
@@ -124,6 +130,23 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
                 <Folder className="h-4 w-4" />
               </Button>
             </div>
+            {!isEditing && (
+              <p className="text-sm text-muted-foreground">
+                The project name will be auto-populated from the directory name
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="name">Project Name</Label>
+            <Input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter project name"
+              required
+            />
           </div>
 
           {error && (
@@ -155,7 +178,7 @@ export function ProjectForm({ open, onClose, onSuccess, project }: ProjectFormPr
         open={showFolderPicker}
         onClose={() => setShowFolderPicker(false)}
         onSelect={(path) => {
-          setGitRepoPath(path)
+          handleGitRepoPathChange(path)
           setShowFolderPicker(false)
         }}
         value={gitRepoPath}
