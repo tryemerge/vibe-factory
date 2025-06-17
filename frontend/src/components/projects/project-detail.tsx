@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Project, ApiResponse } from 'shared/types'
 import { ProjectForm } from './project-form'
 import { makeRequest } from '@/lib/api'
-import { ArrowLeft, Edit, Trash2, Calendar, Clock, User, AlertCircle, Loader2, CheckSquare } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Calendar, Clock, AlertCircle, Loader2, CheckSquare } from 'lucide-react'
 
 interface ProjectDetailProps {
   projectId: string
@@ -166,13 +166,7 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
                 <span className="text-muted-foreground">Last Updated:</span>
                 <span className="ml-2">{new Date(project.updated_at).toLocaleDateString()}</span>
               </div>
-              <div className="flex items-center text-sm">
-                <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Owner ID:</span>
-                <code className="ml-2 text-xs bg-muted px-1 py-0.5 rounded">
-                  {project.owner_id.substring(0, 8)}...
-                </code>
-              </div>
+
             </div>
           </CardContent>
         </Card>

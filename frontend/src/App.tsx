@@ -5,7 +5,7 @@ import { Projects } from '@/pages/projects'
 import { ProjectTasks } from '@/pages/project-tasks'
 import { TaskDetailsPage } from '@/pages/task-details'
 import { TaskAttemptComparePage } from '@/pages/task-attempt-compare'
-import { Users } from '@/pages/users'
+
 
 function AppContent() {
   const location = useLocation()
@@ -22,7 +22,7 @@ function AppContent() {
           <Route path="/projects/:projectId/tasks" element={<ProjectTasks />} />
           <Route path="/projects/:projectId/tasks/:taskId" element={<TaskDetailsPage />} />
           <Route path="/projects/:projectId/tasks/:taskId/attempts/:attemptId/compare" element={<TaskAttemptComparePage />} />
-          <Route path="/users" element={<Users />} />
+
         </Routes>
       </div>
     </div>

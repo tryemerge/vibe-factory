@@ -21,7 +21,7 @@ mod routes;
 
 use execution_monitor::{execution_monitor, AppState};
 use models::ApiResponse;
-use routes::{filesystem, health, projects, tasks, users};
+use routes::{filesystem, health, projects, tasks};
 
 #[derive(RustEmbed)]
 #[folder = "../frontend/dist"]
@@ -124,7 +124,6 @@ async fn main() -> anyhow::Result<()> {
     let app_routes = Router::new()
         .merge(projects::projects_router())
         .merge(tasks::tasks_router())
-        .merge(users::users_router())
         .merge(filesystem::filesystem_router())
         .layer(Extension(pool.clone()));
 

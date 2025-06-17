@@ -154,7 +154,7 @@ pub async fn create_project(
         }
     }
 
-    match Project::create(&pool, &payload, auth.user_id, id).await {
+    match Project::create(&pool, &payload, id).await {
         Ok(project) => Ok(ResponseJson(ApiResponse {
             success: true,
             data: Some(project),
@@ -261,10 +261,7 @@ pub fn projects_router() -> Router {
 mod tests {
     use super::*;
     use crate::auth::{hash_password, AuthUser};
-    use crate::models::{
-        project::{CreateProject, UpdateProject},
-        user::User,
-    };
+    use crate::models::project::{CreateProject, UpdateProject};
     use axum::extract::Extension;
     use chrono::Utc;
     use sqlx::PgPool;

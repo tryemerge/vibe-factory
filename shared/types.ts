@@ -7,7 +7,7 @@ export type ExecutorConfig = { "type": "echo" } | { "type": "claude" };
 
 export type CreateProject = { name: string, git_repo_path: string, use_existing_repo: boolean, };
 
-export type Project = { id: string, name: string, git_repo_path: string, owner_id: string, created_at: Date, updated_at: Date, };
+export type Project = { id: string, name: string, git_repo_path: string, created_at: Date, updated_at: Date, };
 
 export type UpdateProject = { name: string | null, git_repo_path: string | null, };
 
@@ -32,12 +32,6 @@ export type UpdateTaskAttempt = { worktree_path: string | null, base_commit: str
 export type TaskAttemptActivity = { id: string, task_attempt_id: string, status: TaskAttemptStatus, note: string | null, created_at: string, };
 
 export type CreateTaskAttemptActivity = { task_attempt_id: string, status: TaskAttemptStatus | null, note: string | null, };
-
-export type CreateUser = { email: string, };
-
-export type UpdateUser = { email: string | null, };
-
-export type User = { id: string, email: string, created_at: Date, updated_at: Date, };
 
 export type DirectoryEntry = { name: string, path: string, is_directory: boolean, is_git_repo: boolean, };
 

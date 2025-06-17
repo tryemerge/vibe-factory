@@ -109,15 +109,7 @@ pub async fn auth_middleware(
         .get::<PgPool>()
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Verify user exists in database
-    let user_exists = sqlx::query!("SELECT id FROM users WHERE id = $1", claims.user_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if user_exists.is_none() {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
+    // Note: User table removed, skipping database verification
 
     // Add user info to request extensions for handlers to access
     request.extensions_mut().insert(AuthUser {

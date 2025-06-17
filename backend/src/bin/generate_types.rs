@@ -71,12 +71,6 @@ export {}
 
 export {}
 
-export {}
-
-export {}
-
-export {}
-
 export {}"#,
         bloop_backend::models::ApiResponse::<()>::decl(),
         bloop_backend::executor::ExecutorConfig::decl(),
@@ -94,9 +88,6 @@ export {}"#,
         bloop_backend::models::task_attempt::UpdateTaskAttempt::decl(),
         bloop_backend::models::task_attempt_activity::TaskAttemptActivity::decl(),
         bloop_backend::models::task_attempt_activity::CreateTaskAttemptActivity::decl(),
-        bloop_backend::models::user::CreateUser::decl(),
-        bloop_backend::models::user::UpdateUser::decl(),
-        bloop_backend::models::user::UserResponse::decl(),
         bloop_backend::routes::filesystem::DirectoryEntry::decl(),
         bloop_backend::models::task_attempt::DiffChunkType::decl(),
         bloop_backend::models::task_attempt::DiffChunk::decl(),

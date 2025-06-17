@@ -10,7 +10,7 @@ pub struct Project {
     pub id: Uuid,
     pub name: String,
     pub git_repo_path: String,
-    pub owner_id: Uuid, // Foreign key to User
+
     #[ts(type = "Date")]
     pub created_at: DateTime<Utc>,
     #[ts(type = "Date")]
@@ -36,7 +36,7 @@ impl Project {
     pub async fn find_all(pool: &PgPool) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
             Project,
-            "SELECT id, name, git_repo_path, owner_id, created_at, updated_at FROM projects ORDER BY created_at DESC"
+            "SELECT id, name, git_repo_path, created_at, updated_at FROM projects ORDER BY created_at DESC"
         )
         .fetch_all(pool)
         .await
@@ -45,7 +45,7 @@ impl Project {
     pub async fn find_by_id(pool: &PgPool, id: Uuid) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             Project,
-            "SELECT id, name, git_repo_path, owner_id, created_at, updated_at FROM projects WHERE id = $1",
+            "SELECT id, name, git_repo_path, created_at, updated_at FROM projects WHERE id = $1",
             id
         )
         .fetch_optional(pool)
@@ -58,7 +58,7 @@ impl Project {
     ) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             Project,
-            "SELECT id, name, git_repo_path, owner_id, created_at, updated_at FROM projects WHERE git_repo_path = $1",
+            "SELECT id, name, git_repo_path, created_at, updated_at FROM projects WHERE git_repo_path = $1",
             git_repo_path
         )
         .fetch_optional(pool)
@@ -72,7 +72,7 @@ impl Project {
     ) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             Project,
-            "SELECT id, name, git_repo_path, owner_id, created_at, updated_at FROM projects WHERE git_repo_path = $1 AND id != $2",
+            "SELECT id, name, git_repo_path, created_at, updated_at FROM projects WHERE git_repo_path = $1 AND id != $2",
             git_repo_path,
             exclude_id
         )
@@ -83,16 +83,14 @@ impl Project {
     pub async fn create(
         pool: &PgPool,
         data: &CreateProject,
-        owner_id: Uuid,
         project_id: Uuid,
     ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             Project,
-            "INSERT INTO projects (id, name, git_repo_path, owner_id) VALUES ($1, $2, $3, $4) RETURNING id, name, git_repo_path, owner_id, created_at, updated_at",
+            "INSERT INTO projects (id, name, git_repo_path) VALUES ($1, $2, $3) RETURNING id, name, git_repo_path, created_at, updated_at",
             project_id,
             data.name,
-            data.git_repo_path,
-            owner_id
+            data.git_repo_path
         )
         .fetch_one(pool)
         .await
@@ -106,7 +104,7 @@ impl Project {
     ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             Project,
-            "UPDATE projects SET name = $2, git_repo_path = $3 WHERE id = $1 RETURNING id, name, git_repo_path, owner_id, created_at, updated_at",
+            "UPDATE projects SET name = $2, git_repo_path = $3 WHERE id = $1 RETURNING id, name, git_repo_path, created_at, updated_at",
             id,
             name,
             git_repo_path
