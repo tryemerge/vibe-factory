@@ -122,9 +122,13 @@ async fn main() -> anyhow::Result<()> {
 
     // All routes (no auth required)
     let app_routes = Router::new()
-        .merge(projects::projects_router())
-        .merge(tasks::tasks_router())
-        .merge(filesystem::filesystem_router())
+        .nest(
+            "/api",
+            Router::new()
+                .merge(projects::projects_router())
+                .merge(tasks::tasks_router())
+                .merge(filesystem::filesystem_router()),
+        )
         .layer(Extension(pool.clone()));
 
     let app = Router::new()

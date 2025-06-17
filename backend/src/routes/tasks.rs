@@ -8,7 +8,6 @@ use axum::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::auth::AuthUser;
 use crate::models::{
     project::Project,
     task::{CreateTask, Task, TaskWithAttemptStatus, UpdateTask},
@@ -18,7 +17,6 @@ use crate::models::{
 };
 
 pub async fn get_project_tasks(
-    _auth: AuthUser,
     Path(project_id): Path<Uuid>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<ResponseJson<ApiResponse<Vec<TaskWithAttemptStatus>>>, StatusCode> {
@@ -36,7 +34,6 @@ pub async fn get_project_tasks(
 }
 
 pub async fn get_task(
-    _auth: AuthUser,
     Path((project_id, task_id)): Path<(Uuid, Uuid)>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<ResponseJson<ApiResponse<Task>>, StatusCode> {
@@ -61,7 +58,6 @@ pub async fn get_task(
 
 pub async fn create_task(
     Path(project_id): Path<Uuid>,
-    auth: AuthUser,
     Extension(pool): Extension<PgPool>,
     Json(mut payload): Json<CreateTask>,
 ) -> Result<ResponseJson<ApiResponse<Task>>, StatusCode> {
@@ -81,10 +77,9 @@ pub async fn create_task(
     }
 
     tracing::debug!(
-        "Creating task '{}' in project {} for user {}",
+        "Creating task '{}' in project {}",
         payload.title,
-        project_id,
-        auth.user_id
+        project_id
     );
 
     match Task::create(&pool, &payload, id).await {
@@ -158,7 +153,6 @@ pub async fn delete_task(
 
 // Task Attempts endpoints
 pub async fn get_task_attempts(
-    _auth: AuthUser,
     Path((project_id, task_id)): Path<(Uuid, Uuid)>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<ResponseJson<ApiResponse<Vec<TaskAttempt>>>, StatusCode> {
@@ -186,7 +180,6 @@ pub async fn get_task_attempts(
 }
 
 pub async fn get_task_attempt_activities(
-    _auth: AuthUser,
     Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<ResponseJson<ApiResponse<Vec<TaskAttemptActivity>>>, StatusCode> {
@@ -218,7 +211,6 @@ pub async fn get_task_attempt_activities(
 }
 
 pub async fn create_task_attempt(
-    _auth: AuthUser,
     Path((project_id, task_id)): Path<(Uuid, Uuid)>,
     Extension(pool): Extension<PgPool>,
     Json(mut payload): Json<CreateTaskAttempt>,
@@ -258,7 +250,6 @@ pub async fn create_task_attempt(
 }
 
 pub async fn create_task_attempt_activity(
-    _auth: AuthUser,
     Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
     Extension(pool): Extension<PgPool>,
     Json(mut payload): Json<CreateTaskAttemptActivity>,
@@ -295,7 +286,6 @@ pub async fn create_task_attempt_activity(
 }
 
 pub async fn stop_task_attempt(
-    _auth: AuthUser,
     Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
     Extension(pool): Extension<PgPool>,
     Extension(app_state): Extension<crate::execution_monitor::AppState>,
@@ -377,7 +367,6 @@ pub async fn stop_task_attempt(
 }
 
 pub async fn get_task_attempt_diff(
-    _auth: AuthUser,
     Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<ResponseJson<ApiResponse<WorktreeDiff>>, StatusCode> {
@@ -459,7 +448,7 @@ pub fn tasks_router() -> Router {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::{hash_password, AuthUser};
+    use crate::auth::hash_password;
     use crate::models::{
         project::Project,
         task::{CreateTask, TaskStatus, UpdateTask},
@@ -560,13 +549,7 @@ mod tests {
         )
         .await;
 
-        let auth = AuthUser {
-            user_id: user.id,
-            email: user.email,
-            is_admin: false,
-        };
-
-        let result = get_project_tasks(auth, Path(project.id), Extension(pool)).await;
+        let result = get_project_tasks(Path(project.id), Extension(pool)).await;
         assert!(result.is_ok());
 
         let response = result.unwrap().0;
@@ -580,13 +563,7 @@ mod tests {
         let user = create_test_user(&pool, "test@example.com", "password123", false).await;
         let project = create_test_project(&pool, "Empty Project", user.id).await;
 
-        let auth = AuthUser {
-            user_id: user.id,
-            email: user.email,
-            is_admin: false,
-        };
-
-        let result = get_project_tasks(auth, Path(project.id), Extension(pool)).await;
+        let result = get_project_tasks(Path(project.id), Extension(pool)).await;
         assert!(result.is_ok());
 
         let response = result.unwrap().0;
@@ -608,13 +585,7 @@ mod tests {
         )
         .await;
 
-        let auth = AuthUser {
-            user_id: user.id,
-            email: user.email,
-            is_admin: false,
-        };
-
-        let result = get_task(auth, Path((project.id, task.id)), Extension(pool)).await;
+        let result = get_task(Path((project.id, task.id)), Extension(pool)).await;
         assert!(result.is_ok());
 
         let response = result.unwrap().0;
@@ -633,18 +604,7 @@ mod tests {
         let project = create_test_project(&pool, "Test Project", user.id).await;
         let nonexistent_task_id = Uuid::new_v4();
 
-        let auth = AuthUser {
-            user_id: user.id,
-            email: user.email,
-            is_admin: false,
-        };
-
-        let result = get_task(
-            auth,
-            Path((project.id, nonexistent_task_id)),
-            Extension(pool),
-        )
-        .await;
+        let result = get_task(Path((project.id, nonexistent_task_id)), Extension(pool)).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StatusCode::NOT_FOUND);
     }
@@ -656,14 +616,8 @@ mod tests {
         let project2 = create_test_project(&pool, "Project 2", user.id).await;
         let task = create_test_task(&pool, project1.id, "Test Task", None, TaskStatus::Todo).await;
 
-        let auth = AuthUser {
-            user_id: user.id,
-            email: user.email,
-            is_admin: false,
-        };
-
         // Try to get task from wrong project
-        let result = get_task(auth, Path((project2.id, task.id)), Extension(pool)).await;
+        let result = get_task(Path((project2.id, task.id)), Extension(pool)).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), StatusCode::NOT_FOUND);
     }
@@ -673,25 +627,13 @@ mod tests {
         let user = create_test_user(&pool, "test@example.com", "password123", false).await;
         let project = create_test_project(&pool, "Test Project", user.id).await;
 
-        let auth = AuthUser {
-            user_id: user.id,
-            email: user.email,
-            is_admin: false,
-        };
-
         let create_request = CreateTask {
             project_id: project.id, // This will be overridden by the path parameter
             title: "New Task".to_string(),
             description: Some("Task description".to_string()),
         };
 
-        let result = create_task(
-            Path(project.id),
-            auth,
-            Extension(pool),
-            Json(create_request),
-        )
-        .await;
+        let result = create_task(Path(project.id), Extension(pool), Json(create_request)).await;
         assert!(result.is_ok());
 
         let response = result.unwrap().0;
@@ -712,12 +654,6 @@ mod tests {
         let user = create_test_user(&pool, "test@example.com", "password123", false).await;
         let nonexistent_project_id = Uuid::new_v4();
 
-        let auth = AuthUser {
-            user_id: user.id,
-            email: user.email,
-            is_admin: false,
-        };
-
         let create_request = CreateTask {
             project_id: nonexistent_project_id,
             title: "New Task".to_string(),
@@ -726,7 +662,6 @@ mod tests {
 
         let result = create_task(
             Path(nonexistent_project_id),
-            auth,
             Extension(pool),
             Json(create_request),
         )

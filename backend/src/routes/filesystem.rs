@@ -10,7 +10,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use ts_rs::TS;
 
-use crate::auth::AuthUser;
 use crate::models::ApiResponse;
 
 #[derive(Debug, Serialize, TS)]
@@ -28,7 +27,6 @@ pub struct ListDirectoryQuery {
 }
 
 pub async fn list_directory(
-    _auth: AuthUser,
     Query(query): Query<ListDirectoryQuery>,
 ) -> Result<ResponseJson<ApiResponse<Vec<DirectoryEntry>>>, StatusCode> {
     let path_str = query.path.unwrap_or_else(|| {
@@ -114,7 +112,6 @@ pub async fn list_directory(
 }
 
 pub async fn validate_git_path(
-    _auth: AuthUser,
     Query(query): Query<ListDirectoryQuery>,
 ) -> Result<ResponseJson<ApiResponse<bool>>, StatusCode> {
     let path_str = query.path.ok_or(StatusCode::BAD_REQUEST)?;
@@ -135,7 +132,6 @@ pub async fn validate_git_path(
 }
 
 pub async fn create_git_repo(
-    _auth: AuthUser,
     Query(query): Query<ListDirectoryQuery>,
 ) -> Result<ResponseJson<ApiResponse<()>>, StatusCode> {
     let path_str = query.path.ok_or(StatusCode::BAD_REQUEST)?;
