@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { User, CreateUser, UpdateUser } from 'shared/types'
-import { makeAuthenticatedRequest, authStorage } from '@/lib/auth'
+import { makeRequest } from '@/lib/api'
 import { AlertCircle } from 'lucide-react'
 
 interface UserFormProps {
@@ -17,14 +17,11 @@ interface UserFormProps {
 
 export function UserForm({ open, onClose, onSuccess, user }: UserFormProps) {
   const [email, setEmail] = useState(user?.email || '')
-  const [password, setPassword] = useState('')
-  const [isAdmin, setIsAdmin] = useState(user?.is_admin || false)
+  // Password field removed since it's not in the backend API
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   
-  const currentUser = authStorage.getUser()
   const isEditing = !!user
-  const canEditAdminStatus = currentUser?.is_admin && currentUser.id !== user?.id
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,18 +32,16 @@ export function UserForm({ open, onClose, onSuccess, user }: UserFormProps) {
       if (isEditing) {
         const updateData: UpdateUser = { 
           email: email !== user.email ? email : null,
-          password: password ? password : null,
-          is_admin: canEditAdminStatus && isAdmin !== user.is_admin ? isAdmin : null
         }
         
         // Remove null values
         Object.keys(updateData).forEach(key => {
           if (updateData[key as keyof UpdateUser] === null) {
-            delete updateData[key as keyof UpdateUser]
+            delete (updateData as any)[key]
           }
         })
 
-        const response = await makeAuthenticatedRequest(`/api/users/${user.id}`, {
+        const response = await makeRequest(`/api/users/${user.id}`, {
           method: 'PUT',
           body: JSON.stringify(updateData),
         })
@@ -55,17 +50,11 @@ export function UserForm({ open, onClose, onSuccess, user }: UserFormProps) {
           throw new Error('Failed to update user')
         }
       } else {
-        if (!password) {
-          throw new Error('Password is required for new users')
-        }
-
         const createData: CreateUser = { 
           email, 
-          password,
-          is_admin: currentUser?.is_admin ? isAdmin : false
         }
         
-        const response = await makeAuthenticatedRequest('/api/users', {
+        const response = await makeRequest('/api/users', {
           method: 'POST',
           body: JSON.stringify(createData),
         })
@@ -89,8 +78,6 @@ export function UserForm({ open, onClose, onSuccess, user }: UserFormProps) {
 
   const resetForm = () => {
     setEmail(user?.email || '')
-    setPassword('')
-    setIsAdmin(user?.is_admin || false)
     setError('')
   }
 
@@ -127,34 +114,7 @@ export function UserForm({ open, onClose, onSuccess, user }: UserFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">
-              {isEditing ? 'New Password (leave blank to keep current)' : 'Password'}
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={isEditing ? "Enter new password" : "Enter password"}
-              required={!isEditing}
-            />
-          </div>
-
-          {canEditAdminStatus && (
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isAdmin"
-                checked={isAdmin}
-                onChange={(e) => setIsAdmin(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <Label htmlFor="isAdmin" className="text-sm font-medium">
-                Administrator privileges
-              </Label>
-            </div>
-          )}
+          {/* Password and admin fields removed since not supported by backend */}
 
           {error && (
             <Alert variant="destructive">

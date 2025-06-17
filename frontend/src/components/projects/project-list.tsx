@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Project, ApiResponse } from 'shared/types'
 import { ProjectForm } from './project-form'
-import { makeAuthenticatedRequest } from '@/lib/auth'
+import { makeRequest } from '@/lib/api'
 import { Plus, Edit, Trash2, Calendar, AlertCircle, Loader2, MoreHorizontal, ExternalLink } from 'lucide-react'
 import {
   DropdownMenu,
@@ -27,7 +27,7 @@ export function ProjectList() {
     setLoading(true)
     setError('')
     try {
-      const response = await makeAuthenticatedRequest('/api/projects')
+      const response = await makeRequest('/api/projects')
       const data: ApiResponse<Project[]> = await response.json()
       if (data.success && data.data) {
         setProjects(data.data)
@@ -46,7 +46,7 @@ export function ProjectList() {
     if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return
 
     try {
-      const response = await makeAuthenticatedRequest(`/api/projects/${id}`, {
+      const response = await makeRequest(`/api/projects/${id}`, {
         method: 'DELETE',
       })
       if (response.ok) {

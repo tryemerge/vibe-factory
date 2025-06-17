@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, FileText } from "lucide-react";
-import { makeAuthenticatedRequest } from "@/lib/auth";
+import { makeRequest } from "@/lib/api";
 import type {
   TaskStatus,
   TaskAttempt,
@@ -119,7 +119,7 @@ export function TaskDetailsPage() {
 
     try {
       setTaskLoading(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${taskId}`
       );
 
@@ -152,7 +152,7 @@ export function TaskDetailsPage() {
         setTaskAttemptsLoading(true);
       }
 
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${taskId}/attempts`
       );
 
@@ -205,7 +205,7 @@ export function TaskDetailsPage() {
         setActivitiesLoading(true);
       }
       
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts/${attemptId}/activities`
       );
 
@@ -237,7 +237,7 @@ export function TaskDetailsPage() {
 
     try {
       setSavingTask(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}`,
         {
           method: "PUT",
@@ -287,7 +287,7 @@ export function TaskDetailsPage() {
       setCreatingAttempt(true);
       const worktreePath = `/tmp/task-${task.id}-attempt-${Date.now()}`;
 
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts`,
         {
           method: "POST",
@@ -322,7 +322,7 @@ export function TaskDetailsPage() {
 
     try {
       setStoppingAttempt(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttempt.id}/stop`,
         {
           method: "POST",

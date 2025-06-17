@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Folder, FolderOpen, File, AlertCircle, Home, ChevronUp } from 'lucide-react'
-import { makeAuthenticatedRequest } from '@/lib/auth'
+import { makeRequest } from '@/lib/api'
 import { DirectoryEntry } from 'shared/types'
 
 interface FolderPickerProps {
@@ -43,7 +43,7 @@ export function FolderPicker({
     
     try {
       const queryParam = path ? `?path=${encodeURIComponent(path)}` : ''
-      const response = await makeAuthenticatedRequest(`/api/filesystem/list${queryParam}`)
+      const response = await makeRequest(`/api/filesystem/list${queryParam}`)
       
       if (!response.ok) {
         throw new Error('Failed to load directory')

@@ -1,20 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { authStorage } from '@/lib/auth'
-import { ArrowLeft, FolderOpen, Users, LogOut } from 'lucide-react'
+import { ArrowLeft, FolderOpen, Users } from 'lucide-react'
 
-interface NavbarProps {
-  onLogout: () => void
-}
-
-export function Navbar({ onLogout }: NavbarProps) {
+export function Navbar() {
   const location = useLocation()
-  const currentUser = authStorage.getUser()
   const isHome = location.pathname === '/'
-
-  const handleLogout = () => {
-    onLogout()
-  }
 
   return (
     <div className="border-b">
@@ -33,24 +23,19 @@ export function Navbar({ onLogout }: NavbarProps) {
                   Projects
                 </Link>
               </Button>
-              {currentUser?.is_admin && (
-                <Button
-                  asChild
-                  variant={location.pathname === '/users' ? 'default' : 'ghost'}
-                  size="sm"
-                >
-                  <Link to="/users">
-                    <Users className="mr-2 h-4 w-4" />
-                    Users
-                  </Link>
-                </Button>
-              )}
+              <Button
+                asChild
+                variant={location.pathname === '/users' ? 'default' : 'ghost'}
+                size="sm"
+              >
+                <Link to="/users">
+                  <Users className="mr-2 h-4 w-4" />
+                  Users
+                </Link>
+              </Button>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-muted-foreground">
-              Welcome, {currentUser?.email}
-            </div>
             {!isHome && (
               <Button asChild variant="ghost">
                 <Link to="/">
@@ -59,10 +44,6 @@ export function Navbar({ onLogout }: NavbarProps) {
                 </Link>
               </Button>
             )}
-            <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
           </div>
         </div>
       </div>

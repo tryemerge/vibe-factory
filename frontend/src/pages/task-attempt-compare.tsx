@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, FileText } from "lucide-react";
-import { makeAuthenticatedRequest } from "@/lib/auth";
+import { makeRequest } from "@/lib/api";
 import type { WorktreeDiff, DiffChunkType } from "shared/types";
 
 interface ApiResponse<T> {
@@ -37,7 +37,7 @@ export function TaskAttemptComparePage() {
 
     try {
       setLoading(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${taskId}/attempts/${attemptId}/diff`
       );
 
@@ -67,7 +67,7 @@ export function TaskAttemptComparePage() {
 
     try {
       setMerging(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${taskId}/attempts/${attemptId}/merge`,
         {
           method: 'POST',

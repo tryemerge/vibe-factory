@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { makeAuthenticatedRequest } from "@/lib/auth";
+import { makeRequest } from "@/lib/api";
 import type {
   TaskStatus,
   TaskAttempt,
@@ -107,7 +107,7 @@ export function TaskDetailsDialog({
   const fetchTaskAttempts = async (taskId: string) => {
     try {
       setTaskAttemptsLoading(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${taskId}/attempts`
       );
 
@@ -141,7 +141,7 @@ export function TaskDetailsDialog({
 
     try {
       setActivitiesLoading(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts/${attemptId}/activities`
       );
 
@@ -171,7 +171,7 @@ export function TaskDetailsDialog({
 
     try {
       setSavingTask(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}`,
         {
           method: "PUT",
@@ -216,7 +216,7 @@ export function TaskDetailsDialog({
       setCreatingAttempt(true);
       const worktreePath = `/tmp/task-${task.id}-attempt-${Date.now()}`;
 
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts`,
         {
           method: "POST",
@@ -251,7 +251,7 @@ export function TaskDetailsDialog({
 
     try {
       setStoppingAttempt(true);
-      const response = await makeAuthenticatedRequest(
+      const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttempt.id}/stop`,
         {
           method: "POST",

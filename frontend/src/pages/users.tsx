@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { User, ApiResponse } from 'shared/types'
 import { UserForm } from '@/components/users/user-form'
-import { makeAuthenticatedRequest, authStorage } from '@/lib/auth'
-import { Plus, Edit, Trash2, Calendar, AlertCircle, Loader2, Shield, User as UserIcon } from 'lucide-react'
+import { makeRequest } from '@/lib/api'
+import { Plus, Edit, Trash2, Calendar, AlertCircle, Loader2, User as UserIcon } from 'lucide-react'
 
 export function Users() {
   const [users, setUsers] = useState<User[]>([])
@@ -14,13 +14,13 @@ export function Users() {
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [error, setError] = useState('')
-  const currentUser = authStorage.getUser()
+  // Single user app, no need for current user tracking
 
   const fetchUsers = async () => {
     setLoading(true)
     setError('')
     try {
-      const response = await makeAuthenticatedRequest('/api/users')
+      const response = await makeRequest('/api/users')
       const data: ApiResponse<User[]> = await response.json()
       if (data.success && data.data) {
         setUsers(data.data)
@@ -39,7 +39,7 @@ export function Users() {
     if (!confirm(`Are you sure you want to delete user "${email}"? This action cannot be undone.`)) return
 
     try {
-      const response = await makeAuthenticatedRequest(`/api/users/${id}`, {
+      const response = await makeRequest(`/api/users/${id}`, {
         method: 'DELETE',
       })
       if (response.ok) {
@@ -79,12 +79,10 @@ export function Users() {
             Manage user accounts and permissions
           </p>
         </div>
-        {currentUser?.is_admin && (
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
-        )}
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add User
+        </Button>
       </div>
 
       {error && (
@@ -111,15 +109,13 @@ export function Users() {
             <p className="mt-2 text-sm text-muted-foreground">
               Get started by creating the first user account.
             </p>
-            {currentUser?.is_admin && (
-              <Button
-                className="mt-4"
-                onClick={() => setShowForm(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add your first user
-              </Button>
-            )}
+            <Button
+              className="mt-4"
+              onClick={() => setShowForm(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add your first user
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -129,15 +125,11 @@ export function Users() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg flex items-center">
-                    {user.is_admin ? (
-                      <Shield className="mr-2 h-4 w-4 text-orange-500" />
-                    ) : (
-                      <UserIcon className="mr-2 h-4 w-4 text-blue-500" />
-                    )}
+                    <UserIcon className="mr-2 h-4 w-4 text-blue-500" />
                     {user.email}
                   </CardTitle>
-                  <Badge variant={user.is_admin ? "default" : "secondary"}>
-                    {user.is_admin ? "Admin" : "User"}
+                  <Badge variant="secondary">
+                    User
                   </Badge>
                 </div>
                 <CardDescription className="flex items-center">
@@ -156,17 +148,15 @@ export function Users() {
                     <Edit className="mr-1 h-3 w-3" />
                     Edit
                   </Button>
-                  {currentUser?.is_admin && currentUser.id !== user.id && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(user.id, user.email)}
-                      className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="mr-1 h-3 w-3" />
-                      Delete
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(user.id, user.email)}
+                    className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    Delete
+                  </Button>
                 </div>
               </CardContent>
             </Card>

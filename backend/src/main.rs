@@ -2,7 +2,6 @@ use axum::{
     body::Body,
     extract::Extension,
     http::{header, HeaderValue, StatusCode},
-    middleware,
     response::{IntoResponse, Json as ResponseJson, Response},
     routing::{get, post},
     Json, Router,
@@ -20,9 +19,8 @@ mod executors;
 mod models;
 mod routes;
 
-use auth::{auth_middleware, hash_password};
 use execution_monitor::{execution_monitor, AppState};
-use models::{user::User, ApiResponse};
+use models::ApiResponse;
 use routes::{filesystem, health, projects, tasks, users};
 
 #[derive(RustEmbed)]
@@ -105,11 +103,6 @@ async fn main() -> anyhow::Result<()> {
         .connect(&database_url)
         .await?;
 
-    // Create default admin account if it doesn't exist
-    if let Err(e) = create_admin_account(&pool).await {
-        tracing::warn!("Failed to create admin account: {}", e);
-    }
-
     // Create app state
     let app_state = AppState {
         running_executions: Arc::new(Mutex::new(HashMap::new())),
@@ -125,21 +118,19 @@ async fn main() -> anyhow::Result<()> {
     // Public routes (no auth required)
     let public_routes = Router::new()
         .route("/api/health", get(health::health_check))
-        .route("/api/echo", post(echo_handler))
-        .merge(users::public_users_router());
+        .route("/api/echo", post(echo_handler));
 
-    // Protected routes (auth required)
-    let protected_routes = Router::new()
+    // All routes (no auth required)
+    let app_routes = Router::new()
         .merge(projects::projects_router())
         .merge(tasks::tasks_router())
-        .merge(users::protected_users_router())
+        .merge(users::users_router())
         .merge(filesystem::filesystem_router())
-        .layer(Extension(pool.clone()))
-        .layer(middleware::from_fn(auth_middleware));
+        .layer(Extension(pool.clone()));
 
     let app = Router::new()
         .merge(public_routes)
-        .merge(protected_routes)
+        .merge(app_routes)
         // Static file serving routes
         .route("/", get(index_handler))
         .route("/*path", get(static_handler))
@@ -152,17 +143,6 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Server running on http://0.0.0.0:3001");
 
     axum::serve(listener, app).await?;
-
-    Ok(())
-}
-
-async fn create_admin_account(pool: &sqlx::PgPool) -> anyhow::Result<()> {
-    let admin_email = "admin@example.com";
-    let admin_password = env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin123".to_string());
-
-    let password_hash = hash_password(&admin_password)?;
-
-    User::create_or_update_admin(pool, admin_email, &password_hash).await?;
 
     Ok(())
 }

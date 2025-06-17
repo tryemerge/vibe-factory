@@ -14,7 +14,7 @@ import {
 import { FolderPicker } from "@/components/ui/folder-picker";
 import { Project, CreateProject, UpdateProject } from "shared/types";
 import { AlertCircle, Folder } from "lucide-react";
-import { makeAuthenticatedRequest } from "@/lib/auth";
+import { makeRequest } from "@/lib/api";
 
 interface ProjectFormProps {
   open: boolean;
@@ -76,7 +76,7 @@ export function ProjectForm({
           name,
           git_repo_path: finalGitRepoPath,
         };
-        const response = await makeAuthenticatedRequest(
+        const response = await makeRequest(
           `/api/projects/${project.id}`,
           {
             method: "PUT",
@@ -98,7 +98,7 @@ export function ProjectForm({
           git_repo_path: finalGitRepoPath,
           use_existing_repo: repoMode === "existing",
         };
-        const response = await makeAuthenticatedRequest("/api/projects", {
+        const response = await makeRequest("/api/projects", {
           method: "POST",
           body: JSON.stringify(createData),
         });

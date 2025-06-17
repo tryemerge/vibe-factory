@@ -11,7 +11,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ApiResponse } from "shared/types";
-import { authStorage, makeAuthenticatedRequest } from "@/lib/auth";
+import { makeRequest } from "@/lib/api";
 import {
   Heart,
   Activity,
@@ -20,7 +20,6 @@ import {
   CheckCircle,
   AlertCircle,
   Zap,
-  Shield,
 } from "lucide-react";
 
 export function HomePage() {
@@ -30,12 +29,12 @@ export function HomePage() {
   );
   const [loading, setLoading] = useState(false);
 
-  const currentUser = authStorage.getUser();
+  // Single user app, no need for user data
 
   const checkHealth = async () => {
     setLoading(true);
     try {
-      const response = await makeAuthenticatedRequest("/api/health");
+      const response = await makeRequest("/api/health");
       const data: ApiResponse<string> = await response.json();
       setMessage(data.message || "Health check completed");
       setMessageType("success");
@@ -134,43 +133,37 @@ export function HomePage() {
               </CardContent>
             </Card>
 
-            {currentUser?.is_admin && (
-              <Card className="group hover:shadow-lg transition-all duration-200 border-muted/50 hover:border-muted">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="rounded-lg bg-amber-500/10 p-2 mr-3 group-hover:bg-amber-500/20 transition-colors">
-                        <Users className="h-5 w-5 text-amber-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          Users
-                          <Badge variant="outline" className="text-xs">
-                            <Shield className="mr-1 h-3 w-3" />
-                            Admin Only
-                          </Badge>
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          Manage user accounts and permissions
-                        </CardDescription>
-                      </div>
+            <Card className="group hover:shadow-lg transition-all duration-200 border-muted/50 hover:border-muted">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="rounded-lg bg-amber-500/10 p-2 mr-3 group-hover:bg-amber-500/20 transition-colors">
+                      <Users className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        Users
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Manage user accounts and permissions
+                      </CardDescription>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    asChild
-                    className="group-hover:shadow-sm transition-shadow"
-                    size="sm"
-                  >
-                    <Link to="/users">
-                      <Users className="mr-2 h-4 w-4" />
-                      Manage Users
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  asChild
+                  className="group-hover:shadow-sm transition-shadow"
+                  size="sm"
+                >
+                  <Link to="/users">
+                    <Users className="mr-2 h-4 w-4" />
+                    Manage Users
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Status Alert */}

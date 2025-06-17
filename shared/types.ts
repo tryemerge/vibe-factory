@@ -33,15 +33,11 @@ export type TaskAttemptActivity = { id: string, task_attempt_id: string, status:
 
 export type CreateTaskAttemptActivity = { task_attempt_id: string, status: TaskAttemptStatus | null, note: string | null, };
 
-export type CreateUser = { email: string, password: string, is_admin: boolean | null, };
+export type CreateUser = { email: string, };
 
-export type LoginRequest = { email: string, password: string, };
+export type UpdateUser = { email: string | null, };
 
-export type LoginResponse = { user: User, token: string, };
-
-export type UpdateUser = { email: string | null, password: string | null, is_admin: boolean | null, };
-
-export type User = { id: string, email: string, is_admin: boolean, created_at: Date, updated_at: Date, };
+export type User = { id: string, email: string, created_at: Date, updated_at: Date, };
 
 export type DirectoryEntry = { name: string, path: string, is_directory: boolean, is_git_repo: boolean, };
 

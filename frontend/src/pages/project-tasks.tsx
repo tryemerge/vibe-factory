@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Plus } from 'lucide-react'
-import { makeAuthenticatedRequest } from '@/lib/auth'
+import { makeRequest } from '@/lib/api'
 import { TaskCreateDialog } from '@/components/tasks/TaskCreateDialog'
 import { TaskEditDialog } from '@/components/tasks/TaskEditDialog'
 
@@ -53,7 +53,7 @@ export function ProjectTasks() {
 
   const fetchProject = async () => {
     try {
-      const response = await makeAuthenticatedRequest(`/api/projects/${projectId}`)
+      const response = await makeRequest(`/api/projects/${projectId}`)
       
       if (response.ok) {
         const result: ApiResponse<Project> = await response.json()
@@ -72,7 +72,7 @@ export function ProjectTasks() {
   const fetchTasks = async () => {
     try {
       setLoading(true)
-      const response = await makeAuthenticatedRequest(`/api/projects/${projectId}/tasks`)
+      const response = await makeRequest(`/api/projects/${projectId}/tasks`)
       
       if (response.ok) {
         const result: ApiResponse<Task[]> = await response.json()
@@ -91,7 +91,7 @@ export function ProjectTasks() {
 
   const handleCreateTask = async (title: string, description: string) => {
     try {
-      const response = await makeAuthenticatedRequest(`/api/projects/${projectId}/tasks`, {
+      const response = await makeRequest(`/api/projects/${projectId}/tasks`, {
         method: 'POST',
         body: JSON.stringify({
           project_id: projectId,
@@ -114,7 +114,7 @@ export function ProjectTasks() {
     if (!editingTask) return
 
     try {
-      const response = await makeAuthenticatedRequest(`/api/projects/${projectId}/tasks/${editingTask.id}`, {
+      const response = await makeRequest(`/api/projects/${projectId}/tasks/${editingTask.id}`, {
         method: 'PUT',
         body: JSON.stringify({
           title,
@@ -138,7 +138,7 @@ export function ProjectTasks() {
     if (!confirm('Are you sure you want to delete this task?')) return
 
     try {
-      const response = await makeAuthenticatedRequest(`/api/projects/${projectId}/tasks/${taskId}`, {
+      const response = await makeRequest(`/api/projects/${projectId}/tasks/${taskId}`, {
         method: 'DELETE',
       })
 
@@ -179,7 +179,7 @@ export function ProjectTasks() {
     ))
 
     try {
-      const response = await makeAuthenticatedRequest(`/api/projects/${projectId}/tasks/${taskId}`, {
+      const response = await makeRequest(`/api/projects/${projectId}/tasks/${taskId}`, {
         method: 'PUT',
         body: JSON.stringify({
           title: task.title,
