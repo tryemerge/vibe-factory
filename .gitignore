@@ -70,3 +70,7 @@ coverage/
 .env
 frontend/dist
 backend/bindings
+
+build_codesign_release.sh
+
+npx-cli/dist
