@@ -76,8 +76,7 @@ impl Executor for ClaudeFollowupExecutor {
             .arg("--dangerously-skip-permissions")
             .arg("--verbose")
             .arg("--output-format=stream-json")
-            .arg("--resume")
-            .arg(&self.session_id)
+            .arg(format!("--resume={}", self.session_id))
             .process_group(0) // Create new process group so we can kill entire tree
             .spawn()
             .map_err(ExecutorError::SpawnFailed)?;

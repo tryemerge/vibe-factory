@@ -502,14 +502,15 @@ impl TaskAttempt {
             .await?
             .ok_or(TaskAttemptError::TaskNotFound)?;
 
-        // Find the first coding agent execution process to get the executor type
+        // Find the most recent coding agent execution process to get the executor type
         let execution_processes =
             crate::models::execution_process::ExecutionProcess::find_by_task_attempt_id(
                 pool, attempt_id,
             )
             .await?;
-        let first_coding_agent = execution_processes
+        let most_recent_coding_agent = execution_processes
             .iter()
+            .rev() // Reverse to get most recent first (since they're ordered by created_at ASC)
             .find(|p| {
                 matches!(
                     p.process_type,
@@ -520,12 +521,12 @@ impl TaskAttempt {
 
         // Get the executor session to find the session ID
         let executor_session =
-            ExecutorSession::find_by_execution_process_id(pool, first_coding_agent.id)
+            ExecutorSession::find_by_execution_process_id(pool, most_recent_coding_agent.id)
                 .await?
                 .ok_or(TaskAttemptError::TaskNotFound)?; // No session found
 
         // Determine the executor config from the stored executor_type
-        let executor_config = match first_coding_agent.executor_type.as_deref() {
+        let executor_config = match most_recent_coding_agent.executor_type.as_deref() {
             Some("claude") => crate::executor::ExecutorConfig::Claude,
             Some("amp") => crate::executor::ExecutorConfig::Amp,
             Some("echo") => crate::executor::ExecutorConfig::Echo,
