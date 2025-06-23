@@ -503,11 +503,24 @@ impl TaskAttempt {
         .map_err(|e| TaskAttemptError::Git(git2::Error::from_str(&e.to_string())))?;
 
         // Add to running executions for monitoring
+        let execution_type = match process_type {
+            crate::models::execution_process::ExecutionProcessType::SetupScript => {
+                crate::app_state::ExecutionType::SetupScript
+            }
+            crate::models::execution_process::ExecutionProcessType::CodingAgent => {
+                crate::app_state::ExecutionType::CodingAgent
+            }
+            crate::models::execution_process::ExecutionProcessType::DevServer => {
+                crate::app_state::ExecutionType::DevServer
+            }
+        };
+
         app_state
             .add_running_execution(
                 process_id,
                 crate::app_state::RunningExecution {
                     task_attempt_id: attempt_id,
+                    execution_type,
                     child,
                 },
             )

@@ -46,6 +46,7 @@ fn main() {
         vibe_kanban::models::execution_process::ExecutionProcessStatus::decl(),
         vibe_kanban::models::execution_process::ExecutionProcessType::decl(),
         vibe_kanban::models::execution_process::CreateExecutionProcess::decl(),
+        vibe_kanban::models::execution_process::UpdateExecutionProcess::decl(),
     ];
 
     // 4. Friendly banner

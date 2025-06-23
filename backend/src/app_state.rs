@@ -4,8 +4,16 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 #[derive(Debug)]
+pub enum ExecutionType {
+    SetupScript,
+    CodingAgent,
+    DevServer,
+}
+
+#[derive(Debug)]
 pub struct RunningExecution {
     pub task_attempt_id: Uuid,
+    pub execution_type: ExecutionType,
     pub child: tokio::process::Child,
 }
 
