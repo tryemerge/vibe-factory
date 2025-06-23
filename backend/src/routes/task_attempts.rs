@@ -708,6 +708,11 @@ pub struct DeleteFileQuery {
     file_path: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct FollowUpRequest {
+    message: String,
+}
+
 #[axum::debug_handler]
 pub async fn delete_task_attempt_file(
     Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
@@ -746,6 +751,54 @@ pub async fn delete_task_attempt_file(
     }
 }
 
+#[axum::debug_handler]
+pub async fn create_follow_up_execution(
+    Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
+    Extension(pool): Extension<SqlitePool>,
+    Extension(app_state): Extension<crate::app_state::AppState>,
+    Json(payload): Json<FollowUpRequest>,
+) -> Result<ResponseJson<ApiResponse<()>>, StatusCode> {
+    // Verify task attempt exists and belongs to the correct task
+    match TaskAttempt::exists_for_task(&pool, attempt_id, task_id, project_id).await {
+        Ok(false) => return Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            tracing::error!("Failed to check task attempt existence: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+        Ok(true) => {}
+    }
+
+    // Start follow-up execution asynchronously (don't block the response)
+    let pool_clone = pool.clone();
+    let app_state_clone = app_state.clone();
+    let message = payload.message.clone();
+
+    tokio::spawn(async move {
+        if let Err(e) = TaskAttempt::start_follow_up_execution(
+            &pool_clone,
+            &app_state_clone,
+            attempt_id,
+            task_id,
+            project_id,
+            &message,
+        )
+        .await
+        {
+            tracing::error!(
+                "Failed to start follow-up execution for task attempt {}: {}",
+                attempt_id,
+                e
+            );
+        }
+    });
+
+    Ok(ResponseJson(ApiResponse {
+        success: true,
+        data: None,
+        message: Some("Follow-up execution started successfully".to_string()),
+    }))
+}
+
 pub fn task_attempts_router() -> Router {
     use axum::routing::post;
 
@@ -782,6 +835,10 @@ pub fn task_attempts_router() -> Router {
         .route(
             "/projects/:project_id/tasks/:task_id/attempts/:attempt_id/delete-file",
             post(delete_task_attempt_file),
+        )
+        .route(
+            "/projects/:project_id/tasks/:task_id/attempts/:attempt_id/follow-up",
+            post(create_follow_up_execution),
         )
         .route(
             "/projects/:project_id/tasks/:task_id/attempts/:attempt_id/execution-processes",

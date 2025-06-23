@@ -182,7 +182,7 @@ impl TaskAttempt {
             .ok_or(TaskAttemptError::ProjectNotFound)?;
 
         // Generate worktree path automatically
-        let worktree_path_str = format!("/tmp/mission-control-worktree-{}", attempt_id);
+        let worktree_path_str = format!("/tmp/vibe-kanban-worktree-{}", attempt_id);
         let worktree_path = Path::new(&worktree_path_str);
 
         // Create the worktree using git2
@@ -681,6 +681,147 @@ impl TaskAttempt {
         } else {
             crate::executor::ExecutorConfig::Echo // Default
         }
+    }
+
+    /// Start a follow-up coding agent execution with a new message
+    pub async fn start_follow_up_execution(
+        pool: &SqlitePool,
+        app_state: &crate::app_state::AppState,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        project_id: Uuid,
+        message: &str,
+    ) -> Result<(), TaskAttemptError> {
+        let task_attempt = TaskAttempt::find_by_id(pool, attempt_id)
+            .await?
+            .ok_or(TaskAttemptError::TaskNotFound)?;
+
+        // Verify the attempt belongs to the specified task and project
+        let task = Task::find_by_id(pool, task_id)
+            .await?
+            .ok_or(TaskAttemptError::TaskNotFound)?;
+
+        if task.project_id != project_id {
+            return Err(TaskAttemptError::ProjectNotFound);
+        }
+
+        // Check if session_id exists
+        let session_id = task_attempt.session_id.ok_or_else(|| {
+            TaskAttemptError::Git(git2::Error::from_str(
+                "No session_id found for follow-up execution",
+            ))
+        })?;
+
+        let executor_config = Self::determine_executor_config(&task_attempt.executor);
+
+        Self::start_follow_up_process_execution(
+            pool,
+            app_state,
+            attempt_id,
+            task_id,
+            executor_config,
+            &session_id,
+            message,
+            &task_attempt.worktree_path,
+        )
+        .await
+    }
+
+    /// Start a follow-up process execution with specific executor and session
+    async fn start_follow_up_process_execution(
+        pool: &SqlitePool,
+        app_state: &crate::app_state::AppState,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        executor_config: crate::executor::ExecutorConfig,
+        session_id: &str,
+        message: &str,
+        worktree_path: &str,
+    ) -> Result<(), TaskAttemptError> {
+        let process_id = Uuid::new_v4();
+
+        // Create execution process record
+        Self::create_execution_process(
+            pool,
+            attempt_id,
+            process_id,
+            &crate::executor::ExecutorType::CodingAgent(executor_config.clone()),
+            crate::models::execution_process::ExecutionProcessType::CodingAgent,
+            worktree_path,
+        )
+        .await?;
+
+        // Create activity record
+        Self::create_execution_activity(
+            pool,
+            process_id,
+            TaskAttemptStatus::ExecutorRunning,
+            "Starting follow-up execution",
+        )
+        .await?;
+
+        info!(
+            "Starting follow-up execution for task attempt {}",
+            attempt_id
+        );
+
+        // Execute the follow-up process
+        let child = Self::execute_follow_up_process(
+            pool,
+            task_id,
+            attempt_id,
+            process_id,
+            executor_config,
+            session_id,
+            message,
+            worktree_path,
+        )
+        .await?;
+
+        // Register for monitoring
+        Self::register_for_monitoring(
+            app_state,
+            process_id,
+            attempt_id,
+            crate::models::execution_process::ExecutionProcessType::CodingAgent,
+            child,
+        )
+        .await;
+
+        info!(
+            "Started follow-up execution {} for task attempt {}",
+            process_id, attempt_id
+        );
+        Ok(())
+    }
+
+    /// Execute the follow-up process using the appropriate executor
+    async fn execute_follow_up_process(
+        pool: &SqlitePool,
+        task_id: Uuid,
+        attempt_id: Uuid,
+        process_id: Uuid,
+        executor_config: crate::executor::ExecutorConfig,
+        session_id: &str,
+        message: &str,
+        worktree_path: &str,
+    ) -> Result<tokio::process::Child, TaskAttemptError> {
+        let executor = executor_config.create_executor();
+
+        let child = executor
+            .execute_follow_up_streaming(
+                pool,
+                task_id,
+                attempt_id,
+                process_id,
+                session_id,
+                message,
+                worktree_path,
+            )
+            .await
+            .map_err(|e| TaskAttemptError::Git(git2::Error::from_str(&e.to_string())))?;
+
+        Ok(child)
     }
 
     /// Get the git diff between the base commit and the current committed worktree state

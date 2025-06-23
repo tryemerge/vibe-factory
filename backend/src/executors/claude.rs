@@ -48,4 +48,33 @@ impl Executor for ClaudeExecutor {
 
         Ok(child)
     }
+
+    async fn spawn_follow_up(
+        &self,
+        _pool: &sqlx::SqlitePool,
+        _task_id: Uuid,
+        session_id: &str,
+        message: &str,
+        worktree_path: &str,
+    ) -> Result<Child, ExecutorError> {
+        // Use Claude CLI to continue the session with new message
+        let child = Command::new("claude")
+            .kill_on_drop(true)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .current_dir(worktree_path)
+            .arg(message)
+            .arg("-p")
+            .arg("--dangerously-skip-permissions")
+            .arg("--verbose")
+            .arg("--output-format=stream-json")
+            .arg("--resume")
+            .arg(session_id)
+            .process_group(0) // Create new process group so we can kill entire tree
+            .spawn()
+            .map_err(ExecutorError::SpawnFailed)?;
+
+        Ok(child)
+    }
 }

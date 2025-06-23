@@ -43,6 +43,16 @@ pub trait Executor: Send + Sync {
         worktree_path: &str,
     ) -> Result<Child, ExecutorError>;
 
+    /// Spawn a follow-up command for an existing session/thread
+    async fn spawn_follow_up(
+        &self,
+        pool: &sqlx::SqlitePool,
+        task_id: Uuid,
+        session_id: &str,
+        message: &str,
+        worktree_path: &str,
+    ) -> Result<Child, ExecutorError>;
+
     /// Execute the command and stream output to database in real-time
     async fn execute_streaming(
         &self,
@@ -53,6 +63,53 @@ pub trait Executor: Send + Sync {
         worktree_path: &str,
     ) -> Result<Child, ExecutorError> {
         let mut child = self.spawn(pool, task_id, worktree_path).await?;
+
+        // Take stdout and stderr pipes for streaming
+        let stdout = child
+            .stdout
+            .take()
+            .expect("Failed to take stdout from child process");
+        let stderr = child
+            .stderr
+            .take()
+            .expect("Failed to take stderr from child process");
+
+        // Start streaming tasks
+        let pool_clone1 = pool.clone();
+        let pool_clone2 = pool.clone();
+
+        tokio::spawn(stream_output_to_db(
+            stdout,
+            pool_clone1,
+            attempt_id,
+            execution_process_id,
+            true,
+        ));
+        tokio::spawn(stream_output_to_db(
+            stderr,
+            pool_clone2,
+            attempt_id,
+            execution_process_id,
+            false,
+        ));
+
+        Ok(child)
+    }
+
+    /// Execute a follow-up command and stream output to database in real-time
+    async fn execute_follow_up_streaming(
+        &self,
+        pool: &sqlx::SqlitePool,
+        task_id: Uuid,
+        attempt_id: Uuid,
+        execution_process_id: Uuid,
+        session_id: &str,
+        message: &str,
+        worktree_path: &str,
+    ) -> Result<Child, ExecutorError> {
+        let mut child = self
+            .spawn_follow_up(pool, task_id, session_id, message, worktree_path)
+            .await?;
 
         // Take stdout and stderr pipes for streaming
         let stdout = child
@@ -143,10 +200,20 @@ pub async fn stream_output_to_db(
                 if is_first_line && is_stdout {
                     is_first_line = false;
                     if let Some(session_id) = parse_session_id_from_line(&line) {
-                        if let Err(e) = TaskAttempt::update_session_id(&pool, attempt_id, &session_id).await {
-                            tracing::error!("Failed to update session_id for attempt {}: {}", attempt_id, e);
+                        if let Err(e) =
+                            TaskAttempt::update_session_id(&pool, attempt_id, &session_id).await
+                        {
+                            tracing::error!(
+                                "Failed to update session_id for attempt {}: {}",
+                                attempt_id,
+                                e
+                            );
                         } else {
-                            tracing::info!("Updated session_id for attempt {}: {}", attempt_id, session_id);
+                            tracing::info!(
+                                "Updated session_id for attempt {}: {}",
+                                attempt_id,
+                                session_id
+                            );
                         }
                     }
                 }
@@ -226,25 +293,25 @@ pub async fn stream_output_to_db(
 /// Parse session_id from Claude or thread_id from Amp from the first JSONL line
 fn parse_session_id_from_line(line: &str) -> Option<String> {
     use serde_json::Value;
-    
+
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return None;
     }
-    
+
     // Try to parse as JSON
     if let Ok(json) = serde_json::from_str::<Value>(trimmed) {
         // Check for Claude session_id
         if let Some(session_id) = json.get("session_id").and_then(|v| v.as_str()) {
             return Some(session_id.to_string());
         }
-        
+
         // Check for Amp threadID
         if let Some(thread_id) = json.get("threadID").and_then(|v| v.as_str()) {
             return Some(thread_id.to_string());
         }
     }
-    
+
     None
 }
 
@@ -255,7 +322,7 @@ mod tests {
     #[test]
     fn test_parse_claude_session_id() {
         let claude_line = r#"{"type":"system","subtype":"init","cwd":"/private/tmp/mission-control-worktree-3abb979d-2e0e-4404-a276-c16d98a97dd5","session_id":"cc0889a2-0c59-43cc-926b-739a983888a2","tools":["Task","Bash","Glob","Grep","LS","exit_plan_mode","Read","Edit","MultiEdit","Write","NotebookRead","NotebookEdit","WebFetch","TodoRead","TodoWrite","WebSearch"],"mcp_servers":[],"model":"claude-sonnet-4-20250514","permissionMode":"bypassPermissions","apiKeySource":"/login managed key"}"#;
-        
+
         assert_eq!(
             parse_session_id_from_line(claude_line),
             Some("cc0889a2-0c59-43cc-926b-739a983888a2".to_string())
@@ -265,7 +332,7 @@ mod tests {
     #[test]
     fn test_parse_amp_thread_id() {
         let amp_line = r#"{"type":"initial","threadID":"T-286f908a-2cd8-40cc-9490-da689b2f1560"}"#;
-        
+
         assert_eq!(
             parse_session_id_from_line(amp_line),
             Some("T-286f908a-2cd8-40cc-9490-da689b2f1560".to_string())

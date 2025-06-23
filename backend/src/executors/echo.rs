@@ -50,4 +50,36 @@ echo "Task completed: {}""#,
 
         Ok(child)
     }
+
+    async fn spawn_follow_up(
+        &self,
+        _pool: &sqlx::SqlitePool,
+        _task_id: Uuid,
+        session_id: &str,
+        message: &str,
+        _worktree_path: &str,
+    ) -> Result<Child, ExecutorError> {
+        let script = format!(
+            r#"echo "Follow-up execution for session: {}"
+echo "Message: {}"
+for i in {{1..10}}; do
+    echo "Follow-up progress line $i"
+    sleep 1
+done
+echo "Follow-up completed""#,
+            session_id, message
+        );
+
+        let child = Command::new("sh")
+            .kill_on_drop(true)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .arg("-c")
+            .arg(&script)
+            .process_group(0) // Create new process group so we can kill entire tree
+            .spawn()
+            .map_err(ExecutorError::SpawnFailed)?;
+
+        Ok(child)
+    }
 }

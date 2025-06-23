@@ -52,4 +52,39 @@ impl Executor for AmpExecutor {
 
         Ok(child)
     }
+
+    async fn spawn_follow_up(
+        &self,
+        _pool: &sqlx::SqlitePool,
+        _task_id: Uuid,
+        session_id: &str,
+        message: &str,
+        worktree_path: &str,
+    ) -> Result<Child, ExecutorError> {
+        use std::process::Stdio;
+        use tokio::{io::AsyncWriteExt, process::Command};
+
+        let mut child = Command::new("npx")
+            .kill_on_drop(true)
+            .stdin(Stdio::piped()) // <-- open a pipe
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .current_dir(worktree_path)
+            .arg("@sourcegraph/amp")
+            .arg("threads")
+            .arg("continue")
+            .arg(session_id)
+            .arg("--format=jsonl")
+            .process_group(0) // Create new process group so we can kill entire tree
+            .spawn()
+            .map_err(ExecutorError::SpawnFailed)?;
+
+        // feed the message in, then close the pipe so `amp` sees EOF
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(message.as_bytes()).await.unwrap();
+            stdin.shutdown().await.unwrap(); // or `drop(stdin);`
+        }
+
+        Ok(child)
+    }
 }

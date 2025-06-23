@@ -40,4 +40,20 @@ impl Executor for SetupScriptExecutor {
 
         Ok(child)
     }
+
+    async fn spawn_follow_up(
+        &self,
+        _pool: &sqlx::SqlitePool,
+        _task_id: Uuid,
+        _session_id: &str,
+        _message: &str,
+        _worktree_path: &str,
+    ) -> Result<Child, ExecutorError> {
+        // Setup scripts don't support follow-up execution
+        // Return an error indicating this is not supported
+        Err(ExecutorError::SpawnFailed(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Follow-up execution not supported for setup scripts",
+        )))
+    }
 }
