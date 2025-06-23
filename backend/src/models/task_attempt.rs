@@ -562,17 +562,30 @@ impl TaskAttempt {
     ) -> Result<crate::models::execution_process::ExecutionProcess, TaskAttemptError> {
         use crate::models::execution_process::{CreateExecutionProcess, ExecutionProcess};
 
-        let (command, args) = match executor_type {
+        let (command, args, executor_type_string) = match executor_type {
             crate::executor::ExecutorType::SetupScript(_) => (
                 "bash".to_string(),
                 Some(serde_json::to_string(&["-c", "setup_script"]).unwrap()),
+                None, // Setup scripts don't have an executor type
             ),
-            crate::executor::ExecutorType::CodingAgent(_) => ("executor".to_string(), None),
+            crate::executor::ExecutorType::CodingAgent(config) => {
+                let executor_type_str = match config {
+                    crate::executor::ExecutorConfig::Echo => "echo",
+                    crate::executor::ExecutorConfig::Claude => "claude",
+                    crate::executor::ExecutorConfig::Amp => "amp",
+                };
+                (
+                    "executor".to_string(),
+                    None,
+                    Some(executor_type_str.to_string()),
+                )
+            }
         };
 
         let create_process = CreateExecutionProcess {
             task_attempt_id: attempt_id,
             process_type,
+            executor_type: executor_type_string,
             command,
             args,
             working_directory: worktree_path.to_string(),
