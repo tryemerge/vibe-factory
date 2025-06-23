@@ -14,25 +14,6 @@ export type EditorType = "vscode" | "cursor" | "windsurf" | "intellij" | "zed" |
 
 export type ExecutorConfig = { "type": "echo" } | { "type": "claude" } | { "type": "amp" };
 
-// Constants for UI components
-export const EXECUTOR_TYPES = ["echo", "claude", "amp"] as const;
-export const EDITOR_TYPES = ["vscode", "cursor", "windsurf", "intellij", "zed", "custom"] as const;
-
-export const EXECUTOR_LABELS = {
-  echo: "Echo",
-  claude: "Claude",
-  amp: "Amp"
-} as const;
-
-export const EDITOR_LABELS = {
-  vscode: "VS Code",
-  cursor: "Cursor", 
-  windsurf: "Windsurf",
-  intellij: "IntelliJ IDEA",
-  zed: "Zed",
-  custom: "Custom Command"
-} as const;
-
 export type CreateProject = { name: string, git_repo_path: string, use_existing_repo: boolean, setup_script: string | null, };
 
 export type Project = { id: string, name: string, git_repo_path: string, setup_script: string | null, created_at: Date, updated_at: Date, };
@@ -86,5 +67,3 @@ export type ExecutionProcessStatus = "running" | "completed" | "failed" | "kille
 export type ExecutionProcessType = "setupscript" | "codingagent" | "devserver";
 
 export type CreateExecutionProcess = { task_attempt_id: string, process_type: ExecutionProcessType, command: string, args: string | null, working_directory: string, };
-
-export type UpdateExecutionProcess = { status: ExecutionProcessStatus | null, exit_code: bigint | null, completed_at: string | null, };

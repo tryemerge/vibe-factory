@@ -4,7 +4,7 @@ use sqlx::{FromRow, SqlitePool, Type};
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::app_state::ExecutionType;
+
 
 #[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, TS)]
 #[sqlx(type_name = "execution_process_status", rename_all = "lowercase")]
@@ -27,25 +27,7 @@ pub enum ExecutionProcessType {
     DevServer,
 }
 
-impl From<ExecutionType> for ExecutionProcessType {
-    fn from(exec_type: ExecutionType) -> Self {
-        match exec_type {
-            ExecutionType::SetupScript => ExecutionProcessType::SetupScript,
-            ExecutionType::CodingAgent => ExecutionProcessType::CodingAgent,
-            ExecutionType::DevServer => ExecutionProcessType::DevServer,
-        }
-    }
-}
 
-impl From<ExecutionProcessType> for ExecutionType {
-    fn from(exec_type: ExecutionProcessType) -> Self {
-        match exec_type {
-            ExecutionProcessType::SetupScript => ExecutionType::SetupScript,
-            ExecutionProcessType::CodingAgent => ExecutionType::CodingAgent,
-            ExecutionProcessType::DevServer => ExecutionType::DevServer,
-        }
-    }
-}
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -76,13 +58,7 @@ pub struct CreateExecutionProcess {
     pub working_directory: String,
 }
 
-#[derive(Debug, Deserialize, TS)]
-#[ts(export)]
-pub struct UpdateExecutionProcess {
-    pub status: Option<ExecutionProcessStatus>,
-    pub exit_code: Option<i64>,
-    pub completed_at: Option<DateTime<Utc>>,
-}
+
 
 impl ExecutionProcess {
     /// Find execution process by ID
@@ -143,32 +119,7 @@ impl ExecutionProcess {
         .await
     }
 
-    /// Find running execution processes
-    pub async fn find_running(pool: &SqlitePool) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as!(
-            ExecutionProcess,
-            r#"SELECT 
-                id as "id!: Uuid", 
-                task_attempt_id as "task_attempt_id!: Uuid", 
-                process_type as "process_type!: ExecutionProcessType",
-                status as "status!: ExecutionProcessStatus",
-                command, 
-                args, 
-                working_directory, 
-                stdout, 
-                stderr, 
-                exit_code,
-                started_at as "started_at!: DateTime<Utc>",
-                completed_at as "completed_at?: DateTime<Utc>",
-                created_at as "created_at!: DateTime<Utc>", 
-                updated_at as "updated_at!: DateTime<Utc>"
-               FROM execution_processes 
-               WHERE status = 'running' 
-               ORDER BY created_at ASC"#
-        )
-        .fetch_all(pool)
-        .await
-    }
+
 
     /// Create a new execution process
     pub async fn create(
@@ -300,18 +251,5 @@ impl ExecutionProcess {
         Ok(())
     }
 
-    /// Delete execution processes for a task attempt (cleanup)
-    pub async fn delete_by_task_attempt_id(
-        pool: &SqlitePool,
-        task_attempt_id: Uuid,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            "DELETE FROM execution_processes WHERE task_attempt_id = $1",
-            task_attempt_id
-        )
-        .execute(pool)
-        .await?;
 
-        Ok(())
-    }
 }
