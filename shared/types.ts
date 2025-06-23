@@ -12,26 +12,11 @@ export type EditorConfig = { editor_type: EditorType, custom_command: string | n
 
 export type EditorType = "vscode" | "cursor" | "windsurf" | "intellij" | "zed" | "custom";
 
+export type EditorConstants = { editor_types: Array<EditorType>, editor_labels: Array<string>, };
+
 export type ExecutorConfig = { "type": "echo" } | { "type": "claude" } | { "type": "amp" };
 
-// Constants for UI components
-export const EXECUTOR_TYPES = ["echo", "claude", "amp"] as const;
-export const EDITOR_TYPES = ["vscode", "cursor", "windsurf", "intellij", "zed", "custom"] as const;
-
-export const EXECUTOR_LABELS = {
-  echo: "Echo",
-  claude: "Claude",
-  amp: "Amp"
-} as const;
-
-export const EDITOR_LABELS = {
-  vscode: "VS Code",
-  cursor: "Cursor", 
-  windsurf: "Windsurf",
-  intellij: "IntelliJ IDEA",
-  zed: "Zed",
-  custom: "Custom Command"
-} as const;
+export type ExecutorConstants = { executor_types: Array<ExecutorConfig>, executor_labels: Array<string>, };
 
 export type CreateProject = { name: string, git_repo_path: string, use_existing_repo: boolean, setup_script: string | null, };
 
@@ -88,3 +73,34 @@ export type ExecutionProcessType = "setupscript" | "codingagent" | "devserver";
 export type CreateExecutionProcess = { task_attempt_id: string, process_type: ExecutionProcessType, command: string, args: string | null, working_directory: string, };
 
 export type UpdateExecutionProcess = { status: ExecutionProcessStatus | null, exit_code: bigint | null, completed_at: string | null, };
+
+// Generated constants
+export const EXECUTOR_TYPES: string[] = [
+    "echo",
+    "claude",
+    "amp"
+];
+
+export const EDITOR_TYPES: EditorType[] = [
+    "vscode",
+    "cursor", 
+    "windsurf",
+    "intellij",
+    "zed",
+    "custom"
+];
+
+export const EXECUTOR_LABELS: Record<string, string> = {
+    "echo": "Echo (Test Mode)",
+    "claude": "Claude",
+    "amp": "Amp"
+};
+
+export const EDITOR_LABELS: Record<string, string> = {
+    "vscode": "VS Code",
+    "cursor": "Cursor",
+    "windsurf": "Windsurf",
+    "intellij": "IntelliJ IDEA",
+    "zed": "Zed",
+    "custom": "Custom"
+};

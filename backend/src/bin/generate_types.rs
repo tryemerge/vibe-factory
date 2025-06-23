@@ -1,6 +1,40 @@
 use std::{env, fs, path::Path};
 use ts_rs::TS; // in [build-dependencies]
 
+fn generate_constants() -> String {
+    r#"// Generated constants
+export const EXECUTOR_TYPES: string[] = [
+    "echo",
+    "claude",
+    "amp"
+];
+
+export const EDITOR_TYPES: EditorType[] = [
+    "vscode",
+    "cursor", 
+    "windsurf",
+    "intellij",
+    "zed",
+    "custom"
+];
+
+export const EXECUTOR_LABELS: Record<string, string> = {
+    "echo": "Echo (Test Mode)",
+    "claude": "Claude",
+    "amp": "Amp"
+};
+
+export const EDITOR_LABELS: Record<string, string> = {
+    "vscode": "VS Code",
+    "cursor": "Cursor",
+    "windsurf": "Windsurf",
+    "intellij": "IntelliJ IDEA",
+    "zed": "Zed",
+    "custom": "Custom"
+};"#
+    .to_string()
+}
+
 fn main() {
     // 1. Make sure ../shared exists
     let shared_path = Path::new("../shared");
@@ -18,7 +52,9 @@ fn main() {
         vibe_kanban::models::config::ThemeMode::decl(),
         vibe_kanban::models::config::EditorConfig::decl(),
         vibe_kanban::models::config::EditorType::decl(),
+        vibe_kanban::models::config::EditorConstants::decl(),
         vibe_kanban::executor::ExecutorConfig::decl(),
+        vibe_kanban::executor::ExecutorConstants::decl(),
         vibe_kanban::models::project::CreateProject::decl(),
         vibe_kanban::models::project::Project::decl(),
         vibe_kanban::models::project::UpdateProject::decl(),
@@ -69,9 +105,15 @@ fn main() {
         .collect::<Vec<_>>()
         .join("\n\n");
 
-    // 6. Write the consolidated types.ts
-    fs::write(shared_path.join("types.ts"), format!("{HEADER}{body}"))
-        .expect("unable to write types.ts");
+    // 6. Add constants
+    let constants = generate_constants();
+
+    // 7. Write the consolidated types.ts
+    fs::write(
+        shared_path.join("types.ts"),
+        format!("{HEADER}{body}\n\n{constants}"),
+    )
+    .expect("unable to write types.ts");
 
     println!("✅ TypeScript types generated in ../shared/");
 }

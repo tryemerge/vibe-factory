@@ -107,6 +107,31 @@ pub enum ExecutorConfig {
     // Docker { image: String, command: String },
 }
 
+// Constants for frontend
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ExecutorConstants {
+    pub executor_types: Vec<ExecutorConfig>,
+    pub executor_labels: Vec<String>,
+}
+
+impl ExecutorConstants {
+    pub fn new() -> Self {
+        Self {
+            executor_types: vec![
+                ExecutorConfig::Echo,
+                ExecutorConfig::Claude,
+                ExecutorConfig::Amp,
+            ],
+            executor_labels: vec![
+                "Echo (Test Mode)".to_string(),
+                "Claude".to_string(),
+                "Amp".to_string(),
+            ],
+        }
+    }
+}
+
 impl ExecutorConfig {
     pub fn create_executor(&self) -> Box<dyn Executor> {
         match self {
