@@ -70,6 +70,7 @@ fn main() {
         vibe_kanban::models::task_attempt::TaskAttempt::decl(),
         vibe_kanban::models::task_attempt::CreateTaskAttempt::decl(),
         vibe_kanban::models::task_attempt::UpdateTaskAttempt::decl(),
+        vibe_kanban::models::task_attempt::CreateFollowUpAttempt::decl(),
         vibe_kanban::models::task_attempt_activity::TaskAttemptActivity::decl(),
         vibe_kanban::models::task_attempt_activity::CreateTaskAttemptActivity::decl(),
         vibe_kanban::routes::filesystem::DirectoryEntry::decl(),

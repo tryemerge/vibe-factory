@@ -92,6 +92,11 @@ pub trait Executor: Send + Sync {
 pub enum ExecutorType {
     SetupScript(String),
     CodingAgent(ExecutorConfig),
+    FollowUpCodingAgent {
+        config: ExecutorConfig,
+        session_id: Option<String>,
+        prompt: String,
+    },
 }
 
 /// Configuration for different executor types

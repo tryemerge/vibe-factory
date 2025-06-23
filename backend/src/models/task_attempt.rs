@@ -82,6 +82,12 @@ pub struct UpdateTaskAttempt {
     // Currently no updateable fields, but keeping struct for API compatibility
 }
 
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub struct CreateFollowUpAttempt {
+    pub prompt: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub enum DiffChunkType {
@@ -480,6 +486,73 @@ impl TaskAttempt {
         .await
     }
 
+    /// Start a follow-up execution using the same executor type as the first process
+    pub async fn start_followup_execution(
+        pool: &SqlitePool,
+        app_state: &crate::app_state::AppState,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        project_id: Uuid,
+        prompt: &str,
+    ) -> Result<(), TaskAttemptError> {
+        use crate::models::executor_session::ExecutorSession;
+
+        // Get task attempt
+        let task_attempt = TaskAttempt::find_by_id(pool, attempt_id)
+            .await?
+            .ok_or(TaskAttemptError::TaskNotFound)?;
+
+        // Find the first coding agent execution process to get the executor type
+        let execution_processes =
+            crate::models::execution_process::ExecutionProcess::find_by_task_attempt_id(
+                pool, attempt_id,
+            )
+            .await?;
+        let first_coding_agent = execution_processes
+            .iter()
+            .find(|p| {
+                matches!(
+                    p.process_type,
+                    crate::models::execution_process::ExecutionProcessType::CodingAgent
+                )
+            })
+            .ok_or(TaskAttemptError::TaskNotFound)?; // No previous coding agent found
+
+        // Get the executor session to find the session ID
+        let executor_session =
+            ExecutorSession::find_by_execution_process_id(pool, first_coding_agent.id)
+                .await?
+                .ok_or(TaskAttemptError::TaskNotFound)?; // No session found
+
+        // Determine the executor config from the stored executor_type
+        let executor_config = match first_coding_agent.executor_type.as_deref() {
+            Some("claude") => crate::executor::ExecutorConfig::Claude,
+            Some("amp") => crate::executor::ExecutorConfig::Amp,
+            Some("echo") => crate::executor::ExecutorConfig::Echo,
+            _ => return Err(TaskAttemptError::TaskNotFound), // Invalid executor type
+        };
+
+        // Create the follow-up executor type
+        let followup_executor = crate::executor::ExecutorType::FollowUpCodingAgent {
+            config: executor_config,
+            session_id: executor_session.session_id.clone(),
+            prompt: prompt.to_string(),
+        };
+
+        Self::start_process_execution(
+            pool,
+            app_state,
+            attempt_id,
+            task_id,
+            followup_executor,
+            "Starting follow-up executor".to_string(),
+            TaskAttemptStatus::ExecutorRunning,
+            crate::models::execution_process::ExecutionProcessType::CodingAgent,
+            &task_attempt.worktree_path,
+        )
+        .await
+    }
+
     /// Resolve executor configuration from string name
     fn resolve_executor_config(executor_name: &Option<String>) -> crate::executor::ExecutorConfig {
         match executor_name.as_ref().map(|s| s.as_str()) {
@@ -580,6 +653,18 @@ impl TaskAttempt {
                     Some(executor_type_str.to_string()),
                 )
             }
+            crate::executor::ExecutorType::FollowUpCodingAgent { config, .. } => {
+                let executor_type_str = match config {
+                    crate::executor::ExecutorConfig::Echo => "echo",
+                    crate::executor::ExecutorConfig::Claude => "claude",
+                    crate::executor::ExecutorConfig::Amp => "amp",
+                };
+                (
+                    "followup_executor".to_string(),
+                    None,
+                    Some(executor_type_str.to_string()),
+                )
+            }
         };
 
         let create_process = CreateExecutionProcess {
@@ -671,6 +756,44 @@ impl TaskAttempt {
             }
             crate::executor::ExecutorType::CodingAgent(config) => {
                 let executor = config.create_executor();
+                executor
+                    .execute_streaming(pool, task_id, attempt_id, process_id, worktree_path)
+                    .await
+            }
+            crate::executor::ExecutorType::FollowUpCodingAgent {
+                config,
+                session_id,
+                prompt,
+            } => {
+                use crate::executors::{AmpFollowupExecutor, ClaudeFollowupExecutor};
+
+                let executor: Box<dyn crate::executor::Executor> = match config {
+                    crate::executor::ExecutorConfig::Claude => {
+                        if let Some(sid) = session_id {
+                            Box::new(ClaudeFollowupExecutor {
+                                session_id: sid.clone(),
+                                prompt: prompt.clone(),
+                            })
+                        } else {
+                            return Err(TaskAttemptError::TaskNotFound); // No session ID for followup
+                        }
+                    }
+                    crate::executor::ExecutorConfig::Amp => {
+                        if let Some(tid) = session_id {
+                            Box::new(AmpFollowupExecutor {
+                                thread_id: tid.clone(),
+                                prompt: prompt.clone(),
+                            })
+                        } else {
+                            return Err(TaskAttemptError::TaskNotFound); // No thread ID for followup
+                        }
+                    }
+                    crate::executor::ExecutorConfig::Echo => {
+                        // Echo doesn't support followup, use regular echo
+                        config.create_executor()
+                    }
+                };
+
                 executor
                     .execute_streaming(pool, task_id, attempt_id, process_id, worktree_path)
                     .await

@@ -48,6 +48,8 @@ export type CreateTaskAttempt = { executor: string | null, };
 
 export type UpdateTaskAttempt = Record<string, never>;
 
+export type CreateFollowUpAttempt = { prompt: string, };
+
 export type TaskAttemptActivity = { id: string, execution_process_id: string, status: TaskAttemptStatus, note: string | null, created_at: string, };
 
 export type CreateTaskAttemptActivity = { execution_process_id: string, status: TaskAttemptStatus | null, note: string | null, };
