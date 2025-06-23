@@ -126,17 +126,31 @@ pub async fn stream_output_to_db(
     is_stdout: bool,
 ) {
     use crate::models::execution_process::ExecutionProcess;
+    use crate::models::task_attempt::TaskAttempt;
 
     let mut reader = BufReader::new(output);
     let mut line = String::new();
     let mut accumulated_output = String::new();
     let mut update_counter = 0;
+    let mut is_first_line = true;
 
     loop {
         line.clear();
         match reader.read_line(&mut line).await {
             Ok(0) => break, // EOF
             Ok(_) => {
+                // Try to parse session/thread ID from first stdout line
+                if is_first_line && is_stdout {
+                    is_first_line = false;
+                    if let Some(session_id) = parse_session_id_from_line(&line) {
+                        if let Err(e) = TaskAttempt::update_session_id(&pool, attempt_id, &session_id).await {
+                            tracing::error!("Failed to update session_id for attempt {}: {}", attempt_id, e);
+                        } else {
+                            tracing::info!("Updated session_id for attempt {}: {}", attempt_id, session_id);
+                        }
+                    }
+                }
+
                 accumulated_output.push_str(&line);
                 update_counter += 1;
 
@@ -206,5 +220,73 @@ pub async fn stream_output_to_db(
                 e
             );
         }
+    }
+}
+
+/// Parse session_id from Claude or thread_id from Amp from the first JSONL line
+fn parse_session_id_from_line(line: &str) -> Option<String> {
+    use serde_json::Value;
+    
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    
+    // Try to parse as JSON
+    if let Ok(json) = serde_json::from_str::<Value>(trimmed) {
+        // Check for Claude session_id
+        if let Some(session_id) = json.get("session_id").and_then(|v| v.as_str()) {
+            return Some(session_id.to_string());
+        }
+        
+        // Check for Amp threadID
+        if let Some(thread_id) = json.get("threadID").and_then(|v| v.as_str()) {
+            return Some(thread_id.to_string());
+        }
+    }
+    
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_claude_session_id() {
+        let claude_line = r#"{"type":"system","subtype":"init","cwd":"/private/tmp/mission-control-worktree-3abb979d-2e0e-4404-a276-c16d98a97dd5","session_id":"cc0889a2-0c59-43cc-926b-739a983888a2","tools":["Task","Bash","Glob","Grep","LS","exit_plan_mode","Read","Edit","MultiEdit","Write","NotebookRead","NotebookEdit","WebFetch","TodoRead","TodoWrite","WebSearch"],"mcp_servers":[],"model":"claude-sonnet-4-20250514","permissionMode":"bypassPermissions","apiKeySource":"/login managed key"}"#;
+        
+        assert_eq!(
+            parse_session_id_from_line(claude_line),
+            Some("cc0889a2-0c59-43cc-926b-739a983888a2".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_amp_thread_id() {
+        let amp_line = r#"{"type":"initial","threadID":"T-286f908a-2cd8-40cc-9490-da689b2f1560"}"#;
+        
+        assert_eq!(
+            parse_session_id_from_line(amp_line),
+            Some("T-286f908a-2cd8-40cc-9490-da689b2f1560".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_invalid_json() {
+        let invalid_line = "not json at all";
+        assert_eq!(parse_session_id_from_line(invalid_line), None);
+    }
+
+    #[test]
+    fn test_parse_json_without_ids() {
+        let other_json = r#"{"type":"other","message":"hello"}"#;
+        assert_eq!(parse_session_id_from_line(other_json), None);
+    }
+
+    #[test]
+    fn test_parse_empty_line() {
+        assert_eq!(parse_session_id_from_line(""), None);
+        assert_eq!(parse_session_id_from_line("   "), None);
     }
 }

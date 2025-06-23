@@ -525,6 +525,11 @@ export function TaskDetailsPanel({
                         <span className="text-xs text-muted-foreground font-mono">
                           Worktree: {selectedAttempt.worktree_path}
                         </span>
+                        {selectedAttempt.session_id && (
+                          <span className="text-xs text-muted-foreground font-mono">
+                            Session ID: {selectedAttempt.session_id}
+                          </span>
+                        )}
                       </div>
                     )}
                     <div className="flex gap-1">
