@@ -376,10 +376,37 @@ impl TaskAttempt {
         task_id: Uuid,
         project_id: Uuid,
     ) -> Result<(), TaskAttemptError> {
-        use crate::models::project::Project;
         use crate::models::task::{Task, TaskStatus};
 
-        // Get the task attempt, task, and project
+        // Load required entities
+        let (task_attempt, project) =
+            Self::load_execution_context(pool, attempt_id, project_id).await?;
+
+        // Update task status to indicate execution has started
+        Task::update_status(pool, task_id, project_id, TaskStatus::InProgress).await?;
+
+        // Determine execution sequence based on project configuration
+        if Self::should_run_setup_script(&project) {
+            Self::start_setup_script(
+                pool,
+                app_state,
+                attempt_id,
+                task_id,
+                &project,
+                &task_attempt.worktree_path,
+            )
+            .await
+        } else {
+            Self::start_coding_agent(pool, app_state, attempt_id, task_id, project_id).await
+        }
+    }
+
+    /// Load the execution context (task attempt and project) with validation
+    async fn load_execution_context(
+        pool: &SqlitePool,
+        attempt_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<(TaskAttempt, Project), TaskAttemptError> {
         let task_attempt = TaskAttempt::find_by_id(pool, attempt_id)
             .await?
             .ok_or(TaskAttemptError::TaskNotFound)?;
@@ -388,36 +415,81 @@ impl TaskAttempt {
             .await?
             .ok_or(TaskAttemptError::ProjectNotFound)?;
 
-        // Update task status to InProgress at the start of execution (during setup)
-        Task::update_status(pool, task_id, project_id, TaskStatus::InProgress).await?;
-
-        // Step 1: Run setup script if it exists
-        if let Some(setup_script) = &project.setup_script {
-            if !setup_script.trim().is_empty() {
-                Self::start_process_execution(
-                    pool,
-                    app_state,
-                    attempt_id,
-                    task_id,
-                    crate::executor::ExecutorType::SetupScript(setup_script.clone()),
-                    "Starting setup script".to_string(),
-                    TaskAttemptStatus::SetupRunning,
-                    crate::models::execution_process::ExecutionProcessType::SetupScript,
-                    &task_attempt.worktree_path,
-                )
-                .await?;
-
-                // Wait for setup script to complete before starting executor
-                // We'll let the execution monitor handle the completion and then start the executor
-                return Ok(());
-            }
-        }
-
-        // If no setup script, start executor directly
-        Self::start_coding_agent(pool, app_state, attempt_id, task_id, project_id).await
+        Ok((task_attempt, project))
     }
 
-    /// Unified function to start any type of process execution (setup script or coding agent)
+    /// Check if setup script should be executed
+    fn should_run_setup_script(project: &Project) -> bool {
+        project
+            .setup_script
+            .as_ref()
+            .map(|script| !script.trim().is_empty())
+            .unwrap_or(false)
+    }
+
+    /// Start the setup script execution
+    async fn start_setup_script(
+        pool: &SqlitePool,
+        app_state: &crate::app_state::AppState,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        project: &Project,
+        worktree_path: &str,
+    ) -> Result<(), TaskAttemptError> {
+        let setup_script = project.setup_script.as_ref().unwrap();
+
+        Self::start_process_execution(
+            pool,
+            app_state,
+            attempt_id,
+            task_id,
+            crate::executor::ExecutorType::SetupScript(setup_script.clone()),
+            "Starting setup script".to_string(),
+            TaskAttemptStatus::SetupRunning,
+            crate::models::execution_process::ExecutionProcessType::SetupScript,
+            worktree_path,
+        )
+        .await
+    }
+
+    /// Start the coding agent after setup is complete or if no setup is needed
+    pub async fn start_coding_agent(
+        pool: &SqlitePool,
+        app_state: &crate::app_state::AppState,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        _project_id: Uuid,
+    ) -> Result<(), TaskAttemptError> {
+        let task_attempt = TaskAttempt::find_by_id(pool, attempt_id)
+            .await?
+            .ok_or(TaskAttemptError::TaskNotFound)?;
+
+        let executor_config = Self::resolve_executor_config(&task_attempt.executor);
+
+        Self::start_process_execution(
+            pool,
+            app_state,
+            attempt_id,
+            task_id,
+            crate::executor::ExecutorType::CodingAgent(executor_config),
+            "Starting executor".to_string(),
+            TaskAttemptStatus::ExecutorRunning,
+            crate::models::execution_process::ExecutionProcessType::CodingAgent,
+            &task_attempt.worktree_path,
+        )
+        .await
+    }
+
+    /// Resolve executor configuration from string name
+    fn resolve_executor_config(executor_name: &Option<String>) -> crate::executor::ExecutorConfig {
+        match executor_name.as_ref().map(|s| s.as_str()) {
+            Some("claude") => crate::executor::ExecutorConfig::Claude,
+            Some("amp") => crate::executor::ExecutorConfig::Amp,
+            _ => crate::executor::ExecutorConfig::Echo, // Default for "echo" or None
+        }
+    }
+
+    /// Unified function to start any type of process execution
     async fn start_process_execution(
         pool: &SqlitePool,
         app_state: &crate::app_state::AppState,
@@ -429,15 +501,60 @@ impl TaskAttempt {
         process_type: crate::models::execution_process::ExecutionProcessType,
         worktree_path: &str,
     ) -> Result<(), TaskAttemptError> {
-        use crate::executors::SetupScriptExecutor;
-        use crate::models::execution_process::{CreateExecutionProcess, ExecutionProcess};
-        use crate::models::task_attempt_activity::{
-            CreateTaskAttemptActivity, TaskAttemptActivity,
-        };
-
-        // Create execution process record first (since activity now references it)
         let process_id = Uuid::new_v4();
-        let (command, args) = match &executor_type {
+
+        // Create execution process record
+        let _execution_process = Self::create_execution_process_record(
+            pool,
+            attempt_id,
+            process_id,
+            &executor_type,
+            process_type.clone(),
+            worktree_path,
+        )
+        .await?;
+
+        // Create activity record
+        Self::create_activity_record(pool, process_id, activity_status.clone(), &activity_note)
+            .await?;
+
+        tracing::info!("Starting {} for task attempt {}", activity_note, attempt_id);
+
+        // Execute the process
+        let child = Self::execute_process(
+            &executor_type,
+            pool,
+            task_id,
+            attempt_id,
+            process_id,
+            worktree_path,
+        )
+        .await?;
+
+        // Register for monitoring
+        Self::register_for_monitoring(app_state, process_id, attempt_id, &process_type, child)
+            .await;
+
+        tracing::info!(
+            "Started execution {} for task attempt {}",
+            process_id,
+            attempt_id
+        );
+        Ok(())
+    }
+
+    /// Create execution process database record
+    async fn create_execution_process_record(
+        pool: &SqlitePool,
+        attempt_id: Uuid,
+        process_id: Uuid,
+        executor_type: &crate::executor::ExecutorType,
+        process_type: crate::models::execution_process::ExecutionProcessType,
+        worktree_path: &str,
+    ) -> Result<crate::models::execution_process::ExecutionProcess, TaskAttemptError> {
+        use crate::models::execution_process::{CreateExecutionProcess, ExecutionProcess};
+
+        let (command, args) = match executor_type {
             crate::executor::ExecutorType::SetupScript(_) => (
                 "bash".to_string(),
                 Some(serde_json::to_string(&["-c", "setup_script"]).unwrap()),
@@ -447,31 +564,57 @@ impl TaskAttempt {
 
         let create_process = CreateExecutionProcess {
             task_attempt_id: attempt_id,
-            process_type: process_type.clone(),
+            process_type,
             command,
             args,
             working_directory: worktree_path.to_string(),
         };
 
-        let _process = ExecutionProcess::create(pool, &create_process, process_id).await?;
+        ExecutionProcess::create(pool, &create_process, process_id)
+            .await
+            .map_err(TaskAttemptError::from)
+    }
 
-        // Create activity for process start (after process is created)
+    /// Create activity record for process start
+    async fn create_activity_record(
+        pool: &SqlitePool,
+        process_id: Uuid,
+        activity_status: TaskAttemptStatus,
+        activity_note: &str,
+    ) -> Result<(), TaskAttemptError> {
+        use crate::models::task_attempt_activity::{
+            CreateTaskAttemptActivity, TaskAttemptActivity,
+        };
+
         let activity_id = Uuid::new_v4();
         let create_activity = CreateTaskAttemptActivity {
             execution_process_id: process_id,
             status: Some(activity_status.clone()),
-            note: Some(activity_note.clone()),
+            note: Some(activity_note.to_string()),
         };
 
-        TaskAttemptActivity::create(pool, &create_activity, activity_id, activity_status.clone())
-            .await?;
+        TaskAttemptActivity::create(pool, &create_activity, activity_id, activity_status)
+            .await
+            .map(|_| ())
+            .map_err(TaskAttemptError::from)
+    }
 
-        tracing::info!("Starting {} for task attempt {}", activity_note, attempt_id);
+    /// Execute the process based on type
+    async fn execute_process(
+        executor_type: &crate::executor::ExecutorType,
+        pool: &SqlitePool,
+        task_id: Uuid,
+        attempt_id: Uuid,
+        process_id: Uuid,
+        worktree_path: &str,
+    ) -> Result<tokio::process::Child, TaskAttemptError> {
+        use crate::executors::SetupScriptExecutor;
 
-        // Create the appropriate executor and spawn the process
-        let child = match executor_type {
+        let result = match executor_type {
             crate::executor::ExecutorType::SetupScript(script) => {
-                let executor = SetupScriptExecutor { script };
+                let executor = SetupScriptExecutor {
+                    script: script.clone(),
+                };
                 executor
                     .execute_streaming(pool, task_id, attempt_id, process_id, worktree_path)
                     .await
@@ -482,10 +625,19 @@ impl TaskAttempt {
                     .execute_streaming(pool, task_id, attempt_id, process_id, worktree_path)
                     .await
             }
-        }
-        .map_err(|e| TaskAttemptError::Git(git2::Error::from_str(&e.to_string())))?;
+        };
 
-        // Add to running executions for monitoring
+        result.map_err(|e| TaskAttemptError::Git(git2::Error::from_str(&e.to_string())))
+    }
+
+    /// Register process for monitoring
+    async fn register_for_monitoring(
+        app_state: &crate::app_state::AppState,
+        process_id: Uuid,
+        attempt_id: Uuid,
+        process_type: &crate::models::execution_process::ExecutionProcessType,
+        child: tokio::process::Child,
+    ) {
         let execution_type = match process_type {
             crate::models::execution_process::ExecutionProcessType::SetupScript => {
                 crate::app_state::ExecutionType::SetupScript
@@ -508,53 +660,6 @@ impl TaskAttempt {
                 },
             )
             .await;
-
-        tracing::info!(
-            "Started execution {} for task attempt {}",
-            process_id,
-            attempt_id
-        );
-
-        Ok(())
-    }
-
-    /// Start the coding agent after setup is complete or if no setup is needed
-    pub async fn start_coding_agent(
-        pool: &SqlitePool,
-        app_state: &crate::app_state::AppState,
-        attempt_id: Uuid,
-        task_id: Uuid,
-        _project_id: Uuid,
-    ) -> Result<(), TaskAttemptError> {
-        // Get the task attempt to determine executor config
-        let task_attempt = TaskAttempt::find_by_id(pool, attempt_id)
-            .await?
-            .ok_or(TaskAttemptError::TaskNotFound)?;
-
-        // Determine the executor config
-        let executor_config = if let Some(executor_name) = &task_attempt.executor {
-            match executor_name.as_str() {
-                "echo" => crate::executor::ExecutorConfig::Echo,
-                "claude" => crate::executor::ExecutorConfig::Claude,
-                "amp" => crate::executor::ExecutorConfig::Amp,
-                _ => crate::executor::ExecutorConfig::Echo, // Default fallback
-            }
-        } else {
-            crate::executor::ExecutorConfig::Echo // Default
-        };
-
-        Self::start_process_execution(
-            pool,
-            app_state,
-            attempt_id,
-            task_id,
-            crate::executor::ExecutorType::CodingAgent(executor_config),
-            "Starting executor".to_string(),
-            TaskAttemptStatus::ExecutorRunning,
-            crate::models::execution_process::ExecutionProcessType::CodingAgent,
-            &task_attempt.worktree_path,
-        )
-        .await
     }
 
     /// Get the git diff between the base commit and the current committed worktree state
