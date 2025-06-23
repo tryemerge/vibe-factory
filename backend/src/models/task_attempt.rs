@@ -514,6 +514,14 @@ impl TaskAttempt {
         )
         .await?;
 
+        // Create executor session for coding agents
+        if matches!(
+            process_type,
+            crate::models::execution_process::ExecutionProcessType::CodingAgent
+        ) {
+            Self::create_executor_session_record(pool, attempt_id, task_id, process_id).await?;
+        }
+
         // Create activity record
         Self::create_activity_record(pool, process_id, activity_status.clone(), &activity_note)
             .await?;
@@ -572,6 +580,35 @@ impl TaskAttempt {
 
         ExecutionProcess::create(pool, &create_process, process_id)
             .await
+            .map_err(TaskAttemptError::from)
+    }
+
+    /// Create executor session record for coding agents
+    async fn create_executor_session_record(
+        pool: &SqlitePool,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        process_id: Uuid,
+    ) -> Result<(), TaskAttemptError> {
+        use crate::models::executor_session::{CreateExecutorSession, ExecutorSession};
+
+        // Get the task to create prompt
+        let task = Task::find_by_id(pool, task_id)
+            .await?
+            .ok_or(TaskAttemptError::TaskNotFound)?;
+
+        let prompt = format!("{}\n\n{}", task.title, task.description.unwrap_or_default());
+
+        let session_id = Uuid::new_v4();
+        let create_session = CreateExecutorSession {
+            task_attempt_id: attempt_id,
+            execution_process_id: process_id,
+            prompt: Some(prompt),
+        };
+
+        ExecutorSession::create(pool, &create_session, session_id)
+            .await
+            .map(|_| ())
             .map_err(TaskAttemptError::from)
     }
 

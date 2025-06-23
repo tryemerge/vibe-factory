@@ -151,18 +151,44 @@ pub async fn stream_output_to_db(
     is_stdout: bool,
 ) {
     use crate::models::execution_process::ExecutionProcess;
+    use crate::models::executor_session::ExecutorSession;
 
     let mut reader = BufReader::new(output);
     let mut line = String::new();
     let mut accumulated_output = String::new();
     let mut update_counter = 0;
+    let mut session_id_parsed = false;
 
     loop {
         line.clear();
         match reader.read_line(&mut line).await {
             Ok(0) => break, // EOF
             Ok(_) => {
-                // Note: Session ID parsing removed since we no longer store it in database
+                // Parse session ID from the first JSONL line (stdout only)
+                if is_stdout && !session_id_parsed {
+                    if let Some(external_session_id) = parse_session_id_from_line(&line) {
+                        if let Err(e) = ExecutorSession::update_session_id(
+                            &pool,
+                            execution_process_id,
+                            &external_session_id,
+                        )
+                        .await
+                        {
+                            tracing::error!(
+                                "Failed to update session ID for execution process {}: {}",
+                                execution_process_id,
+                                e
+                            );
+                        } else {
+                            tracing::info!(
+                                "Updated session ID {} for execution process {}",
+                                external_session_id,
+                                execution_process_id
+                            );
+                        }
+                        session_id_parsed = true;
+                    }
+                }
 
                 accumulated_output.push_str(&line);
                 update_counter += 1;
