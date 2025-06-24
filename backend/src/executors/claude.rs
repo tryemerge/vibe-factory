@@ -23,18 +23,27 @@ impl Executor for ClaudeExecutor {
         worktree_path: &str,
     ) -> Result<Child, ExecutorError> {
         // Get the task to fetch its description
+
+        dbg!(&task_id);
         let task = Task::find_by_id(pool, task_id)
             .await?
             .ok_or(ExecutorError::TaskNotFound)?;
 
-        let prompt = format!(
-            "Task title: {}
+        dbg!(&task.title);
+        dbg!(&task.description);
+
+        let prompt = if task.title == "/init" {
+            task.title
+        } else {
+            format!(
+                "Task title: {}
             Task description: {}",
-            task.title,
-            task.description
-                .as_deref()
-                .unwrap_or("No description provided")
-        );
+                task.title,
+                task.description
+                    .as_deref()
+                    .unwrap_or("No description provided")
+            )
+        };
 
         // Use Claude CLI to process the task
         let child = Command::new("claude")
@@ -60,8 +69,8 @@ impl Executor for ClaudeExecutor {
 impl Executor for ClaudeFollowupExecutor {
     async fn spawn(
         &self,
-        pool: &sqlx::SqlitePool,
-        task_id: Uuid,
+        _pool: &sqlx::SqlitePool,
+        _task_id: Uuid,
         worktree_path: &str,
     ) -> Result<Child, ExecutorError> {
         // Use Claude CLI with --resume flag to continue the session

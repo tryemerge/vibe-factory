@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Settings, FileCode } from "lucide-react";
 import { makeRequest } from "@/lib/api";
 import { TaskFormDialog } from "@/components/tasks/TaskFormDialog";
 import { ProjectForm } from "@/components/projects/project-form";
 import { useKeyboardShortcuts } from "@/lib/keyboard-shortcuts";
+import { useConfig } from "@/components/config-provider";
 import {
   getMainContainerClasses,
   getKanbanSectionClasses,
@@ -37,6 +38,7 @@ export function ProjectTasks() {
     taskId?: string;
   }>();
   const navigate = useNavigate();
+  const { config } = useConfig();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,8 @@ export function ProjectTasks() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [claudeInitLoading, setClaudeInitLoading] = useState(false);
+  const [claudeMdExists, setClaudeMdExists] = useState<boolean | null>(null);
 
   // Panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -90,6 +94,32 @@ export function ProjectTasks() {
     }
   }, [taskId, tasks]);
 
+  const handleClaudeInit = async () => {
+    console.log('🔥 handleClaudeInit called');
+    if (!projectId) return;
+
+    setClaudeInitLoading(true);
+
+    try {
+      console.log('🔥 About to call handleCreateAndStartTask with params:', {
+        title: '/init',
+        description: 'Initialize Project',
+        executor: { type: 'claude' }
+      });
+      await handleCreateAndStartTask(
+        '/init',
+        'Initialize Project',
+        { type: 'claude' }
+      );
+      console.log('🔥 handleCreateAndStartTask completed successfully');
+    } catch (err) {
+      console.error('🔥 handleCreateAndStartTask failed:', err);
+      setError('Failed to initialize project with Claude');
+    } finally {
+      setClaudeInitLoading(false);
+    }
+  };
+
   const fetchProject = async () => {
     try {
       const response = await makeRequest(`/api/projects/${projectId}`);
@@ -133,7 +163,7 @@ export function ProjectTasks() {
               if (
                 updatedSelectedTask &&
                 JSON.stringify(selectedTask) !==
-                  JSON.stringify(updatedSelectedTask)
+                JSON.stringify(updatedSelectedTask)
               ) {
                 setSelectedTask(updatedSelectedTask);
               }
@@ -180,6 +210,7 @@ export function ProjectTasks() {
     description: string,
     executor?: ExecutorConfig
   ) => {
+    console.log('🔥 handleCreateAndStartTask called with:', { title, description, executor });
     try {
       const payload: CreateTaskAndStart = {
         project_id: projectId!,
@@ -188,6 +219,8 @@ export function ProjectTasks() {
         executor: executor || null,
       };
 
+      console.log('🔥 Payload being sent to backend:', JSON.stringify(payload, null, 2));
+
       const response = await makeRequest(
         `/api/projects/${projectId}/tasks/create-and-start`,
         {
@@ -195,6 +228,8 @@ export function ProjectTasks() {
           body: JSON.stringify(payload),
         }
       );
+
+      console.log('🔥 Backend response status:', response.status);
 
       if (response.ok) {
         await fetchTasks();
@@ -358,10 +393,33 @@ export function ProjectTasks() {
               <Settings className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={handleCreateNewTask}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
+          <div className="flex items-center gap-3">
+            {config?.executor.type === 'claude' && claudeMdExists === false && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClaudeInit}
+                disabled={claudeInitLoading}
+                className="text-sm"
+              >
+                {claudeInitLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                    Initializing...
+                  </>
+                ) : (
+                  <>
+                    <FileCode className="h-4 w-4 mr-2" />
+                    Init Claude
+                  </>
+                )}
+              </Button>
+            )}
+            <Button onClick={handleCreateNewTask}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+          </div>
         </div>
 
         <TaskFormDialog

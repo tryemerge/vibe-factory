@@ -12,9 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FolderPicker } from "@/components/ui/folder-picker";
-import { Project, CreateProject, UpdateProject } from "shared/types";
-import { AlertCircle, Folder } from "lucide-react";
+import { Project, CreateProject, UpdateProject, CreateTaskAndStart } from "shared/types";
+import { AlertCircle, Folder, FileCode } from "lucide-react";
 import { makeRequest } from "@/lib/api";
+import { useConfig } from "@/components/config-provider";
 
 interface ProjectFormProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function ProjectForm({
   onSuccess,
   project,
 }: ProjectFormProps) {
+  const { config } = useConfig();
   const [name, setName] = useState(project?.name || "");
   const [gitRepoPath, setGitRepoPath] = useState(project?.git_repo_path || "");
   const [setupScript, setSetupScript] = useState(project?.setup_script ?? "");
@@ -38,6 +40,8 @@ export function ProjectForm({
   const [repoMode, setRepoMode] = useState<"existing" | "new">("existing");
   const [parentPath, setParentPath] = useState("");
   const [folderName, setFolderName] = useState("");
+  const [claudeInitLoading, setClaudeInitLoading] = useState(false);
+  const [claudeMdExists, setClaudeMdExists] = useState<boolean | null>(null);
 
   const isEditing = !!project;
 
@@ -54,6 +58,30 @@ export function ProjectForm({
     }
   }, [project]);
 
+  // Check for CLAUDE.md existence when project loads and executor is Claude
+  useEffect(() => {
+    if (project && config && config.executor.type === 'claude' && open) {
+      checkClaudeMdExists();
+    }
+  }, [project, config, open]);
+
+  const checkClaudeMdExists = async () => {
+    if (!project) return;
+    
+    try {
+      const response = await makeRequest(`/api/filesystem?path=${encodeURIComponent(project.git_repo_path)}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const claudeMdExists = result.data.some((entry: any) => entry.name === 'CLAUDE.md');
+          setClaudeMdExists(claudeMdExists);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check for CLAUDE.md:', err);
+    }
+  };
+
   // Auto-populate project name from directory name
   const handleGitRepoPathChange = (path: string) => {
     setGitRepoPath(path);
@@ -69,6 +97,42 @@ export function ProjectForm({
           .replace(/\b\w/g, (l) => l.toUpperCase()); // Capitalize first letter of each word
         setName(cleanName);
       }
+    }
+  };
+
+  const handleClaudeInit = async () => {
+    if (!project) return;
+    
+    setClaudeInitLoading(true);
+    
+    try {
+      const payload: CreateTaskAndStart = {
+        project_id: project.id,
+        title: 'Initialize Project',
+        description: '/init',
+        executor: { type: 'claude' },
+      };
+
+      const response = await makeRequest(
+        `/api/projects/${project.id}/tasks/create-and-start`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (response.ok) {
+        // After init task is created, check again for CLAUDE.md
+        setTimeout(() => {
+          checkClaudeMdExists();
+        }, 1000);
+      } else {
+        setError('Failed to initialize project with Claude');
+      }
+    } catch (err) {
+      setError('Failed to initialize project with Claude');
+    } finally {
+      setClaudeInitLoading(false);
     }
   };
 
@@ -315,6 +379,37 @@ export function ProjectForm({
               Use it for setup tasks like installing dependencies or preparing the environment.
             </p>
           </div>
+
+          {isEditing && config && config.executor.type === 'claude' && (
+            <div className="space-y-2">
+              <Label>Claude Integration</Label>
+              <div className="flex items-center space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClaudeInit}
+                  disabled={claudeInitLoading}
+                  className="text-sm"
+                >
+                  {claudeInitLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                      Initializing...
+                    </>
+                  ) : (
+                    <>
+                      <FileCode className="h-4 w-4 mr-2" />
+                      Init Claude
+                    </>
+                  )}
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Initialize Claude with project context and create CLAUDE.md
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && (
             <Alert variant="destructive">
