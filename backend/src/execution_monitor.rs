@@ -518,11 +518,11 @@ async fn handle_coding_agent_completion(
 
 /// Handle dev server completion (future functionality)
 async fn handle_dev_server_completion(
-    _app_state: &AppState,
+    app_state: &AppState,
     task_attempt_id: Uuid,
-    _execution_process_id: Uuid,
+    execution_process_id: Uuid,
     _execution_process: ExecutionProcess,
-    _success: bool,
+    success: bool,
     exit_code: Option<i64>,
 ) {
     let exit_text = if let Some(code) = exit_code {
@@ -537,6 +537,22 @@ async fn handle_dev_server_completion(
         exit_text
     );
 
-    // Dev servers might restart automatically or have different completion semantics
-    // For now, just log the completion
+    // Create task attempt activity with appropriate completion status
+    let activity_id = Uuid::new_v4();
+    let status = if success {
+        TaskAttemptStatus::DevServerComplete
+    } else {
+        TaskAttemptStatus::DevServerFailed
+    };
+    let create_activity = CreateTaskAttemptActivity {
+        execution_process_id,
+        status: Some(status.clone()),
+        note: Some(format!("Dev server execution completed{}", exit_text)),
+    };
+
+    if let Err(e) =
+        TaskAttemptActivity::create(&app_state.db_pool, &create_activity, activity_id, status).await
+    {
+        tracing::error!("Failed to create dev server completion activity: {}", e);
+    }
 }

@@ -58,6 +58,9 @@ pub enum TaskAttemptStatus {
     ExecutorRunning,
     ExecutorComplete,
     ExecutorFailed,
+    DevServerRunning,
+    DevServerComplete,
+    DevServerFailed,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
@@ -524,7 +527,7 @@ impl TaskAttempt {
             task_id,
             crate::executor::ExecutorType::DevServer(dev_script),
             "Starting dev server".to_string(),
-            TaskAttemptStatus::SetupRunning, // Reuse existing status
+            TaskAttemptStatus::DevServerRunning,
             crate::models::execution_process::ExecutionProcessType::DevServer,
             &task_attempt.worktree_path,
         )

@@ -46,7 +46,7 @@ export type TaskWithAttemptStatus = { id: string, project_id: string, title: str
 
 export type UpdateTask = { title: string | null, description: string | null, status: TaskStatus | null, };
 
-export type TaskAttemptStatus = "setuprunning" | "setupcomplete" | "setupfailed" | "executorrunning" | "executorcomplete" | "executorfailed";
+export type TaskAttemptStatus = "setuprunning" | "setupcomplete" | "setupfailed" | "executorrunning" | "executorcomplete" | "executorfailed" | "devserverrunning" | "devservercomplete" | "devserverfailed";
 
 export type TaskAttempt = { id: string, task_id: string, worktree_path: string, merge_commit: string | null, executor: string | null, created_at: string, updated_at: string, };
 

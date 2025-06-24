@@ -118,6 +118,21 @@ const getAttemptStatusDisplay = (
         label: "Executor Failed",
         dotColor: "bg-red-500",
       };
+    case "devserverrunning":
+      return {
+        label: "Dev Server Running",
+        dotColor: "bg-blue-500",
+      };
+    case "devservercomplete":
+      return {
+        label: "Dev Server Complete",
+        dotColor: "bg-green-500",
+      };
+    case "devserverfailed":
+      return {
+        label: "Dev Server Failed",
+        dotColor: "bg-red-500",
+      };
     default:
       return {
         label: "Unknown",
