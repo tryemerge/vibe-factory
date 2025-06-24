@@ -793,6 +793,43 @@ pub async fn create_followup_attempt(
     }
 }
 
+pub async fn start_dev_server(
+    Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
+    Extension(pool): Extension<SqlitePool>,
+    Extension(app_state): Extension<crate::app_state::AppState>,
+) -> Result<ResponseJson<ApiResponse<()>>, StatusCode> {
+    // Verify task attempt exists and belongs to the correct task
+    match TaskAttempt::exists_for_task(&pool, attempt_id, task_id, project_id).await {
+        Ok(false) => return Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            tracing::error!("Failed to check task attempt existence: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+        Ok(true) => {}
+    }
+
+    // Start dev server execution
+    match TaskAttempt::start_dev_server(&pool, &app_state, attempt_id, task_id, project_id).await {
+        Ok(_) => Ok(ResponseJson(ApiResponse {
+            success: true,
+            data: None,
+            message: Some("Dev server started successfully".to_string()),
+        })),
+        Err(e) => {
+            tracing::error!(
+                "Failed to start dev server for task attempt {}: {}",
+                attempt_id,
+                e
+            );
+            Ok(ResponseJson(ApiResponse {
+                success: false,
+                data: None,
+                message: Some(e.to_string()),
+            }))
+        }
+    }
+}
+
 pub fn task_attempts_router() -> Router {
     use axum::routing::post;
 
@@ -849,5 +886,9 @@ pub fn task_attempts_router() -> Router {
         .route(
             "/projects/:project_id/tasks/:task_id/attempts/:attempt_id/follow-up",
             post(create_followup_attempt),
+        )
+        .route(
+            "/projects/:project_id/tasks/:task_id/attempts/:attempt_id/start-dev-server",
+            post(start_dev_server),
         )
 }

@@ -32,6 +32,7 @@ export function ProjectForm({
   const [name, setName] = useState(project?.name || "");
   const [gitRepoPath, setGitRepoPath] = useState(project?.git_repo_path || "");
   const [setupScript, setSetupScript] = useState(project?.setup_script ?? "");
+  const [devScript, setDevScript] = useState(project?.dev_script ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showFolderPicker, setShowFolderPicker] = useState(false);
@@ -47,10 +48,12 @@ export function ProjectForm({
       setName(project.name || "");
       setGitRepoPath(project.git_repo_path || "");
       setSetupScript(project.setup_script ?? "");
+      setDevScript(project.dev_script ?? "");
     } else {
       setName("");
       setGitRepoPath("");
       setSetupScript("");
+      setDevScript("");
     }
   }, [project]);
 
@@ -90,6 +93,7 @@ export function ProjectForm({
           name,
           git_repo_path: finalGitRepoPath,
           setup_script: setupScript.trim() || null,
+          dev_script: devScript.trim() || null,
         };
         const response = await makeRequest(
           `/api/projects/${project.id}`,
@@ -113,6 +117,7 @@ export function ProjectForm({
           git_repo_path: finalGitRepoPath,
           use_existing_repo: repoMode === "existing",
           setup_script: setupScript.trim() || null,
+          dev_script: devScript.trim() || null,
         };
         const response = await makeRequest("/api/projects", {
           method: "POST",
@@ -147,10 +152,12 @@ export function ProjectForm({
       setName(project.name || "");
       setGitRepoPath(project.git_repo_path || "");
       setSetupScript(project.setup_script ?? "");
+      setDevScript(project.dev_script ?? "");
     } else {
       setName("");
       setGitRepoPath("");
       setSetupScript("");
+      setDevScript("");
     }
     setParentPath("");
     setFolderName("");
@@ -313,6 +320,22 @@ export function ProjectForm({
             <p className="text-sm text-muted-foreground">
               This script will run after creating the worktree and before the executor starts. 
               Use it for setup tasks like installing dependencies or preparing the environment.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dev-script">Dev Server Script (Optional)</Label>
+            <textarea
+              id="dev-script"
+              value={devScript}
+              onChange={(e) => setDevScript(e.target.value)}
+              placeholder="#!/bin/bash&#10;npm run dev&#10;# Add dev server start command here..."
+              rows={4}
+              className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md resize-vertical focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-sm text-muted-foreground">
+              This script can be run from task attempts to start a development server. 
+              Use it to quickly start your project's dev server for testing changes.
             </p>
           </div>
 

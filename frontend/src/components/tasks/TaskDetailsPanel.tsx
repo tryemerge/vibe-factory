@@ -14,6 +14,7 @@ import {
   StopCircle,
   Send,
   AlertCircle,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -45,10 +46,12 @@ import type {
   TaskWithAttemptStatus,
   ExecutionProcess,
   EditorType,
+  Project,
 } from "shared/types";
 
 interface TaskDetailsPanelProps {
   task: TaskWithAttemptStatus | null;
+  project: Project | null;
   projectId: string;
   isOpen: boolean;
   onClose: () => void;
@@ -125,6 +128,7 @@ const getAttemptStatusDisplay = (
 
 export function TaskDetailsPanel({
   task,
+  project,
   projectId,
   isOpen,
   onClose,
@@ -152,6 +156,7 @@ export function TaskDetailsPanel({
   const [followUpMessage, setFollowUpMessage] = useState("");
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [isStartingDevServer, setIsStartingDevServer] = useState(false);
   
   // Auto-scroll state
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -398,6 +403,41 @@ export function TaskDetailsPanel({
       if (!editorType) {
         setShowEditorDialog(true);
       }
+    }
+  };
+
+  const startDevServer = async () => {
+    if (!task || !selectedAttempt || !project?.dev_script) return;
+
+    setIsStartingDevServer(true);
+    
+    try {
+      const response = await makeRequest(
+        `/api/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttempt.id}/start-dev-server`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to start dev server");
+      }
+
+      const data: ApiResponse<null> = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || "Failed to start dev server");
+      }
+
+      // Refresh activities to show the new dev server process
+      fetchAttemptActivities(selectedAttempt.id);
+    } catch (err) {
+      console.error("Failed to start dev server:", err);
+    } finally {
+      setIsStartingDevServer(false);
     }
   };
 
@@ -719,6 +759,17 @@ export function TaskDetailsPanel({
                         >
                           <StopCircle className="h-4 w-4 mr-1" />
                           {isStopping ? "Stopping..." : "Stop"}
+                        </Button>
+                      )}
+                      {project?.dev_script && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={startDevServer}
+                          disabled={isStartingDevServer}
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          {isStartingDevServer ? "Starting..." : "Dev Server"}
                         </Button>
                       )}
                       <Button

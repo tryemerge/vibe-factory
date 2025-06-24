@@ -415,6 +415,7 @@ export function ProjectTasks() {
       {isPanelOpen && (
         <TaskDetailsPanel
           task={selectedTask}
+          project={project}
           projectId={projectId!}
           isOpen={isPanelOpen}
           onClose={handleClosePanel}

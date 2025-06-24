@@ -205,8 +205,9 @@ pub async fn update_project(
         .git_repo_path
         .unwrap_or(existing_project.git_repo_path.clone());
     let setup_script = payload.setup_script.or(existing_project.setup_script);
+    let dev_script = payload.dev_script.or(existing_project.dev_script);
 
-    match Project::update(&pool, id, name, git_repo_path, setup_script).await {
+    match Project::update(&pool, id, name, git_repo_path, setup_script, dev_script).await {
         Ok(project) => Ok(ResponseJson(ApiResponse {
             success: true,
             data: Some(project),

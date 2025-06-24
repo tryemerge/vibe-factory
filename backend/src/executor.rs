@@ -91,6 +91,7 @@ pub trait Executor: Send + Sync {
 #[derive(Debug, Clone)]
 pub enum ExecutorType {
     SetupScript(String),
+    DevServer(String),
     CodingAgent(ExecutorConfig),
     FollowUpCodingAgent {
         config: ExecutorConfig,

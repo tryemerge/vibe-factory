@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE projects SET name = $2, git_repo_path = $3, setup_script = $4 WHERE id = $1 RETURNING id as \"id!: Uuid\", name, git_repo_path, setup_script, created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "INSERT INTO projects (id, name, git_repo_path, setup_script, dev_script) VALUES ($1, $2, $3, $4, $5) RETURNING id as \"id!: Uuid\", name, git_repo_path, setup_script, dev_script, created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
   "describe": {
     "columns": [
       {
@@ -24,27 +24,33 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "dev_script",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "updated_at!: DateTime<Utc>",
+        "name": "created_at!: DateTime<Utc>",
         "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 6,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 4
+      "Right": 5
     },
     "nullable": [
       true,
       false,
       false,
       true,
+      true,
       false,
       false
     ]
   },
-  "hash": "b3bead952fd42b79bed0908db603726935c0e830ea74ff30064bac71185442fc"
+  "hash": "5dc5d9e57b9dee5421b414f385a4c99f6014c4d9c0f965ff571ec75945132285"
 }
