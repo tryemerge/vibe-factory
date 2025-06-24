@@ -4,12 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, MessageSquare } from "lucide-react";
 import { ConversationViewer } from "./ConversationViewer";
-import type { ExecutionProcess } from "shared/types";
+import type { ExecutionProcess, ExecutionProcessStatus } from "shared/types";
 
 interface ExecutionOutputViewerProps {
   executionProcess: ExecutionProcess;
   executor?: string;
 }
+
+const getExecutionProcessStatusDisplay = (
+  status: ExecutionProcessStatus
+): { label: string; color: string } => {
+  switch (status) {
+    case "running":
+      return { label: "Running", color: "bg-blue-500" };
+    case "completed":
+      return { label: "Completed", color: "bg-green-500" };
+    case "failed":
+      return { label: "Failed", color: "bg-red-500" };
+    case "killed":
+      return { label: "Stopped", color: "bg-gray-500" };
+    default:
+      return { label: "Unknown", color: "bg-gray-400" };
+  }
+};
 
 export function ExecutionOutputViewer({
   executionProcess,
@@ -93,17 +110,34 @@ export function ExecutionOutputViewer({
     );
   }
 
+  const statusDisplay = getExecutionProcessStatusDisplay(executionProcess.status);
+
   return (
     <Card className="">
       <CardContent className="p-3">
         <div className="space-y-3">
+          {/* Execution process header with status */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs capitalize">
+                {executionProcess.process_type.replace(/([A-Z])/g, ' $1').toLowerCase()}
+              </Badge>
+              <div className="flex items-center gap-1">
+                <div className={`h-2 w-2 rounded-full ${statusDisplay.color}`} />
+                <span className="text-xs text-muted-foreground">{statusDisplay.label}</span>
+              </div>
+              {executor && (
+                <Badge variant="secondary" className="text-xs">
+                  {executor}
+                </Badge>
+              )}
+            </div>
+          </div>
+
           {/* View mode toggle for executors with valid JSONL */}
           {isValidJsonl && hasStdout && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {executor} output
-                </Badge>
                 {jsonlFormat && (
                   <Badge variant="secondary" className="text-xs">
                     {jsonlFormat} format

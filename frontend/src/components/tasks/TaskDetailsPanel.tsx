@@ -45,6 +45,7 @@ import type {
   ApiResponse,
   TaskWithAttemptStatus,
   ExecutionProcess,
+  ExecutionProcessSummary,
   EditorType,
   Project,
 } from "shared/types";
@@ -118,21 +119,6 @@ const getAttemptStatusDisplay = (
         label: "Executor Failed",
         dotColor: "bg-red-500",
       };
-    case "devserverrunning":
-      return {
-        label: "Dev Server Running",
-        dotColor: "bg-blue-500",
-      };
-    case "devservercomplete":
-      return {
-        label: "Dev Server Complete",
-        dotColor: "bg-green-500",
-      };
-    case "devserverfailed":
-      return {
-        label: "Dev Server Failed",
-        dotColor: "bg-red-500",
-      };
     default:
       return {
         label: "Unknown",
@@ -154,12 +140,16 @@ export function TaskDetailsPanel({
   const [selectedAttempt, setSelectedAttempt] = useState<TaskAttempt | null>(
     null
   );
-  const [attemptActivities, setAttemptActivities] = useState<
-    TaskAttemptActivity[]
-  >([]);
-  const [executionProcesses, setExecutionProcesses] = useState<
-    Record<string, ExecutionProcess>
-  >({});
+  // Combined attempt data state
+  const [attemptData, setAttemptData] = useState<{
+    activities: TaskAttemptActivity[];
+    processes: ExecutionProcessSummary[];
+    runningProcessDetails: Record<string, ExecutionProcess>;
+  }>({
+    activities: [],
+    processes: [],
+    runningProcessDetails: {}
+  });
   const [loading, setLoading] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [selectedExecutor, setSelectedExecutor] = useState<string>("claude");
@@ -177,6 +167,15 @@ export function TaskDetailsPanel({
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { config } = useConfig();
+
+  // Find running dev server in current project (across all task attempts)
+  const runningDevServer = useMemo(() => {
+    return attemptData.processes.find(
+      process => 
+        process.process_type === "devserver" && 
+        process.status === "running"
+    );
+  }, [attemptData.processes]);
 
   // Handle ESC key locally to prevent global navigation
   useEffect(() => {
@@ -202,16 +201,15 @@ export function TaskDetailsPanel({
   ];
 
   // Check if any execution process is currently running
-  // We need to check the latest activity for each execution process
   const isAttemptRunning = useMemo(() => {
-    if (!selectedAttempt || attemptActivities.length === 0 || isStopping) {
+    if (!selectedAttempt || attemptData.activities.length === 0 || isStopping) {
       return false;
     }
 
     // Group activities by execution_process_id and get the latest one for each
     const latestActivitiesByProcess = new Map<string, TaskAttemptActivity>();
 
-    attemptActivities.forEach((activity) => {
+    attemptData.activities.forEach((activity) => {
       const existing = latestActivitiesByProcess.get(
         activity.execution_process_id
       );
@@ -227,24 +225,23 @@ export function TaskDetailsPanel({
     return Array.from(latestActivitiesByProcess.values()).some(
       (activity) =>
         activity.status === "setuprunning" ||
-        activity.status === "executorrunning" ||
-        activity.status === "devserverrunning"
+        activity.status === "executorrunning"
     );
-  }, [selectedAttempt, attemptActivities, isStopping]);
+  }, [selectedAttempt, attemptData.activities, isStopping]);
 
   // Check if follow-up should be enabled
   const canSendFollowUp = useMemo(() => {
-    if (!selectedAttempt || attemptActivities.length === 0 || isAttemptRunning || isSendingFollowUp) {
+    if (!selectedAttempt || attemptData.activities.length === 0 || isAttemptRunning || isSendingFollowUp) {
       return false;
     }
 
     // Need at least one completed coding agent execution
-    const codingAgentActivities = attemptActivities.filter(
+    const codingAgentActivities = attemptData.activities.filter(
       (activity) => activity.status === "executorcomplete"
     );
 
     return codingAgentActivities.length > 0;
-  }, [selectedAttempt, attemptActivities, isAttemptRunning, isSendingFollowUp]);
+  }, [selectedAttempt, attemptData.activities, isAttemptRunning, isSendingFollowUp]);
 
   // Polling for updates when attempt is running
   useEffect(() => {
@@ -252,7 +249,7 @@ export function TaskDetailsPanel({
 
     const interval = setInterval(() => {
       if (selectedAttempt) {
-        fetchAttemptActivities(selectedAttempt.id, true);
+        fetchAttemptData(selectedAttempt.id, true);
       }
     }, 2000);
 
@@ -277,7 +274,7 @@ export function TaskDetailsPanel({
     if (shouldAutoScroll && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-  }, [attemptActivities, executionProcesses, shouldAutoScroll]);
+  }, [attemptData.activities, attemptData.processes, shouldAutoScroll]);
 
   // Handle scroll events to detect manual scrolling
   const handleScroll = useCallback(() => {
@@ -315,12 +312,15 @@ export function TaskDetailsPanel({
                 : latest
             );
             setSelectedAttempt(latestAttempt);
-            fetchAttemptActivities(latestAttempt.id);
+            fetchAttemptData(latestAttempt.id);
           } else {
             // Clear state when no attempts exist
             setSelectedAttempt(null);
-            setAttemptActivities([]);
-            setExecutionProcesses({});
+            setAttemptData({
+              activities: [],
+              processes: [],
+              runningProcessDetails: {}
+            });
           }
         }
       }
@@ -331,68 +331,76 @@ export function TaskDetailsPanel({
     }
   };
 
-  const fetchAttemptActivities = async (
+  const fetchAttemptData = async (
     attemptId: string,
     _isBackgroundUpdate = false
   ) => {
     if (!task) return;
 
     try {
-      const response = await makeRequest(
-        `/api/projects/${projectId}/tasks/${task.id}/attempts/${attemptId}/activities`
-      );
+      const [activitiesResponse, processesResponse] = await Promise.all([
+        makeRequest(
+          `/api/projects/${projectId}/tasks/${task.id}/attempts/${attemptId}/activities`
+        ),
+        makeRequest(
+          `/api/projects/${projectId}/tasks/${task.id}/attempts/${attemptId}/execution-processes`
+        )
+      ]);
 
-      if (response.ok) {
-        const result: ApiResponse<TaskAttemptActivity[]> =
-          await response.json();
-        if (result.success && result.data) {
-          setAttemptActivities(result.data);
-
-          // Fetch execution processes for running activities
-          const runningActivities = result.data.filter(
+      if (activitiesResponse.ok && processesResponse.ok) {
+        const activitiesResult: ApiResponse<TaskAttemptActivity[]> =
+          await activitiesResponse.json();
+        const processesResult: ApiResponse<ExecutionProcessSummary[]> =
+          await processesResponse.json();
+        
+        if (activitiesResult.success && processesResult.success && 
+            activitiesResult.data && processesResult.data) {
+          
+          // Find running activities that need detailed execution info
+          const runningActivities = activitiesResult.data.filter(
             (activity) =>
               activity.status === "setuprunning" ||
-              activity.status === "executorrunning" ||
-              activity.status === "devserverrunning"
+              activity.status === "executorrunning"
           );
 
+          // Fetch detailed execution info for running processes
+          const runningProcessDetails: Record<string, ExecutionProcess> = {};
           for (const activity of runningActivities) {
-            fetchExecutionProcess(activity.execution_process_id);
+            try {
+              const detailResponse = await makeRequest(
+                `/api/projects/${projectId}/execution-processes/${activity.execution_process_id}`
+              );
+              if (detailResponse.ok) {
+                const detailResult: ApiResponse<ExecutionProcess> = await detailResponse.json();
+                if (detailResult.success && detailResult.data) {
+                  runningProcessDetails[activity.execution_process_id] = detailResult.data;
+                }
+              }
+            } catch (err) {
+              console.error(`Failed to fetch execution process ${activity.execution_process_id}:`, err);
+            }
           }
+
+          // Update all attempt data at once
+          setAttemptData({
+            activities: activitiesResult.data,
+            processes: processesResult.data,
+            runningProcessDetails
+          });
         }
       }
     } catch (err) {
-      console.error("Failed to fetch attempt activities:", err);
+      console.error("Failed to fetch attempt data:", err);
     }
   };
 
-  const fetchExecutionProcess = async (processId: string) => {
-    if (!task) return;
 
-    try {
-      const response = await makeRequest(
-        `/api/projects/${projectId}/execution-processes/${processId}`
-      );
-
-      if (response.ok) {
-        const result: ApiResponse<ExecutionProcess> = await response.json();
-        if (result.success && result.data) {
-          setExecutionProcesses((prev) => ({
-            ...prev,
-            [processId]: result.data!,
-          }));
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch execution process:", err);
-    }
-  };
 
   const handleAttemptChange = (attemptId: string) => {
     const attempt = taskAttempts.find((a) => a.id === attemptId);
     if (attempt) {
       setSelectedAttempt(attempt);
-      fetchAttemptActivities(attempt.id);
+      fetchAttemptData(attempt.id);
     }
   };
 
@@ -450,9 +458,38 @@ export function TaskDetailsPanel({
       }
 
       // Refresh activities to show the new dev server process
-      fetchAttemptActivities(selectedAttempt.id);
+      fetchAttemptData(selectedAttempt.id);
     } catch (err) {
       console.error("Failed to start dev server:", err);
+    } finally {
+      setIsStartingDevServer(false);
+    }
+  };
+
+  const stopDevServer = async () => {
+    if (!task || !selectedAttempt || !runningDevServer) return;
+
+    setIsStartingDevServer(true);
+    
+    try {
+      const response = await makeRequest(
+        `/api/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttempt.id}/execution-processes/${runningDevServer.id}/stop`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to stop dev server");
+      }
+
+      // Refresh activities to show the stopped dev server
+      fetchAttemptData(selectedAttempt.id);
+    } catch (err) {
+      console.error("Failed to stop dev server:", err);
     } finally {
       setIsStartingDevServer(false);
     }
@@ -500,13 +537,11 @@ export function TaskDetailsPanel({
       );
 
       if (response.ok) {
-        // Clear cached execution processes since they should be stopped
-        setExecutionProcesses({});
         // Refresh activities to show updated status
-        await fetchAttemptActivities(selectedAttempt.id);
+        await fetchAttemptData(selectedAttempt.id);
         // Wait a bit for the backend to finish updating
         setTimeout(() => {
-          fetchAttemptActivities(selectedAttempt.id);
+          fetchAttemptData(selectedAttempt.id);
         }, 1000);
       }
     } catch (err) {
@@ -551,7 +586,7 @@ export function TaskDetailsPanel({
         // Clear the message
         setFollowUpMessage("");
         // Refresh activities to show the new follow-up execution
-        fetchAttemptActivities(selectedAttempt.id);
+        fetchAttemptData(selectedAttempt.id);
       } else {
         const errorText = await response.text();
         setFollowUpError(`Failed to start follow-up execution: ${errorText || response.statusText}`);
@@ -780,13 +815,21 @@ export function TaskDetailsPanel({
                       )}
                       {project?.dev_script && (
                         <Button
-                          variant="outline"
+                          variant={runningDevServer ? "destructive" : "outline"}
                           size="sm"
-                          onClick={startDevServer}
+                          onClick={runningDevServer ? stopDevServer : startDevServer}
                           disabled={isStartingDevServer}
                         >
-                          <Play className="h-4 w-4 mr-1" />
-                          {isStartingDevServer ? "Starting..." : "Dev Server"}
+                          {runningDevServer ? (
+                            <StopCircle className="h-4 w-4 mr-1" />
+                          ) : (
+                            <Play className="h-4 w-4 mr-1" />
+                          )}
+                          {isStartingDevServer 
+                            ? runningDevServer ? "Stopping..." : "Starting..."
+                            : runningDevServer 
+                            ? "Stop Dev Server" 
+                            : "Start Dev Server"}
                         </Button>
                       )}
                       <Button
@@ -829,7 +872,7 @@ export function TaskDetailsPanel({
                         <Label className="text-sm font-medium mb-3 block">
                           Activity History
                         </Label>
-                        {attemptActivities.length === 0 ? (
+                        {attemptData.activities.length === 0 ? (
                           <div className="text-center py-4 text-muted-foreground">
                             No activities found
                           </div>
@@ -858,7 +901,7 @@ export function TaskDetailsPanel({
                                 </div>
                               </div>
                             )}
-                            {attemptActivities.slice().map((activity) => (
+                            {attemptData.activities.slice().map((activity) => (
                               <div key={activity.id}>
                                 {/* Compact activity message */}
                                 <div className="flex items-center gap-3 my-4 rounded-md">
@@ -892,9 +935,8 @@ export function TaskDetailsPanel({
 
                                 {/* Show stdio output for running processes */}
                                 {(activity.status === "setuprunning" ||
-                                  activity.status === "executorrunning" ||
-                                  activity.status === "devserverrunning") &&
-                                  executionProcesses[
+                                  activity.status === "executorrunning") &&
+                                  attemptData.runningProcessDetails[
                                     activity.execution_process_id
                                   ] && (
                                     <div className="mt-2">
@@ -909,7 +951,7 @@ export function TaskDetailsPanel({
                                       >
                                         <ExecutionOutputViewer
                                           executionProcess={
-                                            executionProcesses[
+                                            attemptData.runningProcessDetails[
                                               activity.execution_process_id
                                             ]
                                           }

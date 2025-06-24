@@ -86,6 +86,24 @@ pub struct UpdateExecutionProcess {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ExecutionProcessSummary {
+    pub id: Uuid,
+    pub task_attempt_id: Uuid,
+    pub process_type: ExecutionProcessType,
+    pub executor_type: Option<String>, // "echo", "claude", "amp", etc. - only for CodingAgent processes
+    pub status: ExecutionProcessStatus,
+    pub command: String,
+    pub args: Option<String>, // JSON array of arguments
+    pub working_directory: String,
+    pub exit_code: Option<i64>,
+    pub started_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 impl ExecutionProcess {
     /// Find execution process by ID
     pub async fn find_by_id(pool: &SqlitePool, id: Uuid) -> Result<Option<Self>, sqlx::Error> {
@@ -133,6 +151,36 @@ impl ExecutionProcess {
                 working_directory, 
                 stdout, 
                 stderr, 
+                exit_code,
+                started_at as "started_at!: DateTime<Utc>",
+                completed_at as "completed_at?: DateTime<Utc>",
+                created_at as "created_at!: DateTime<Utc>", 
+                updated_at as "updated_at!: DateTime<Utc>"
+               FROM execution_processes 
+               WHERE task_attempt_id = $1 
+               ORDER BY created_at ASC"#,
+            task_attempt_id
+        )
+        .fetch_all(pool)
+        .await
+    }
+
+    /// Find execution process summaries for a task attempt (excluding stdio)
+    pub async fn find_summaries_by_task_attempt_id(
+        pool: &SqlitePool,
+        task_attempt_id: Uuid,
+    ) -> Result<Vec<ExecutionProcessSummary>, sqlx::Error> {
+        sqlx::query_as!(
+            ExecutionProcessSummary,
+            r#"SELECT 
+                id as "id!: Uuid", 
+                task_attempt_id as "task_attempt_id!: Uuid", 
+                process_type as "process_type!: ExecutionProcessType",
+                executor_type,
+                status as "status!: ExecutionProcessStatus",
+                command, 
+                args, 
+                working_directory, 
                 exit_code,
                 started_at as "started_at!: DateTime<Utc>",
                 completed_at as "completed_at?: DateTime<Utc>",

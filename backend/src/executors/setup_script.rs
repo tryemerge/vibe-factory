@@ -35,6 +35,7 @@ impl Executor for SetupScriptExecutor {
             .arg("-c")
             .arg(&self.script)
             .current_dir(worktree_path)
+            .process_group(0)
             .spawn()
             .map_err(ExecutorError::SpawnFailed)?;
 

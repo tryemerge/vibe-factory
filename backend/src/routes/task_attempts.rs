@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use crate::models::{
-    execution_process::ExecutionProcess,
+    execution_process::{ExecutionProcess, ExecutionProcessSummary},
     task::Task,
     task_attempt::{
         BranchStatus, CreateFollowUpAttempt, CreateTaskAttempt, TaskAttempt, TaskAttemptStatus,
@@ -431,7 +431,7 @@ pub async fn rebase_task_attempt(
 pub async fn get_task_attempt_execution_processes(
     Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
     Extension(pool): Extension<SqlitePool>,
-) -> Result<ResponseJson<ApiResponse<Vec<ExecutionProcess>>>, StatusCode> {
+) -> Result<ResponseJson<ApiResponse<Vec<ExecutionProcessSummary>>>, StatusCode> {
     // Verify task attempt exists and belongs to the correct task
     match TaskAttempt::exists_for_task(&pool, attempt_id, task_id, project_id).await {
         Ok(false) => return Err(StatusCode::NOT_FOUND),
@@ -442,7 +442,7 @@ pub async fn get_task_attempt_execution_processes(
         Ok(true) => {}
     }
 
-    match ExecutionProcess::find_by_task_attempt_id(&pool, attempt_id).await {
+    match ExecutionProcess::find_summaries_by_task_attempt_id(&pool, attempt_id).await {
         Ok(processes) => Ok(ResponseJson(ApiResponse {
             success: true,
             data: Some(processes),
@@ -549,36 +549,35 @@ pub async fn stop_all_execution_processes(
                     tracing::error!("Failed to update execution process status: {}", e);
                     errors.push(format!("Failed to update process {} status", process.id));
                 } else {
-                    // Create a new activity record to mark as stopped
-                    let activity_id = Uuid::new_v4();
-                    let stop_status = match process.process_type {
-                        crate::models::execution_process::ExecutionProcessType::DevServer => {
-                            TaskAttemptStatus::DevServerFailed
-                        }
-                        _ => TaskAttemptStatus::ExecutorFailed,
-                    };
-                    let create_activity = CreateTaskAttemptActivity {
-                        execution_process_id: process.id,
-                        status: Some(stop_status.clone()),
-                        note: Some(format!(
-                            "Execution process {:?} ({}) stopped by user",
-                            process.process_type, process.id
-                        )),
-                    };
+                    // Create activity record for stopped processes (skip dev servers)
+                    if !matches!(
+                        process.process_type,
+                        crate::models::execution_process::ExecutionProcessType::DevServer
+                    ) {
+                        let activity_id = Uuid::new_v4();
+                        let create_activity = CreateTaskAttemptActivity {
+                            execution_process_id: process.id,
+                            status: Some(TaskAttemptStatus::ExecutorFailed),
+                            note: Some(format!(
+                                "Execution process {:?} ({}) stopped by user",
+                                process.process_type, process.id
+                            )),
+                        };
 
-                    if let Err(e) = TaskAttemptActivity::create(
-                        &pool,
-                        &create_activity,
-                        activity_id,
-                        stop_status,
-                    )
-                    .await
-                    {
-                        tracing::error!("Failed to create stopped activity: {}", e);
-                        errors.push(format!(
-                            "Failed to create activity for process {}",
-                            process.id
-                        ));
+                        if let Err(e) = TaskAttemptActivity::create(
+                            &pool,
+                            &create_activity,
+                            activity_id,
+                            TaskAttemptStatus::ExecutorFailed,
+                        )
+                        .await
+                        {
+                            tracing::error!("Failed to create stopped activity: {}", e);
+                            errors.push(format!(
+                                "Failed to create activity for process {}",
+                                process.id
+                            ));
+                        }
                     }
                 }
             }
@@ -679,28 +678,32 @@ pub async fn stop_execution_process(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    // Create a new activity record to mark as stopped
-    let activity_id = Uuid::new_v4();
-    let stop_status = match process.process_type {
-        crate::models::execution_process::ExecutionProcessType::DevServer => {
-            TaskAttemptStatus::DevServerFailed
-        }
-        _ => TaskAttemptStatus::ExecutorFailed,
-    };
-    let create_activity = CreateTaskAttemptActivity {
-        execution_process_id: process_id,
-        status: Some(stop_status.clone()),
-        note: Some(format!(
-            "Execution process {:?} ({}) stopped by user",
-            process.process_type, process_id
-        )),
-    };
+    // Create activity record for stopped processes (skip dev servers)
+    if !matches!(
+        process.process_type,
+        crate::models::execution_process::ExecutionProcessType::DevServer
+    ) {
+        let activity_id = Uuid::new_v4();
+        let create_activity = CreateTaskAttemptActivity {
+            execution_process_id: process_id,
+            status: Some(TaskAttemptStatus::ExecutorFailed),
+            note: Some(format!(
+                "Execution process {:?} ({}) stopped by user",
+                process.process_type, process_id
+            )),
+        };
 
-    if let Err(e) =
-        TaskAttemptActivity::create(&pool, &create_activity, activity_id, stop_status).await
-    {
-        tracing::error!("Failed to create stopped activity: {}", e);
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        if let Err(e) = TaskAttemptActivity::create(
+            &pool,
+            &create_activity,
+            activity_id,
+            TaskAttemptStatus::ExecutorFailed,
+        )
+        .await
+        {
+            tracing::error!("Failed to create stopped activity: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
     }
 
     Ok(ResponseJson(ApiResponse {

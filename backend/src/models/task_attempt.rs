@@ -58,9 +58,6 @@ pub enum TaskAttemptStatus {
     ExecutorRunning,
     ExecutorComplete,
     ExecutorFailed,
-    DevServerRunning,
-    DevServerComplete,
-    DevServerFailed,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
@@ -527,7 +524,7 @@ impl TaskAttempt {
             task_id,
             crate::executor::ExecutorType::DevServer(dev_script),
             "Starting dev server".to_string(),
-            TaskAttemptStatus::DevServerRunning,
+            TaskAttemptStatus::ExecutorRunning, // Dev servers don't create activities, just use generic status
             crate::models::execution_process::ExecutionProcessType::DevServer,
             &task_attempt.worktree_path,
         )
@@ -648,9 +645,14 @@ impl TaskAttempt {
             Self::create_executor_session_record(pool, attempt_id, task_id, process_id).await?;
         }
 
-        // Create activity record
-        Self::create_activity_record(pool, process_id, activity_status.clone(), &activity_note)
-            .await?;
+        // Create activity record (skip for dev servers as they run in parallel)
+        if !matches!(
+            process_type,
+            crate::models::execution_process::ExecutionProcessType::DevServer
+        ) {
+            Self::create_activity_record(pool, process_id, activity_status.clone(), &activity_note)
+                .await?;
+        }
 
         tracing::info!("Starting {} for task attempt {}", activity_note, attempt_id);
 

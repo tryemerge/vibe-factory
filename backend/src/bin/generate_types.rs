@@ -103,6 +103,7 @@ fn main() {
         vibe_kanban::models::task_attempt::WorktreeDiff::decl(),
         vibe_kanban::models::task_attempt::BranchStatus::decl(),
         vibe_kanban::models::execution_process::ExecutionProcess::decl(),
+        vibe_kanban::models::execution_process::ExecutionProcessSummary::decl(),
         vibe_kanban::models::execution_process::ExecutionProcessStatus::decl(),
         vibe_kanban::models::execution_process::ExecutionProcessType::decl(),
         vibe_kanban::models::execution_process::CreateExecutionProcess::decl(),

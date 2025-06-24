@@ -46,7 +46,7 @@ export type TaskWithAttemptStatus = { id: string, project_id: string, title: str
 
 export type UpdateTask = { title: string | null, description: string | null, status: TaskStatus | null, };
 
-export type TaskAttemptStatus = "setuprunning" | "setupcomplete" | "setupfailed" | "executorrunning" | "executorcomplete" | "executorfailed" | "devserverrunning" | "devservercomplete" | "devserverfailed";
+export type TaskAttemptStatus = "setuprunning" | "setupcomplete" | "setupfailed" | "executorrunning" | "executorcomplete" | "executorfailed";
 
 export type TaskAttempt = { id: string, task_id: string, worktree_path: string, merge_commit: string | null, executor: string | null, created_at: string, updated_at: string, };
 
@@ -73,6 +73,8 @@ export type WorktreeDiff = { files: Array<FileDiff>, };
 export type BranchStatus = { is_behind: boolean, commits_behind: number, commits_ahead: number, up_to_date: boolean, merged: boolean, };
 
 export type ExecutionProcess = { id: string, task_attempt_id: string, process_type: ExecutionProcessType, executor_type: string | null, status: ExecutionProcessStatus, command: string, args: string | null, working_directory: string, stdout: string | null, stderr: string | null, exit_code: bigint | null, started_at: string, completed_at: string | null, created_at: string, updated_at: string, };
+
+export type ExecutionProcessSummary = { id: string, task_attempt_id: string, process_type: ExecutionProcessType, executor_type: string | null, status: ExecutionProcessStatus, command: string, args: string | null, working_directory: string, exit_code: bigint | null, started_at: string, completed_at: string | null, created_at: string, updated_at: string, };
 
 export type ExecutionProcessStatus = "running" | "completed" | "failed" | "killed";
 

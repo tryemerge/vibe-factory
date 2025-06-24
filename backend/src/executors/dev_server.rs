@@ -6,6 +6,10 @@ use crate::executor::{Executor, ExecutorError};
 use crate::models::project::Project;
 use crate::models::task::Task;
 
+use libc;
+use std::os::unix::process::CommandExt; // for before_exec
+use tokio::process::Command; // make sure libc is in your Cargo.toml
+
 /// Executor for running project dev server scripts
 pub struct DevServerExecutor {
     pub script: String,
@@ -35,6 +39,12 @@ impl Executor for DevServerExecutor {
             .arg("-c")
             .arg(&self.script)
             .current_dir(worktree_path)
+            .process_group(0)
+            .before_exec(|| {
+                // if *this* child’s parent ever dies, the kernel will SIGTERM it
+                unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) };
+                Ok(())
+            })
             .spawn()
             .map_err(ExecutorError::SpawnFailed)?;
 
