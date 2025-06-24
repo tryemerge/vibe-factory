@@ -21,6 +21,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Chip } from "@/components/ui/chip";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ExecutionOutputViewer } from "./ExecutionOutputViewer";
 import { EditorSelectionDialog } from "./EditorSelectionDialog";
 
@@ -148,7 +154,7 @@ export function TaskDetailsPanel({
   }>({
     activities: [],
     processes: [],
-    runningProcessDetails: {}
+    runningProcessDetails: {},
   });
   const [loading, setLoading] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -162,7 +168,10 @@ export function TaskDetailsPanel({
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [isStartingDevServer, setIsStartingDevServer] = useState(false);
-  
+  const [devServerDetails, setDevServerDetails] =
+    useState<ExecutionProcess | null>(null);
+  const [isHoveringDevServer, setIsHoveringDevServer] = useState(false);
+
   // Auto-scroll state
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -171,9 +180,8 @@ export function TaskDetailsPanel({
   // Find running dev server in current project (across all task attempts)
   const runningDevServer = useMemo(() => {
     return attemptData.processes.find(
-      process => 
-        process.process_type === "devserver" && 
-        process.status === "running"
+      (process) =>
+        process.process_type === "devserver" && process.status === "running"
     );
   }, [attemptData.processes]);
 
@@ -182,15 +190,15 @@ export function TaskDetailsPanel({
     if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
         onClose();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
+    document.addEventListener("keydown", handleKeyDown, true); // Use capture phase
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [isOpen, onClose]);
 
   // Available executors
@@ -231,7 +239,12 @@ export function TaskDetailsPanel({
 
   // Check if follow-up should be enabled
   const canSendFollowUp = useMemo(() => {
-    if (!selectedAttempt || attemptData.activities.length === 0 || isAttemptRunning || isSendingFollowUp) {
+    if (
+      !selectedAttempt ||
+      attemptData.activities.length === 0 ||
+      isAttemptRunning ||
+      isSendingFollowUp
+    ) {
       return false;
     }
 
@@ -241,7 +254,12 @@ export function TaskDetailsPanel({
     );
 
     return codingAgentActivities.length > 0;
-  }, [selectedAttempt, attemptData.activities, isAttemptRunning, isSendingFollowUp]);
+  }, [
+    selectedAttempt,
+    attemptData.activities,
+    isAttemptRunning,
+    isSendingFollowUp,
+  ]);
 
   // Polling for updates when attempt is running
   useEffect(() => {
@@ -255,6 +273,45 @@ export function TaskDetailsPanel({
 
     return () => clearInterval(interval);
   }, [isAttemptRunning, task?.id, selectedAttempt?.id]);
+
+  // Fetch dev server details when hovering
+  const fetchDevServerDetails = async () => {
+    if (!runningDevServer || !task || !selectedAttempt) return;
+
+    try {
+      const response = await makeRequest(
+        `/api/projects/${projectId}/execution-processes/${runningDevServer.id}`
+      );
+      if (response.ok) {
+        const result: ApiResponse<ExecutionProcess> = await response.json();
+        if (result.success && result.data) {
+          setDevServerDetails(result.data);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch dev server details:", err);
+    }
+  };
+
+  // Poll dev server details while hovering
+  useEffect(() => {
+    if (!isHoveringDevServer || !runningDevServer) {
+      setDevServerDetails(null);
+      return;
+    }
+
+    // Fetch immediately
+    fetchDevServerDetails();
+
+    // Then poll every 2 seconds
+    const interval = setInterval(fetchDevServerDetails, 2000);
+    return () => clearInterval(interval);
+  }, [
+    isHoveringDevServer,
+    runningDevServer?.id,
+    task?.id,
+    selectedAttempt?.id,
+  ]);
 
   // Set default executor from config
   useEffect(() => {
@@ -272,16 +329,18 @@ export function TaskDetailsPanel({
   // Auto-scroll to bottom when activities or execution processes change
   useEffect(() => {
     if (shouldAutoScroll && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
     }
   }, [attemptData.activities, attemptData.processes, shouldAutoScroll]);
 
   // Handle scroll events to detect manual scrolling
   const handleScroll = useCallback(() => {
     if (scrollContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } =
+        scrollContainerRef.current;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5; // 5px tolerance
-      
+
       if (isAtBottom && !shouldAutoScroll) {
         setShouldAutoScroll(true);
       } else if (!isAtBottom && shouldAutoScroll) {
@@ -319,7 +378,7 @@ export function TaskDetailsPanel({
             setAttemptData({
               activities: [],
               processes: [],
-              runningProcessDetails: {}
+              runningProcessDetails: {},
             });
           }
         }
@@ -344,7 +403,7 @@ export function TaskDetailsPanel({
         ),
         makeRequest(
           `/api/projects/${projectId}/tasks/${task.id}/attempts/${attemptId}/execution-processes`
-        )
+        ),
       ]);
 
       if (activitiesResponse.ok && processesResponse.ok) {
@@ -352,10 +411,13 @@ export function TaskDetailsPanel({
           await activitiesResponse.json();
         const processesResult: ApiResponse<ExecutionProcessSummary[]> =
           await processesResponse.json();
-        
-        if (activitiesResult.success && processesResult.success && 
-            activitiesResult.data && processesResult.data) {
-          
+
+        if (
+          activitiesResult.success &&
+          processesResult.success &&
+          activitiesResult.data &&
+          processesResult.data
+        ) {
           // Find running activities that need detailed execution info
           const runningActivities = activitiesResult.data.filter(
             (activity) =>
@@ -371,13 +433,18 @@ export function TaskDetailsPanel({
                 `/api/projects/${projectId}/execution-processes/${activity.execution_process_id}`
               );
               if (detailResponse.ok) {
-                const detailResult: ApiResponse<ExecutionProcess> = await detailResponse.json();
+                const detailResult: ApiResponse<ExecutionProcess> =
+                  await detailResponse.json();
                 if (detailResult.success && detailResult.data) {
-                  runningProcessDetails[activity.execution_process_id] = detailResult.data;
+                  runningProcessDetails[activity.execution_process_id] =
+                    detailResult.data;
                 }
               }
             } catch (err) {
-              console.error(`Failed to fetch execution process ${activity.execution_process_id}:`, err);
+              console.error(
+                `Failed to fetch execution process ${activity.execution_process_id}:`,
+                err
+              );
             }
           }
 
@@ -385,7 +452,7 @@ export function TaskDetailsPanel({
           setAttemptData({
             activities: activitiesResult.data,
             processes: processesResult.data,
-            runningProcessDetails
+            runningProcessDetails,
           });
         }
       }
@@ -393,8 +460,6 @@ export function TaskDetailsPanel({
       console.error("Failed to fetch attempt data:", err);
     }
   };
-
-
 
   const handleAttemptChange = (attemptId: string) => {
     const attempt = taskAttempts.find((a) => a.id === attemptId);
@@ -435,7 +500,7 @@ export function TaskDetailsPanel({
     if (!task || !selectedAttempt || !project?.dev_script) return;
 
     setIsStartingDevServer(true);
-    
+
     try {
       const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttempt.id}/start-dev-server`,
@@ -452,7 +517,7 @@ export function TaskDetailsPanel({
       }
 
       const data: ApiResponse<null> = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.message || "Failed to start dev server");
       }
@@ -470,7 +535,7 @@ export function TaskDetailsPanel({
     if (!task || !selectedAttempt || !runningDevServer) return;
 
     setIsStartingDevServer(true);
-    
+
     try {
       const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttempt.id}/execution-processes/${runningDevServer.id}/stop`,
@@ -481,7 +546,7 @@ export function TaskDetailsPanel({
           },
         }
       );
-      
+
       if (!response.ok) {
         throw new Error("Failed to stop dev server");
       }
@@ -589,10 +654,18 @@ export function TaskDetailsPanel({
         fetchAttemptData(selectedAttempt.id);
       } else {
         const errorText = await response.text();
-        setFollowUpError(`Failed to start follow-up execution: ${errorText || response.statusText}`);
+        setFollowUpError(
+          `Failed to start follow-up execution: ${
+            errorText || response.statusText
+          }`
+        );
       }
     } catch (err) {
-      setFollowUpError(`Failed to send follow-up: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setFollowUpError(
+        `Failed to send follow-up: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsSendingFollowUp(false);
     }
@@ -710,9 +783,6 @@ export function TaskDetailsPanel({
                             selectedAttempt.created_at
                           ).toLocaleTimeString()}
                         </span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          Worktree: {selectedAttempt.worktree_path}
-                        </span>
                       </div>
                     )}
                     <div className="flex gap-1">
@@ -813,25 +883,83 @@ export function TaskDetailsPanel({
                           {isStopping ? "Stopping..." : "Stop"}
                         </Button>
                       )}
-                      {project?.dev_script && (
-                        <Button
-                          variant={runningDevServer ? "destructive" : "outline"}
-                          size="sm"
-                          onClick={runningDevServer ? stopDevServer : startDevServer}
-                          disabled={isStartingDevServer}
-                        >
-                          {runningDevServer ? (
-                            <StopCircle className="h-4 w-4 mr-1" />
-                          ) : (
-                            <Play className="h-4 w-4 mr-1" />
-                          )}
-                          {isStartingDevServer 
-                            ? runningDevServer ? "Stopping..." : "Starting..."
-                            : runningDevServer 
-                            ? "Stop Dev Server" 
-                            : "Start Dev Server"}
-                        </Button>
-                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className={
+                                !project?.dev_script ? "cursor-not-allowed" : ""
+                              }
+                              onMouseEnter={() => setIsHoveringDevServer(true)}
+                              onMouseLeave={() => setIsHoveringDevServer(false)}
+                            >
+                              <Button
+                                variant={
+                                  runningDevServer ? "destructive" : "outline"
+                                }
+                                size="sm"
+                                onClick={
+                                  runningDevServer
+                                    ? stopDevServer
+                                    : startDevServer
+                                }
+                                disabled={
+                                  isStartingDevServer || !project?.dev_script
+                                }
+                              >
+                                {runningDevServer ? (
+                                  <StopCircle className="h-4 w-4 mr-1" />
+                                ) : (
+                                  <Play className="h-4 w-4 mr-1" />
+                                )}
+                                {isStartingDevServer
+                                  ? runningDevServer
+                                    ? "Stopping..."
+                                    : "Starting..."
+                                  : runningDevServer
+                                  ? "Stop Dev Server"
+                                  : "Start Dev Server"}
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            className={runningDevServer ? "max-w-2xl p-4" : ""}
+                            side="top"
+                            align="center"
+                            avoidCollisions={true}
+                          >
+                            {!project?.dev_script ? (
+                              <p>
+                                Configure a dev server command in project
+                                settings
+                              </p>
+                            ) : runningDevServer && devServerDetails ? (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium">
+                                  Dev Server Logs (Last 10 lines):
+                                </p>
+                                <pre className="text-xs bg-muted p-2 rounded max-h-64 overflow-y-auto whitespace-pre-wrap">
+                                  {(() => {
+                                    const stdout =
+                                      devServerDetails.stdout || "";
+                                    const stderr =
+                                      devServerDetails.stderr || "";
+                                    const allOutput =
+                                      stdout + (stderr ? "\n" + stderr : "");
+                                    const lines = allOutput
+                                      .split("\n")
+                                      .filter((line) => line.trim());
+                                    const lastLines = lines.slice(-10);
+                                    return lastLines.length > 0
+                                      ? lastLines.join("\n")
+                                      : "No output yet...";
+                                  })()}
+                                </pre>
+                              </div>
+                            ) : null}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <Button
                         variant="outline"
                         size="sm"
@@ -854,7 +982,7 @@ export function TaskDetailsPanel({
               </div>
 
               {/* Content */}
-              <div 
+              <div
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
                 className="flex-1 overflow-y-auto p-6 space-y-6"
@@ -941,13 +1069,13 @@ export function TaskDetailsPanel({
                                   ] && (
                                     <div className="mt-2">
                                       <div
-                                      className={`transition-all duration-200 ${
-                                      expandedOutputs.has(
-                                      activity.execution_process_id
-                                      )
-                                      ? ""
-                                      : "max-h-64 overflow-hidden flex flex-col justify-end"
-                                      }`}
+                                        className={`transition-all duration-200 ${
+                                          expandedOutputs.has(
+                                            activity.execution_process_id
+                                          )
+                                            ? ""
+                                            : "max-h-64 overflow-hidden flex flex-col justify-end"
+                                        }`}
                                       >
                                         <ExecutionOutputViewer
                                           executionProcess={
@@ -1019,9 +1147,13 @@ export function TaskDetailsPanel({
                           if (followUpError) setFollowUpError(null);
                         }}
                         onKeyDown={(e) => {
-                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                             e.preventDefault();
-                            if (canSendFollowUp && followUpMessage.trim() && !isSendingFollowUp) {
+                            if (
+                              canSendFollowUp &&
+                              followUpMessage.trim() &&
+                              !isSendingFollowUp
+                            ) {
                               handleSendFollowUp();
                             }
                           }
@@ -1031,7 +1163,11 @@ export function TaskDetailsPanel({
                       />
                       <Button
                         onClick={handleSendFollowUp}
-                        disabled={!canSendFollowUp || !followUpMessage.trim() || isSendingFollowUp}
+                        disabled={
+                          !canSendFollowUp ||
+                          !followUpMessage.trim() ||
+                          isSendingFollowUp
+                        }
                         className="self-end"
                       >
                         {isSendingFollowUp ? (
