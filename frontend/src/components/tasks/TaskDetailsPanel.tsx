@@ -227,7 +227,8 @@ export function TaskDetailsPanel({
     return Array.from(latestActivitiesByProcess.values()).some(
       (activity) =>
         activity.status === "setuprunning" ||
-        activity.status === "executorrunning"
+        activity.status === "executorrunning" ||
+        activity.status === "devserverrunning"
     );
   }, [selectedAttempt, attemptActivities, isStopping]);
 
@@ -351,7 +352,8 @@ export function TaskDetailsPanel({
           const runningActivities = result.data.filter(
             (activity) =>
               activity.status === "setuprunning" ||
-              activity.status === "executorrunning"
+              activity.status === "executorrunning" ||
+              activity.status === "devserverrunning"
           );
 
           for (const activity of runningActivities) {
@@ -890,7 +892,8 @@ export function TaskDetailsPanel({
 
                                 {/* Show stdio output for running processes */}
                                 {(activity.status === "setuprunning" ||
-                                  activity.status === "executorrunning") &&
+                                  activity.status === "executorrunning" ||
+                                  activity.status === "devserverrunning") &&
                                   executionProcesses[
                                     activity.execution_process_id
                                   ] && (
