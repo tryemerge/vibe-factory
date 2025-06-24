@@ -7,7 +7,10 @@ use axum::{
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::models::{config::{Config, EditorConstants, SoundConstants}, ApiResponse};
+use crate::models::{
+    config::{Config, EditorConstants, SoundConstants},
+    ApiResponse,
+};
 use crate::utils;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;

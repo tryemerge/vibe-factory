@@ -83,14 +83,23 @@ async fn serve_file(path: &str) -> impl IntoResponse {
     }
 }
 
-async fn serve_sound_file(axum::extract::Path(filename): axum::extract::Path<String>) -> impl IntoResponse {
-    use tokio::fs;
+async fn serve_sound_file(
+    axum::extract::Path(filename): axum::extract::Path<String>,
+) -> impl IntoResponse {
     use std::path::Path;
+    use tokio::fs;
 
     // Validate filename contains only expected sound files
-    let valid_sounds = ["abstract-sound1.mp3", "abstract-sound2.mp3", "abstract-sound3.mp3", 
-                       "abstract-sound4.mp3", "cow-mooing.mp3", "phone-vibration.mp3", "rooster.mp3"];
-    
+    let valid_sounds = [
+        "abstract-sound1.mp3",
+        "abstract-sound2.mp3",
+        "abstract-sound3.mp3",
+        "abstract-sound4.mp3",
+        "cow-mooing.mp3",
+        "phone-vibration.mp3",
+        "rooster.mp3",
+    ];
+
     if !valid_sounds.contains(&filename.as_str()) {
         return Response::builder()
             .status(StatusCode::NOT_FOUND)
@@ -99,21 +108,17 @@ async fn serve_sound_file(axum::extract::Path(filename): axum::extract::Path<Str
     }
 
     let sound_path = Path::new("backend/sounds").join(&filename);
-    
+
     match fs::read(&sound_path).await {
-        Ok(content) => {
-            Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, HeaderValue::from_static("audio/mpeg"))
-                .body(Body::from(content))
-                .unwrap()
-        }
-        Err(_) => {
-            Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from("Sound file not found"))
-                .unwrap()
-        }
+        Ok(content) => Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, HeaderValue::from_static("audio/mpeg"))
+            .body(Body::from(content))
+            .unwrap(),
+        Err(_) => Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::from("Sound file not found"))
+            .unwrap(),
     }
 }
 
