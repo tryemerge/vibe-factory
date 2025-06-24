@@ -223,6 +223,42 @@ impl ExecutionProcess {
         .await
     }
 
+    /// Find running dev servers for a specific project
+    pub async fn find_running_dev_servers_by_project(
+        pool: &SqlitePool,
+        project_id: Uuid,
+    ) -> Result<Vec<Self>, sqlx::Error> {
+        sqlx::query_as!(
+            ExecutionProcess,
+            r#"SELECT 
+                ep.id as "id!: Uuid", 
+                ep.task_attempt_id as "task_attempt_id!: Uuid", 
+                ep.process_type as "process_type!: ExecutionProcessType",
+                ep.executor_type,
+                ep.status as "status!: ExecutionProcessStatus",
+                ep.command, 
+                ep.args, 
+                ep.working_directory, 
+                ep.stdout, 
+                ep.stderr, 
+                ep.exit_code,
+                ep.started_at as "started_at!: DateTime<Utc>",
+                ep.completed_at as "completed_at?: DateTime<Utc>",
+                ep.created_at as "created_at!: DateTime<Utc>", 
+                ep.updated_at as "updated_at!: DateTime<Utc>"
+               FROM execution_processes ep
+               JOIN task_attempts ta ON ep.task_attempt_id = ta.id
+               JOIN tasks t ON ta.task_id = t.id
+               WHERE ep.status = 'running' 
+               AND ep.process_type = 'devserver'
+               AND t.project_id = $1
+               ORDER BY ep.created_at ASC"#,
+            project_id
+        )
+        .fetch_all(pool)
+        .await
+    }
+
     /// Create a new execution process
     pub async fn create(
         pool: &SqlitePool,
