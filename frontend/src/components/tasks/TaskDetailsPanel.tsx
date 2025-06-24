@@ -781,13 +781,13 @@ export function TaskDetailsPanel({
                                   ] && (
                                     <div className="mt-2">
                                       <div
-                                        className={`transition-all duration-200 ${
-                                          expandedOutputs.has(
-                                            activity.execution_process_id
-                                          )
-                                            ? ""
-                                            : "max-h-64 overflow-hidden"
-                                        }`}
+                                      className={`transition-all duration-200 ${
+                                      expandedOutputs.has(
+                                      activity.execution_process_id
+                                      )
+                                      ? ""
+                                      : "max-h-64 overflow-hidden flex flex-col justify-end"
+                                      }`}
                                       >
                                         <ExecutionOutputViewer
                                           executionProcess={
@@ -849,6 +849,14 @@ export function TaskDetailsPanel({
                         placeholder="Ask a follow-up question about this task..."
                         value={followUpMessage}
                         onChange={(e) => setFollowUpMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            if (canSendFollowUp && followUpMessage.trim() && !isSendingFollowUp) {
+                              handleSendFollowUp();
+                            }
+                          }
+                        }}
                         className="flex-1 min-h-[60px] resize-none"
                         disabled={!canSendFollowUp}
                       />
