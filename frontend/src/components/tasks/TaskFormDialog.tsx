@@ -45,6 +45,8 @@ interface TaskFormDialogProps {
     description: string,
     status: TaskStatus
   ) => Promise<void>;
+  onCreateInitTask?: () => Promise<void>;
+  hasInitInProgress?: boolean;
 }
 
 export function TaskFormDialog({
@@ -55,15 +57,21 @@ export function TaskFormDialog({
   onCreateTask,
   onCreateAndStartTask,
   onUpdateTask,
+  onCreateInitTask,
+  hasInitInProgress,
 }: TaskFormDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>('todo');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingAndStart, setIsSubmittingAndStart] = useState(false);
+  const [isCreatingInit, setIsCreatingInit] = useState(false);
 
   const { config } = useConfig();
   const isEditMode = Boolean(task);
+  
+  // Check if Claude is the default executor
+  const isClaudeExecutor = config?.executor?.type === 'claude';
 
   useEffect(() => {
     if (task) {
@@ -120,6 +128,18 @@ export function TaskFormDialog({
       onOpenChange(false);
     } finally {
       setIsSubmittingAndStart(false);
+    }
+  };
+
+  const handleCreateInit = async () => {
+    if (!onCreateInitTask) return;
+
+    setIsCreatingInit(true);
+    try {
+      await onCreateInitTask();
+      onOpenChange(false);
+    } finally {
+      setIsCreatingInit(false);
     }
   };
 
@@ -236,7 +256,7 @@ export function TaskFormDialog({
             <Button
               variant="outline"
               onClick={handleCancel}
-              disabled={isSubmitting || isSubmittingAndStart}
+              disabled={isSubmitting || isSubmittingAndStart || isCreatingInit}
             >
               Cancel
             </Button>
@@ -249,11 +269,22 @@ export function TaskFormDialog({
               </Button>
             ) : (
               <>
+                {isClaudeExecutor && onCreateInitTask && (
+                  <Button
+                    variant="outline"
+                    onClick={handleCreateInit}
+                    disabled={
+                      isSubmitting || isSubmittingAndStart || isCreatingInit || hasInitInProgress
+                    }
+                  >
+                    {isCreatingInit ? 'Creating Init...' : 'Init'}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={handleSubmit}
                   disabled={
-                    isSubmitting || isSubmittingAndStart || !title.trim()
+                    isSubmitting || isSubmittingAndStart || isCreatingInit || !title.trim()
                   }
                 >
                   {isSubmitting ? 'Creating...' : 'Create Task'}
@@ -262,7 +293,7 @@ export function TaskFormDialog({
                   <Button
                     onClick={handleCreateAndStart}
                     disabled={
-                      isSubmitting || isSubmittingAndStart || !title.trim()
+                      isSubmitting || isSubmittingAndStart || isCreatingInit || !title.trim()
                     }
                   >
                     {isSubmittingAndStart

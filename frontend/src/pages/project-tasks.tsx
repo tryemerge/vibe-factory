@@ -7,6 +7,7 @@ import { makeRequest } from '@/lib/api';
 import { TaskFormDialog } from '@/components/tasks/TaskFormDialog';
 import { ProjectForm } from '@/components/projects/project-form';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts';
+import { useConfig } from '@/components/config-provider';
 import {
   getMainContainerClasses,
   getKanbanSectionClasses,
@@ -37,6 +38,7 @@ export function ProjectTasks() {
     taskId?: string;
   }>();
   const navigate = useNavigate();
+  const { config } = useConfig();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [project, setProject] = useState<ProjectWithBranch | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,7 +137,7 @@ export function ProjectTasks() {
               if (
                 updatedSelectedTask &&
                 JSON.stringify(selectedTask) !==
-                  JSON.stringify(updatedSelectedTask)
+                JSON.stringify(updatedSelectedTask)
               ) {
                 setSelectedTask(updatedSelectedTask);
               }
@@ -207,6 +209,15 @@ export function ProjectTasks() {
       setError('Failed to create and start task');
     }
   };
+
+  const handleCreateInitTask = async () => {
+    await handleCreateAndStartTask('/init', '', config?.executor);
+  };
+
+  // Check if there's an init task in progress
+  const hasInitInProgress = tasks.some(
+    (task) => task.title === '/init' && task.has_in_progress_attempt
+  );
 
   const handleUpdateTask = async (
     title: string,
@@ -424,6 +435,8 @@ export function ProjectTasks() {
         onCreateTask={handleCreateTask}
         onCreateAndStartTask={handleCreateAndStartTask}
         onUpdateTask={handleUpdateTask}
+        onCreateInitTask={handleCreateInitTask}
+        hasInitInProgress={hasInitInProgress}
       />
 
       <ProjectForm

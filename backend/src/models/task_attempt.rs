@@ -25,11 +25,11 @@ pub enum TaskAttemptError {
 impl std::fmt::Display for TaskAttemptError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TaskAttemptError::Database(e) => write!(f, "Database error: {}", e),
-            TaskAttemptError::Git(e) => write!(f, "Git error: {}", e),
+            TaskAttemptError::Database(e) => write!(f, "Database error: {e}"),
+            TaskAttemptError::Git(e) => write!(f, "Git error: {e}"),
             TaskAttemptError::TaskNotFound => write!(f, "Task not found"),
             TaskAttemptError::ProjectNotFound => write!(f, "Project not found"),
-            TaskAttemptError::ValidationError(e) => write!(f, "Validation error: {}", e),
+            TaskAttemptError::ValidationError(e) => write!(f, "Validation error: {e}"),
         }
     }
 }
@@ -177,7 +177,7 @@ impl TaskAttempt {
             .ok_or(TaskAttemptError::ProjectNotFound)?;
 
         // Generate worktree path automatically
-        let worktree_path_str = format!("/tmp/mission-control-worktree-{}", attempt_id);
+        let worktree_path_str = format!("/tmp/mission-control-worktree-{attempt_id}");
         let worktree_path = Path::new(&worktree_path_str);
 
         // Create the worktree using git2
@@ -192,7 +192,7 @@ impl TaskAttempt {
         }
 
         // Create the worktree at the specified path
-        let branch_name = format!("attempt-{}", attempt_id);
+        let branch_name = format!("attempt-{attempt_id}");
         repo.worktree(&branch_name, worktree_path, None)?;
 
         // Insert the record into the database
@@ -252,14 +252,14 @@ impl TaskAttempt {
         let final_commit = parent_commit.id();
 
         // Now we need to merge the worktree branch into the main repository
-        let branch_name = format!("attempt-{}", attempt_id);
+        let branch_name = format!("attempt-{attempt_id}");
 
         // Get the current base branch name (e.g., "main", "master", "develop", etc.)
         let main_branch = main_repo.head()?.shorthand().unwrap_or("main").to_string();
 
         // Fetch the worktree branch into the main repository
-        let worktree_branch_ref = format!("refs/heads/{}", branch_name);
-        let main_branch_ref = format!("refs/heads/{}", main_branch);
+        let worktree_branch_ref = format!("refs/heads/{branch_name}");
+        let main_branch_ref = format!("refs/heads/{main_branch}");
 
         // Create the branch in main repo pointing to the final commit
         let branch_oid = main_repo.odb()?.write(
@@ -305,7 +305,7 @@ impl TaskAttempt {
             let main_commit = main_repo.find_commit(main_branch_commit.id())?;
             let worktree_commit = main_repo.find_commit(worktree_branch_commit.id())?;
 
-            let merge_commit_message = format!("Merge task: {} into {}", task_title, main_branch);
+            let merge_commit_message = format!("Merge task: {task_title} into {main_branch}");
             let merge_commit_id = main_repo.commit(
                 Some(&main_branch_ref),
                 &signature,
@@ -618,6 +618,7 @@ impl TaskAttempt {
     }
 
     /// Unified function to start any type of process execution
+    #[allow(clippy::too_many_arguments)]
     async fn start_process_execution(
         pool: &SqlitePool,
         app_state: &crate::app_state::AppState,
@@ -1032,7 +1033,7 @@ impl TaskAttempt {
                                     });
                                 }
                                 Err(e) => {
-                                    eprintln!("Error generating diff for {}: {:?}", path_str, e);
+                                    tracing::error!("Error generating diff for {path_str}: {e:?}");
                                 }
                                 _ => {}
                             }
@@ -1117,7 +1118,7 @@ impl TaskAttempt {
                                     });
                                 }
                                 Err(e) => {
-                                    eprintln!("Error generating diff for {}: {:?}", path_str, e);
+                                    tracing::error!("Error generating diff for {path_str}: {e:?}");
                                 }
                                 _ => {}
                             }
@@ -1449,14 +1450,13 @@ impl TaskAttempt {
         if file_full_path.exists() {
             std::fs::remove_file(&file_full_path).map_err(|e| {
                 TaskAttemptError::Git(GitError::from_str(&format!(
-                    "Failed to delete file {}: {}",
-                    file_path, e
+                    "Failed to delete file {file_path}: {e}"
                 )))
             })?;
 
             debug!("Deleted file: {}", file_path);
         } else {
-            info!("File {} does not exist, skipping deletion", file_path);
+            tracing::info!("File {file_path} does not exist, skipping deletion");
         }
 
         // Stage the deletion
@@ -1473,7 +1473,7 @@ impl TaskAttempt {
         let head = repo.head()?;
         let parent_commit = head.peel_to_commit()?;
 
-        let commit_message = format!("Delete file: {}", file_path);
+        let commit_message = format!("Delete file: {file_path}");
         let commit_id = repo.commit(
             Some("HEAD"),
             &signature,

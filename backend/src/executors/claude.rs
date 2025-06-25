@@ -29,14 +29,18 @@ impl Executor for ClaudeExecutor {
             .await?
             .ok_or(ExecutorError::TaskNotFound)?;
 
-        let prompt = format!(
-            "Task title: {}
+        let prompt = if task.title == "/init" {
+            task.title
+        } else {
+            format!(
+                "Task title: {}
             Task description: {}",
-            task.title,
-            task.description
-                .as_deref()
-                .unwrap_or("No description provided")
-        );
+                task.title,
+                task.description
+                    .as_deref()
+                    .unwrap_or("No description provided")
+            )
+        };
 
         // Use Claude CLI to process the task
         let child = Command::new("claude")

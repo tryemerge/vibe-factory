@@ -10,7 +10,7 @@ use crate::{
 /// An executor that uses Amp to process tasks
 pub struct AmpExecutor;
 
-/// An executor that continues an Amp thread
+/// An executor that continues an Amp thread    
 pub struct AmpFollowupExecutor {
     pub thread_id: String,
     pub prompt: String,

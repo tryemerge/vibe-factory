@@ -74,8 +74,8 @@ pub struct SoundConstants {
     pub sound_labels: Vec<String>,
 }
 
-impl EditorConstants {
-    pub fn new() -> Self {
+impl Default for EditorConstants {
+    fn default() -> Self {
         Self {
             editor_types: vec![
                 EditorType::VSCode,
@@ -97,8 +97,14 @@ impl EditorConstants {
     }
 }
 
-impl SoundConstants {
+impl EditorConstants {
     pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for SoundConstants {
+    fn default() -> Self {
         Self {
             sound_files: vec![
                 SoundFile::AbstractSound1,
@@ -119,6 +125,12 @@ impl SoundConstants {
                 "Rooster Call".to_string(),
             ],
         }
+    }
+}
+
+impl SoundConstants {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
