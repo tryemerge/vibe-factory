@@ -25,6 +25,12 @@ pub struct ListDirectoryQuery {
     path: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ReadFileQuery {
+    project_path: String,
+    file_name: String,
+}
+
 pub async fn list_directory(
     Query(query): Query<ListDirectoryQuery>,
 ) -> Result<ResponseJson<ApiResponse<Vec<DirectoryEntry>>>, StatusCode> {
@@ -191,9 +197,61 @@ pub async fn create_git_repo(
     }
 }
 
+pub async fn read_project_file(
+    Query(query): Query<ReadFileQuery>,
+) -> Result<ResponseJson<ApiResponse<String>>, StatusCode> {
+    let project_path = Path::new(&query.project_path);
+    let file_path = project_path.join(&query.file_name);
+
+    // Security check: ensure the file is within the project directory
+    if !file_path.starts_with(project_path) {
+        return Ok(ResponseJson(ApiResponse {
+            success: false,
+            data: None,
+            message: Some("File path is outside project directory".to_string()),
+        }));
+    }
+
+    // Check if file exists
+    if !file_path.exists() {
+        return Ok(ResponseJson(ApiResponse {
+            success: false,
+            data: None,
+            message: Some("File does not exist".to_string()),
+        }));
+    }
+
+    // Check if it's actually a file
+    if !file_path.is_file() {
+        return Ok(ResponseJson(ApiResponse {
+            success: false,
+            data: None,
+            message: Some("Path is not a file".to_string()),
+        }));
+    }
+
+    // Read file contents
+    match fs::read_to_string(&file_path) {
+        Ok(content) => Ok(ResponseJson(ApiResponse {
+            success: true,
+            data: Some(content),
+            message: None,
+        })),
+        Err(e) => {
+            tracing::error!("Failed to read file: {}", e);
+            Ok(ResponseJson(ApiResponse {
+                success: false,
+                data: None,
+                message: Some(format!("Failed to read file: {}", e)),
+            }))
+        }
+    }
+}
+
 pub fn filesystem_router() -> Router {
     Router::new()
         .route("/filesystem/list", get(list_directory))
         .route("/filesystem/validate-git", get(validate_git_path))
         .route("/filesystem/create-git", get(create_git_repo))
+        .route("/filesystem/read-file", get(read_project_file))
 }

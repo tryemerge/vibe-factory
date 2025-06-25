@@ -104,9 +104,7 @@ export function TaskDetailsToolbar({
               <div className="h-4 w-px bg-border" />
             </>
           ) : (
-            <div className="text-sm text-muted-foreground">
-              No attempts yet
-            </div>
+            <div className="text-sm text-muted-foreground">No attempts yet</div>
           )}
         </div>
 
@@ -170,9 +168,7 @@ export function TaskDetailsToolbar({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      {isStopping
-                        ? 'Stopping execution...'
-                        : 'Stop execution'}
+                      {isStopping ? 'Stopping execution...' : 'Stop execution'}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -229,8 +225,7 @@ export function TaskDetailsToolbar({
                         }
                       >
                         {executor.name}
-                        {config?.executor.type === executor.id &&
-                          ' (Default)'}
+                        {config?.executor.type === executor.id && ' (Default)'}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -256,16 +251,14 @@ export function TaskDetailsToolbar({
                         onMouseLeave={() => onSetIsHoveringDevServer(false)}
                       >
                         <Button
-                          variant={
-                            runningDevServer ? 'destructive' : 'outline'
-                          }
+                          variant={runningDevServer ? 'destructive' : 'outline'}
                           size="sm"
                           onClick={
-                            runningDevServer ? onStopDevServer : onStartDevServer
+                            runningDevServer
+                              ? onStopDevServer
+                              : onStartDevServer
                           }
-                          disabled={
-                            isStartingDevServer || !project?.dev_script
-                          }
+                          disabled={isStartingDevServer || !project?.dev_script}
                         >
                           {runningDevServer ? (
                             <StopCircle className="h-4 w-4" />

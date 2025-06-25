@@ -4,6 +4,7 @@ import { Navbar } from '@/components/layout/navbar';
 import { Projects } from '@/pages/projects';
 import { ProjectTasks } from '@/pages/project-tasks';
 import { TaskAttemptComparePage } from '@/pages/task-attempt-compare';
+import { DiagramViewer } from '@/pages/diagram-viewer';
 import { Settings } from '@/pages/Settings';
 import { DisclaimerDialog } from '@/components/DisclaimerDialog';
 import { OnboardingDialog } from '@/components/OnboardingDialog';
@@ -129,6 +130,10 @@ function AppContent() {
             <Route
               path="/projects/:projectId/tasks/:taskId/attempts/:attemptId/compare"
               element={<TaskAttemptComparePage />}
+            />
+            <Route
+              path="/projects/:projectId/diagrams"
+              element={<DiagramViewer />}
             />
             <Route path="/settings" element={<Settings />} />
           </Routes>

@@ -5,7 +5,7 @@ use crate::{
     app_state::AppState,
     models::{
         execution_process::{ExecutionProcess, ExecutionProcessStatus, ExecutionProcessType},
-        task::{Task, TaskStatus},
+        task::{CreateTask, Task, TaskStatus},
         task_attempt::{TaskAttempt, TaskAttemptStatus},
         task_attempt_activity::{CreateTaskAttemptActivity, TaskAttemptActivity},
     },
@@ -53,7 +53,7 @@ async fn commit_execution_changes(
         let tree = worktree_repo.find_tree(tree_id)?;
 
         // Create commit for the changes
-        let commit_message = format!("Task attempt {} - Final changes", attempt_id);
+        let commit_message = format!("Task attempt {attempt_id} - Final changes");
         worktree_repo.commit(
             Some("HEAD"),
             &signature,
@@ -81,14 +81,16 @@ async fn play_sound_notification(sound_file: &crate::models::config::SoundFile) 
     } else if cfg!(target_os = "linux") {
         // Try different Linux notification sounds
         let sound_path = sound_file.to_path();
-        if let Ok(_) = tokio::process::Command::new("paplay")
+        if tokio::process::Command::new("paplay")
             .arg(&sound_path)
             .spawn()
+            .is_ok()
         {
             // Success with paplay
-        } else if let Ok(_) = tokio::process::Command::new("aplay")
+        } else if tokio::process::Command::new("aplay")
             .arg(&sound_path)
             .spawn()
+            .is_ok()
         {
             // Success with aplay
         } else {
@@ -139,7 +141,7 @@ pub async fn execution_monitor(app_state: AppState) {
                 "failed"
             };
             let exit_text = if let Some(code) = exit_code {
-                format!(" with exit code {}", code)
+                format!(" with exit code {code}")
             } else {
                 String::new()
             };
@@ -342,7 +344,7 @@ async fn handle_setup_completion(
     exit_code: Option<i64>,
 ) {
     let exit_text = if let Some(code) = exit_code {
-        format!(" with exit code {}", code)
+        format!(" with exit code {code}")
     } else {
         String::new()
     };
@@ -353,7 +355,7 @@ async fn handle_setup_completion(
         let create_activity = CreateTaskAttemptActivity {
             execution_process_id,
             status: Some(TaskAttemptStatus::SetupComplete),
-            note: Some(format!("Setup script completed successfully{}", exit_text)),
+            note: Some(format!("Setup script completed successfully{exit_text}")),
         };
 
         if let Err(e) = TaskAttemptActivity::create(
@@ -394,7 +396,7 @@ async fn handle_setup_completion(
         let create_activity = CreateTaskAttemptActivity {
             execution_process_id,
             status: Some(TaskAttemptStatus::SetupFailed),
-            note: Some(format!("Setup script failed{}", exit_text)),
+            note: Some(format!("Setup script failed{exit_text}")),
         };
 
         if let Err(e) = TaskAttemptActivity::create(
@@ -442,7 +444,7 @@ async fn handle_coding_agent_completion(
     exit_code: Option<i64>,
 ) {
     let exit_text = if let Some(code) = exit_code {
-        format!(" with exit code {}", code)
+        format!(" with exit code {code}")
     } else {
         String::new()
     };
@@ -493,7 +495,7 @@ async fn handle_coding_agent_completion(
         let create_activity = CreateTaskAttemptActivity {
             execution_process_id,
             status: Some(status.clone()),
-            note: Some(format!("Coding agent execution completed{}", exit_text)),
+            note: Some(format!("Coding agent execution completed {exit_text}")),
         };
 
         if let Err(e) =
@@ -524,6 +526,11 @@ async fn handle_coding_agent_completion(
                         e
                     );
                 }
+
+                // Check if this is a successfully completed "Visualise Application" task
+                if success && task.title == "Visualise Application" {
+                    handle_visualise_task_completion(app_state, &task).await;
+                }
             }
         }
     } else {
@@ -544,7 +551,7 @@ async fn handle_dev_server_completion(
     exit_code: Option<i64>,
 ) {
     let exit_text = if let Some(code) = exit_code {
-        format!(" with exit code {}", code)
+        format!(" with exit code {code}")
     } else {
         String::new()
     };
@@ -574,5 +581,159 @@ async fn handle_dev_server_completion(
             "Failed to update dev server execution process status: {}",
             e
         );
+    }
+}
+
+/// Handle the completion of a "Visualise Application" task by creating a follow-up reflection task
+async fn handle_visualise_task_completion(app_state: &AppState, completed_task: &Task) {
+    tracing::info!(
+        "Visualise task {} completed successfully, starting automated merge and reflection",
+        completed_task.id
+    );
+
+    // Find the latest task attempt for this visualise task
+    let latest_attempt =
+        match TaskAttempt::find_by_task_id(&app_state.db_pool, completed_task.id).await {
+            Ok(attempts) => {
+                if let Some(attempt) = attempts.first() {
+                    // attempts are ordered by created_at DESC, so first is latest
+                    attempt.clone()
+                } else {
+                    tracing::error!(
+                        "No task attempts found for visualise task {}",
+                        completed_task.id
+                    );
+                    return;
+                }
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to find task attempts for visualise task {}: {}",
+                    completed_task.id,
+                    e
+                );
+                return;
+            }
+        };
+
+    // Check if this attempt has already been merged
+    if latest_attempt.merge_commit.is_some() {
+        tracing::info!(
+            "Task attempt {} is already merged, skipping auto-merge",
+            latest_attempt.id
+        );
+    } else {
+        // Automatically merge the UML.md changes
+        tracing::info!(
+            "Auto-merging UML.md changes from attempt {}",
+            latest_attempt.id
+        );
+        match TaskAttempt::merge_changes(
+            &app_state.db_pool,
+            latest_attempt.id,
+            completed_task.id,
+            completed_task.project_id,
+        )
+        .await
+        {
+            Ok(_merge_commit_id) => {
+                tracing::info!(
+                    "Successfully auto-merged UML.md for task attempt {}",
+                    latest_attempt.id
+                );
+
+                // Update task status to Done
+                if let Err(e) = Task::update_status(
+                    &app_state.db_pool,
+                    completed_task.id,
+                    completed_task.project_id,
+                    TaskStatus::Done,
+                )
+                .await
+                {
+                    tracing::error!(
+                        "Failed to update visualise task status to Done after auto-merge: {}",
+                        e
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to auto-merge visualise task attempt {}: {}",
+                    latest_attempt.id,
+                    e
+                );
+                return;
+            }
+        }
+    }
+
+    // Create the reflection task
+    let reflection_prompt = "Reflect on the UML that you generated. Would it be sufficient to faithfully reimplement the business logic of the codebase in a new stack or another language using the UML itself? If there is anything missing, edit UML.md to include it, or remove anything unnecessary, incorrect or misleading.";
+
+    let reflection_task = CreateTask {
+        project_id: completed_task.project_id,
+        title: "Visualise Reflection".to_string(),
+        description: Some(reflection_prompt.to_string()),
+    };
+
+    let reflection_task_id = Uuid::new_v4();
+    match Task::create(&app_state.db_pool, &reflection_task, reflection_task_id).await {
+        Ok(created_reflection_task) => {
+            tracing::info!(
+                "Successfully created UML reflection task {} following visualise task completion",
+                created_reflection_task.id
+            );
+
+            // Automatically start the reflection task
+            let attempt_id = Uuid::new_v4();
+            let attempt_payload = crate::models::task_attempt::CreateTaskAttempt {
+                executor: Some("claude".to_string()), // Use Claude for reflection by default
+            };
+
+            match TaskAttempt::create(
+                &app_state.db_pool,
+                &attempt_payload,
+                attempt_id,
+                reflection_task_id,
+            )
+            .await
+            {
+                Ok(_attempt) => {
+                    // Start execution asynchronously
+                    let pool_clone = app_state.db_pool.clone();
+                    let app_state_clone = app_state.clone();
+                    let project_id = completed_task.project_id; // Clone the project_id to avoid lifetime issues
+                    tokio::spawn(async move {
+                        if let Err(e) = TaskAttempt::start_execution(
+                            &pool_clone,
+                            &app_state_clone,
+                            attempt_id,
+                            reflection_task_id,
+                            project_id,
+                        )
+                        .await
+                        {
+                            tracing::error!(
+                                "Failed to start execution for reflection task attempt {}: {}",
+                                attempt_id,
+                                e
+                            );
+                        } else {
+                            tracing::info!(
+                                "Successfully started execution for reflection task {}",
+                                reflection_task_id
+                            );
+                        }
+                    });
+                }
+                Err(e) => {
+                    tracing::error!("Failed to create task attempt for reflection task: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to create UML reflection follow-up task: {}", e);
+        }
     }
 }

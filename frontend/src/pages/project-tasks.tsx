@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, Eye } from 'lucide-react';
 import { makeRequest } from '@/lib/api';
 import { TaskFormDialog } from '@/components/tasks/TaskFormDialog';
 import { ProjectForm } from '@/components/projects/project-form';
@@ -137,7 +137,7 @@ export function ProjectTasks() {
               if (
                 updatedSelectedTask &&
                 JSON.stringify(selectedTask) !==
-                JSON.stringify(updatedSelectedTask)
+                  JSON.stringify(updatedSelectedTask)
               ) {
                 setSelectedTask(updatedSelectedTask);
               }
@@ -212,6 +212,64 @@ export function ProjectTasks() {
 
   const handleCreateInitTask = async () => {
     await handleCreateAndStartTask('/init', '', config?.executor);
+  };
+
+  const handleVisualise = async () => {
+    if (!project) return;
+
+    try {
+      // Check if UML.md exists in the project
+      const response = await makeRequest(
+        `/api/filesystem/read-file?project_path=${encodeURIComponent(project.git_repo_path)}&file_name=UML.md`
+      );
+
+      if (response.ok) {
+        const result: ApiResponse<string> = await response.json();
+        if (result.success && result.data) {
+          // UML.md exists, navigate to diagram viewer
+          navigate(`/projects/${projectId}/diagrams`);
+          return;
+        }
+      }
+
+      // UML.md doesn't exist, create visualization task
+      const visualisePrompt = `You are an enterprise architect tasked with creating Mermaid diagrams to represent the functionalities and flows of a codebase for non-technical stakeholders. These diagrams will be used to review the codebase before approving its migration. It's crucial that your diagrams accurately capture the business logic and structure without omitting or adding any information, as the migrated code will be based on these diagrams.
+
+Carefully examine the provided codebase. Pay attention to:
+1. The overall structure of the code
+2. Functions and their relationships
+3. Data flow between different components
+4. Business logic implemented in the code
+5. Any important conditionals or loops that affect the flow
+
+Create a series of Mermaid diagrams that represent the functionalities and flows found in the codebase. Your diagrams should:
+1. Accurately represent the business logic without omissions or additions
+2. Show the relationships between different components
+3. Illustrate the data flow through the system
+4. Highlight any critical decision points or processes
+
+Use appropriate Mermaid diagram types such as flowcharts, sequence diagrams, or class diagrams as needed to best represent different aspects of the codebase.
+
+Write all of your diagrams to a single markdown file called UML.md. For each diagram:
+1. Start with a brief textual explanation of what the diagram represents
+2. Follow with the Mermaid diagram code inside a markdown code block with the \`\`\`mermaid tag
+3. Ensure that each diagram is clear, concise, and focuses on a specific aspect of the codebase
+
+Remember:
+- Do not omit any business logic from the diagrams
+- Do not add anything superfluous that isn't represented in the original codebase
+- Use clear and descriptive labels in your diagrams
+- If necessary, add brief textual explanations between diagrams to provide context or clarification
+
+Your final output should be the complete contents of the UML.md file, including all textual explanations and Mermaid diagram code blocks.Do not include any additional commentary or explanations outside of what should be in the UML.md file.`;
+      await handleCreateAndStartTask(
+        'Visualise Application',
+        visualisePrompt,
+        config?.executor
+      );
+    } catch (err) {
+      console.error('Error checking for UML.md', err);
+    }
   };
 
   // Check if there's an init task in progress
@@ -376,10 +434,16 @@ export function ProjectTasks() {
               <Settings className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={handleCreateNewTask}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleVisualise}>
+              <Eye className="h-4 w-4 mr-2" />
+              Visualise
+            </Button>
+            <Button onClick={handleCreateNewTask}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+          </div>
         </div>
 
         {/* Tasks View */}

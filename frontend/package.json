@@ -26,6 +26,7 @@
     "click-to-react-component": "^1.1.2",
     "clsx": "^2.0.0",
     "lucide-react": "^0.303.0",
+    "mermaid": "^11.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.1",

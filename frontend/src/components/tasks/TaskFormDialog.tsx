@@ -69,7 +69,7 @@ export function TaskFormDialog({
 
   const { config } = useConfig();
   const isEditMode = Boolean(task);
-  
+
   // Check if Claude is the default executor
   const isClaudeExecutor = config?.executor?.type === 'claude';
 
@@ -274,7 +274,10 @@ export function TaskFormDialog({
                     variant="outline"
                     onClick={handleCreateInit}
                     disabled={
-                      isSubmitting || isSubmittingAndStart || isCreatingInit || hasInitInProgress
+                      isSubmitting ||
+                      isSubmittingAndStart ||
+                      isCreatingInit ||
+                      hasInitInProgress
                     }
                   >
                     {isCreatingInit ? 'Creating Init...' : 'Init'}
@@ -284,7 +287,10 @@ export function TaskFormDialog({
                   variant="outline"
                   onClick={handleSubmit}
                   disabled={
-                    isSubmitting || isSubmittingAndStart || isCreatingInit || !title.trim()
+                    isSubmitting ||
+                    isSubmittingAndStart ||
+                    isCreatingInit ||
+                    !title.trim()
                   }
                 >
                   {isSubmitting ? 'Creating...' : 'Create Task'}
@@ -293,7 +299,10 @@ export function TaskFormDialog({
                   <Button
                     onClick={handleCreateAndStart}
                     disabled={
-                      isSubmitting || isSubmittingAndStart || isCreatingInit || !title.trim()
+                      isSubmitting ||
+                      isSubmittingAndStart ||
+                      isCreatingInit ||
+                      !title.trim()
                     }
                   >
                     {isSubmittingAndStart

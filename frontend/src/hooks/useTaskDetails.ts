@@ -56,7 +56,10 @@ export function useTaskDetails(
       return false;
     }
 
-    const latestActivitiesByProcess = new Map<string, TaskAttemptActivityWithPrompt>();
+    const latestActivitiesByProcess = new Map<
+      string,
+      TaskAttemptActivityWithPrompt
+    >();
 
     attemptData.activities.forEach((activity) => {
       const existing = latestActivitiesByProcess.get(
@@ -167,11 +170,7 @@ export function useTaskDetails(
     fetchDevServerDetails();
     const interval = setInterval(fetchDevServerDetails, 2000);
     return () => clearInterval(interval);
-  }, [
-    isHoveringDevServer,
-    runningDevServer?.id,
-    fetchDevServerDetails,
-  ]);
+  }, [isHoveringDevServer, runningDevServer?.id, fetchDevServerDetails]);
 
   const fetchTaskAttempts = async () => {
     if (!task) return;
@@ -482,13 +481,13 @@ export function useTaskDetails(
     isStartingDevServer,
     devServerDetails,
     isHoveringDevServer,
-    
+
     // Computed
     runningDevServer,
     isAttemptRunning,
     canSendFollowUp,
     processedDevServerLogs,
-    
+
     // Actions
     setSelectedExecutor,
     setFollowUpMessage,
