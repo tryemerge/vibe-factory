@@ -137,7 +137,7 @@ export function ProjectTasks() {
               if (
                 updatedSelectedTask &&
                 JSON.stringify(selectedTask) !==
-                  JSON.stringify(updatedSelectedTask)
+                JSON.stringify(updatedSelectedTask)
               ) {
                 setSelectedTask(updatedSelectedTask);
               }
@@ -250,18 +250,38 @@ Create a series of Mermaid diagrams that represent the functionalities and flows
 
 Use appropriate Mermaid diagram types such as flowcharts, sequence diagrams, or class diagrams as needed to best represent different aspects of the codebase.
 
+CRITICAL MERMAID SYNTAX REQUIREMENTS:
+- Ensure all brackets [], parentheses (), and braces {} are correctly opened and closed on the same line
+- NEVER use reserved words 'end', 'class', 'style', or 'subgraph' at the end of node identifiers or text (e.g., use 'finish' instead of 'end')
+- Do not begin node text with a single 'o' or 'x' character followed by a space, as it can be misinterpreted as an edge type
+- When defining node text with quotes, escape them using &quot; instead of "
+- All flowchart definitions must start with 'graph TD;', 'graph LR;', etc. - do not mix syntax from other diagram types
+- Use descriptive but concise node labels that avoid problematic patterns
+- Wrap all node labels in double quotes "..."
+
+Example of valid Mermaid syntax:
+\`\`\`mermaid
+graph TD;
+    A["Start Process"] --> B{"Is Valid?"};
+    B -- Yes --> C["Process Data"];
+    C --> D["Complete Task"];
+    B -- No --> E["Handle Error"];
+    E --> F["Finish"];
+\`\`\`
+
 Write all of your diagrams to a single markdown file called UML.md. For each diagram:
 1. Start with a brief textual explanation of what the diagram represents
 2. Follow with the Mermaid diagram code inside a markdown code block with the \`\`\`mermaid tag
 3. Ensure that each diagram is clear, concise, and focuses on a specific aspect of the codebase
+4. Test your syntax mentally against the rules above before including it
 
 Remember:
 - Do not omit any business logic from the diagrams
 - Do not add anything superfluous that isn't represented in the original codebase
-- Use clear and descriptive labels in your diagrams
+- Use clear and descriptive labels in your diagrams that follow Mermaid best practices
 - If necessary, add brief textual explanations between diagrams to provide context or clarification
 
-Your final output should be the complete contents of the UML.md file, including all textual explanations and Mermaid diagram code blocks.Do not include any additional commentary or explanations outside of what should be in the UML.md file.`;
+Your final output should be the complete contents of the UML.md file, including all textual explanations and Mermaid diagram code blocks. Do not include any additional commentary or explanations outside of what should be in the UML.md file.`;
       await handleCreateAndStartTask(
         'Visualise Application',
         visualisePrompt,

@@ -668,7 +668,6 @@ async fn handle_visualise_task_completion(app_state: &AppState, completed_task: 
         }
     }
 
-    // Create the reflection task
     let reflection_prompt = "Reflect on the UML that you generated. Would it be sufficient to faithfully reimplement the business logic of the codebase in a new stack or another language using the UML itself? If there is anything missing, edit UML.md to include it, or remove anything unnecessary, incorrect or misleading.";
 
     let reflection_task = CreateTask {
