@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { makeRequest } from '@/lib/api';
 import { useConfig } from '@/components/config-provider';
 import type {
@@ -9,6 +9,7 @@ import type {
   ExecutionProcess,
   ExecutionProcessSummary,
   EditorType,
+  SoundFile,
 } from 'shared/types';
 
 export function useTaskDetails(
@@ -41,6 +42,17 @@ export function useTaskDetails(
   const [isHoveringDevServer, setIsHoveringDevServer] = useState(false);
 
   const { config } = useConfig();
+  const previousIsAttemptRunningRef = useRef<boolean>(false);
+
+  // Play completion sound
+  const playCompletionSound = useCallback(async (soundFile: SoundFile) => {
+    const audio = new Audio(`/api/sounds/${soundFile}.mp3`);
+    try {
+      await audio.play();
+    } catch (err) {
+      console.error('Failed to play completion sound:', err);
+    }
+  }, []);
 
   // Find running dev server in current project
   const runningDevServer = useMemo(() => {
@@ -76,6 +88,20 @@ export function useTaskDetails(
         activity.status === 'executorrunning'
     );
   }, [selectedAttempt, attemptData.activities, isStopping]);
+
+  // Effect to detect task completion and play sound
+  useEffect(() => {
+    const wasRunning = previousIsAttemptRunningRef.current;
+    const isCurrentlyRunning = isAttemptRunning;
+    
+    // If task was running and now is not running, play completion sound
+    if (wasRunning && !isCurrentlyRunning && config?.sound_alerts) {
+      playCompletionSound(config.sound_file);
+    }
+    
+    // Update the ref for next check
+    previousIsAttemptRunningRef.current = isCurrentlyRunning;
+  }, [isAttemptRunning, config?.sound_alerts, config?.sound_file, playCompletionSound]);
 
   // Check if follow-up should be enabled
   const canSendFollowUp = useMemo(() => {
