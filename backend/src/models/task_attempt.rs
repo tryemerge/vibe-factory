@@ -1288,7 +1288,7 @@ impl TaskAttempt {
                 commits_behind: 0,
                 commits_ahead: 0,
                 up_to_date: true,
-                merged: attempt.merge_commit.is_some(),
+                merged: attempt.merge_commit.is_some() && !has_uncommitted_changes,
                 has_uncommitted_changes,
                 base_branch_name,
             });
@@ -1313,7 +1313,7 @@ impl TaskAttempt {
             commits_behind,
             commits_ahead,
             up_to_date: commits_behind == 0 && commits_ahead == 0,
-            merged: attempt.merge_commit.is_some(),
+            merged: attempt.merge_commit.is_some() && commits_ahead == 0 && !has_uncommitted_changes,
             has_uncommitted_changes,
             base_branch_name,
         })
