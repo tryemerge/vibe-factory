@@ -70,41 +70,7 @@ async fn commit_execution_changes(
     Ok(())
 }
 
-/// Play a system sound notification
-async fn play_sound_notification(sound_file: &crate::models::config::SoundFile) {
-    // Use platform-specific sound notification
-    if cfg!(target_os = "macos") {
-        let sound_path = sound_file.to_path();
-        let _ = tokio::process::Command::new("afplay")
-            .arg(sound_path)
-            .spawn();
-    } else if cfg!(target_os = "linux") {
-        // Try different Linux notification sounds
-        let sound_path = sound_file.to_path();
-        if let Ok(_) = tokio::process::Command::new("paplay")
-            .arg(&sound_path)
-            .spawn()
-        {
-            // Success with paplay
-        } else if let Ok(_) = tokio::process::Command::new("aplay")
-            .arg(&sound_path)
-            .spawn()
-        {
-            // Success with aplay
-        } else {
-            // Try system bell as fallback
-            let _ = tokio::process::Command::new("echo")
-                .arg("-e")
-                .arg("\\a")
-                .spawn();
-        }
-    } else if cfg!(target_os = "windows") {
-        let _ = tokio::process::Command::new("powershell")
-            .arg("-c")
-            .arg("[console]::beep(800, 300)")
-            .spawn();
-    }
-}
+
 
 /// Send a macOS push notification
 async fn send_push_notification(title: &str, message: &str) {
@@ -447,11 +413,7 @@ async fn handle_coding_agent_completion(
         String::new()
     };
 
-    // Play sound notification if enabled
-    if app_state.get_sound_alerts_enabled().await {
-        let sound_file = app_state.get_sound_file().await;
-        play_sound_notification(&sound_file).await;
-    }
+    // Note: Sound notifications are handled by the frontend to work in browsers
 
     // Send push notification if enabled
     if app_state.get_push_notifications_enabled().await {
