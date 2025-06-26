@@ -16,8 +16,12 @@ if (platform !== "darwin" || arch !== "arm64") {
   process.exit(1);
 }
 
-try {
-  const extractDir = path.join(__dirname, "..", "dist", "app-darwin-arm64");
+function getExtractDir() {
+  return path.join(__dirname, "..", "dist", "app-darwin-arm64");
+}
+
+function setupBinaries() {
+  const extractDir = getExtractDir();
   const zipName = "vibe-kanban.zip";
   const zipPath = path.join(extractDir, zipName);
 
@@ -27,10 +31,16 @@ try {
     process.exit(1);
   }
 
-  // Clean out any previous extraction (but keep the zip)
+  // Check if already extracted
+  const binaryPath = path.join(extractDir, "vibe-kanban");
+  if (fs.existsSync(binaryPath)) {
+    return binaryPath;
+  }
+
+  // Clean out any previous extraction (but keep the zip and mcp-server)
   console.log("🧹 Cleaning up old files…");
   fs.readdirSync(extractDir).forEach((name) => {
-    if (name !== zipName) {
+    if (name !== zipName && name !== "mcp-server") {
       fs.rmSync(path.join(extractDir, name), { recursive: true, force: true });
     }
   });
@@ -39,11 +49,28 @@ try {
   console.log("📦 Extracting vibe-kanban...");
   execSync(`unzip -o "${zipPath}" -d "${extractDir}"`, { stdio: "inherit" });
 
-  // Execute the binary
-  const binaryPath = path.join(extractDir, "vibe-kanban");
-  console.log("🚀 Launching vibe-kanban...");
-  execSync(`"${binaryPath}"`, { stdio: "inherit" });
-} catch (error) {
-  console.error("❌ Error running vibe-kanban:", error.message);
-  process.exit(1);
+  return binaryPath;
 }
+
+function main() {
+  try {
+    const binaryPath = setupBinaries();
+
+    // Execute the binary
+    console.log("🚀 Launching vibe-kanban...");
+    console.log("💡 After starting, you can use MCP integration with:");
+    console.log("   npx vibe-kanban-mcp");
+    console.log("");
+
+    execSync(`"${binaryPath}"`, { stdio: "inherit" });
+  } catch (error) {
+    console.error("❌ Error running vibe-kanban:", error.message);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { getExtractDir, setupBinaries };
