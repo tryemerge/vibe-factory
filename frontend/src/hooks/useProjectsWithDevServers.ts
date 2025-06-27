@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { makeRequest } from '@/lib/api';
-import type { ApiResponse, Project, ExecutionProcessSummary } from 'shared/types';
+import type {
+  ApiResponse,
+  Project,
+  ExecutionProcessSummary,
+} from 'shared/types';
 
 export function useProjectsWithDevServers() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [projectDevServers, setProjectDevServers] = useState<Map<string, ExecutionProcessSummary[]>>(new Map());
+  const [projectDevServers, setProjectDevServers] = useState<
+    Map<string, ExecutionProcessSummary[]>
+  >(new Map());
   const [loading, setLoading] = useState(false);
 
   const fetchProjects = async () => {
@@ -23,24 +29,30 @@ export function useProjectsWithDevServers() {
 
   const fetchProjectDevServers = async (projects: Project[]) => {
     const devServerMap = new Map<string, ExecutionProcessSummary[]>();
-    
+
     // Fetch dev servers for each project
     await Promise.all(
       projects.map(async (project) => {
         try {
-          const response = await makeRequest(`/api/projects/${project.id}/running-dev-servers`);
+          const response = await makeRequest(
+            `/api/projects/${project.id}/running-dev-servers`
+          );
           if (response.ok) {
-            const result: ApiResponse<ExecutionProcessSummary[]> = await response.json();
+            const result: ApiResponse<ExecutionProcessSummary[]> =
+              await response.json();
             if (result.success && result.data) {
               devServerMap.set(project.id, result.data);
             }
           }
         } catch (error) {
-          console.error(`Failed to fetch dev servers for project ${project.id}:`, error);
+          console.error(
+            `Failed to fetch dev servers for project ${project.id}:`,
+            error
+          );
         }
       })
     );
-    
+
     setProjectDevServers(devServerMap);
   };
 
@@ -58,7 +70,7 @@ export function useProjectsWithDevServers() {
 
   useEffect(() => {
     fetchAll();
-    
+
     // Poll for updates every 10 seconds
     const interval = setInterval(fetchAll, 10000);
     return () => clearInterval(interval);

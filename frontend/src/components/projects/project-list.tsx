@@ -37,13 +37,13 @@ export function ProjectList() {
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [error, setError] = useState('');
-  
-  const { 
-    projects, 
-    hasRunningDevServers, 
+
+  const {
+    projects,
+    hasRunningDevServers,
     getRunningDevServersCount,
     loading,
-    refetch 
+    refetch,
   } = useProjectsWithDevServers();
 
   const fetchProjects = async () => {
@@ -148,9 +148,13 @@ export function ProjectList() {
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">Active</Badge>
                     {hasRunningDevServers(project.id) && (
-                      <Badge variant="outline" className="text-orange-500 border-orange-500">
+                      <Badge
+                        variant="outline"
+                        className="text-orange-500 border-orange-500"
+                      >
                         <Server className="h-3 w-3 mr-1" />
-                        {getRunningDevServersCount(project.id)} dev server{getRunningDevServersCount(project.id) > 1 ? 's' : ''}
+                        {getRunningDevServersCount(project.id)} dev server
+                        {getRunningDevServersCount(project.id) > 1 ? 's' : ''}
                       </Badge>
                     )}
                     <DropdownMenu>
