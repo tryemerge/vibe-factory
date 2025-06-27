@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Project, ApiResponse } from 'shared/types';
+import { Project } from 'shared/types';
 import { ProjectForm } from './project-form';
 import { makeRequest } from '@/lib/api';
+import { useProjectsWithDevServers } from '@/hooks/useProjectsWithDevServers';
 import {
   Plus,
   Edit,
@@ -22,6 +23,7 @@ import {
   Loader2,
   MoreHorizontal,
   ExternalLink,
+  Server,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -32,28 +34,24 @@ import {
 
 export function ProjectList() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [error, setError] = useState('');
+  
+  const { 
+    projects, 
+    hasRunningDevServers, 
+    getRunningDevServersCount,
+    loading,
+    refetch 
+  } = useProjectsWithDevServers();
 
   const fetchProjects = async () => {
-    setLoading(true);
-    setError('');
     try {
-      const response = await makeRequest('/api/projects');
-      const data: ApiResponse<Project[]> = await response.json();
-      if (data.success && data.data) {
-        setProjects(data.data);
-      } else {
-        setError('Failed to load projects');
-      }
+      refetch();
     } catch (error) {
       console.error('Failed to fetch projects:', error);
       setError('Failed to connect to server');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -149,6 +147,12 @@ export function ProjectList() {
                   <CardTitle className="text-lg">{project.name}</CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">Active</Badge>
+                    {hasRunningDevServers(project.id) && (
+                      <Badge variant="outline" className="text-orange-500 border-orange-500">
+                        <Server className="h-3 w-3 mr-1" />
+                        {getRunningDevServersCount(project.id)} dev server{getRunningDevServersCount(project.id) > 1 ? 's' : ''}
+                      </Badge>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         asChild

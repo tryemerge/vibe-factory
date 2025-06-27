@@ -11,6 +11,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::models::{
+    execution_process::{ExecutionProcess, ExecutionProcessSummary},
     project::{
         CreateProject, Project, ProjectWithBranch, SearchMatchType, SearchResult, UpdateProject,
     },
@@ -403,6 +404,23 @@ async fn search_files_in_repo(
     Ok(results)
 }
 
+pub async fn get_running_dev_servers(
+    Path(id): Path<Uuid>,
+    Extension(pool): Extension<SqlitePool>,
+) -> Result<ResponseJson<ApiResponse<Vec<ExecutionProcessSummary>>>, StatusCode> {
+    match ExecutionProcess::find_running_dev_server_summaries_by_project(&pool, id).await {
+        Ok(dev_servers) => Ok(ResponseJson(ApiResponse {
+            success: true,
+            data: Some(dev_servers),
+            message: None,
+        })),
+        Err(e) => {
+            tracing::error!("Failed to fetch running dev servers: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 pub fn projects_router() -> Router {
     Router::new()
         .route("/projects", get(get_projects).post(create_project))
@@ -412,4 +430,5 @@ pub fn projects_router() -> Router {
         )
         .route("/projects/:id/with-branch", get(get_project_with_branch))
         .route("/projects/:id/search", get(search_project_files))
+        .route("/projects/:id/running-dev-servers", get(get_running_dev_servers))
 }

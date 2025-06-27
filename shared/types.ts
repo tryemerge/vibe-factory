@@ -78,7 +78,7 @@ export type BranchStatus = { is_behind: boolean, commits_behind: number, commits
 
 export type ExecutionProcess = { id: string, task_attempt_id: string, process_type: ExecutionProcessType, executor_type: string | null, status: ExecutionProcessStatus, command: string, args: string | null, working_directory: string, stdout: string | null, stderr: string | null, exit_code: bigint | null, started_at: string, completed_at: string | null, created_at: string, updated_at: string, };
 
-export type ExecutionProcessSummary = { id: string, task_attempt_id: string, process_type: ExecutionProcessType, executor_type: string | null, status: ExecutionProcessStatus, command: string, args: string | null, working_directory: string, exit_code: bigint | null, started_at: string, completed_at: string | null, created_at: string, updated_at: string, };
+export type ExecutionProcessSummary = { id: string, task_attempt_id: string, task_id: string | null, process_type: ExecutionProcessType, executor_type: string | null, status: ExecutionProcessStatus, command: string, args: string | null, working_directory: string, exit_code: bigint | null, started_at: string, completed_at: string | null, created_at: string, updated_at: string, };
 
 export type ExecutionProcessStatus = "running" | "completed" | "failed" | "killed";
 

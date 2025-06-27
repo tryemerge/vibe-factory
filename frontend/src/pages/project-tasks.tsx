@@ -394,6 +394,7 @@ export function ProjectTasks() {
             <div className="min-w-[900px] max-w-[2000px] relative py-1">
               <TaskKanbanBoard
                 tasks={tasks}
+                projectId={projectId!}
                 onDragEnd={handleDragEnd}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}

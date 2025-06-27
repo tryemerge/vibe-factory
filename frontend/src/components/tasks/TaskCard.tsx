@@ -12,6 +12,7 @@ import {
   Edit,
   Loader2,
   CheckCircle,
+  Server,
 } from 'lucide-react';
 import type { TaskWithAttemptStatus } from 'shared/types';
 
@@ -24,6 +25,7 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onViewDetails: (task: Task) => void;
+  hasRunningDevServer?: boolean;
 }
 
 export function TaskCard({
@@ -33,6 +35,7 @@ export function TaskCard({
   onEdit,
   onDelete,
   onViewDetails,
+  hasRunningDevServer,
 }: TaskCardProps) {
   return (
     <KanbanCard
@@ -56,6 +59,10 @@ export function TaskCard({
             {/* Merged Indicator */}
             {task.has_merged_attempt && (
               <CheckCircle className="h-3 w-3 text-green-500" />
+            )}
+            {/* Dev Server Indicator */}
+            {hasRunningDevServer && (
+              <Server className="h-3 w-3 text-orange-500" />
             )}
             {/* Actions Menu */}
             <div

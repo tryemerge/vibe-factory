@@ -6,12 +6,14 @@ import {
   type DragEndEvent,
 } from '@/components/ui/shadcn-io/kanban';
 import { TaskCard } from './TaskCard';
+import { useRunningDevServers } from '@/hooks/useRunningDevServers';
 import type { TaskStatus, TaskWithAttemptStatus } from 'shared/types';
 
 type Task = TaskWithAttemptStatus;
 
 interface TaskKanbanBoardProps {
   tasks: Task[];
+  projectId: string;
   onDragEnd: (event: DragEndEvent) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
@@ -44,11 +46,13 @@ const statusBoardColors: Record<TaskStatus, string> = {
 
 export function TaskKanbanBoard({
   tasks,
+  projectId,
   onDragEnd,
   onEditTask,
   onDeleteTask,
   onViewTaskDetails,
 }: TaskKanbanBoardProps) {
+  const { hasRunningDevServerForTask } = useRunningDevServers(projectId);
   const groupTasksByStatus = () => {
     const groups: Record<TaskStatus, Task[]> = {} as Record<TaskStatus, Task[]>;
 
@@ -89,6 +93,7 @@ export function TaskKanbanBoard({
                 onEdit={onEditTask}
                 onDelete={onDeleteTask}
                 onViewDetails={onViewTaskDetails}
+                hasRunningDevServer={hasRunningDevServerForTask(task.id)}
               />
             ))}
           </KanbanCards>

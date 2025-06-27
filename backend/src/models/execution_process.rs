@@ -92,6 +92,7 @@ pub struct UpdateExecutionProcess {
 pub struct ExecutionProcessSummary {
     pub id: Uuid,
     pub task_attempt_id: Uuid,
+    pub task_id: Option<Uuid>, // For queries that join with task_attempts
     pub process_type: ExecutionProcessType,
     pub executor_type: Option<String>, // "echo", "claude", "amp", etc. - only for CodingAgent processes
     pub status: ExecutionProcessStatus,
@@ -171,27 +172,27 @@ impl ExecutionProcess {
         pool: &SqlitePool,
         task_attempt_id: Uuid,
     ) -> Result<Vec<ExecutionProcessSummary>, sqlx::Error> {
-        sqlx::query_as!(
-            ExecutionProcessSummary,
+        sqlx::query_as::<_, ExecutionProcessSummary>(
             r#"SELECT 
-                id as "id!: Uuid", 
-                task_attempt_id as "task_attempt_id!: Uuid", 
-                process_type as "process_type!: ExecutionProcessType",
+                id, 
+                task_attempt_id, 
+                NULL as task_id,
+                process_type,
                 executor_type,
-                status as "status!: ExecutionProcessStatus",
+                status,
                 command, 
                 args, 
                 working_directory, 
                 exit_code,
-                started_at as "started_at!: DateTime<Utc>",
-                completed_at as "completed_at?: DateTime<Utc>",
-                created_at as "created_at!: DateTime<Utc>", 
-                updated_at as "updated_at!: DateTime<Utc>"
+                started_at,
+                completed_at,
+                created_at, 
+                updated_at
                FROM execution_processes 
                WHERE task_attempt_id = $1 
                ORDER BY created_at ASC"#,
-            task_attempt_id
         )
+        .bind(task_attempt_id)
         .fetch_all(pool)
         .await
     }
@@ -256,6 +257,40 @@ impl ExecutionProcess {
                ORDER BY ep.created_at ASC"#,
             project_id
         )
+        .fetch_all(pool)
+        .await
+    }
+
+    /// Find running dev server summaries for a specific project (includes task_id)
+    pub async fn find_running_dev_server_summaries_by_project(
+        pool: &SqlitePool,
+        project_id: Uuid,
+    ) -> Result<Vec<ExecutionProcessSummary>, sqlx::Error> {
+        sqlx::query_as::<_, ExecutionProcessSummary>(
+            r#"SELECT 
+                ep.id, 
+                ep.task_attempt_id, 
+                t.id as task_id,
+                ep.process_type,
+                ep.executor_type,
+                ep.status,
+                ep.command, 
+                ep.args, 
+                ep.working_directory, 
+                ep.exit_code,
+                ep.started_at,
+                ep.completed_at,
+                ep.created_at, 
+                ep.updated_at
+               FROM execution_processes ep
+               JOIN task_attempts ta ON ep.task_attempt_id = ta.id
+               JOIN tasks t ON ta.task_id = t.id
+               WHERE ep.status = 'running' 
+               AND ep.process_type = 'devserver'
+               AND t.project_id = $1
+               ORDER BY ep.created_at ASC"#,
+        )
+        .bind(project_id)
         .fetch_all(pool)
         .await
     }
