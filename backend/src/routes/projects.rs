@@ -430,5 +430,8 @@ pub fn projects_router() -> Router {
         )
         .route("/projects/:id/with-branch", get(get_project_with_branch))
         .route("/projects/:id/search", get(search_project_files))
-        .route("/projects/:id/running-dev-servers", get(get_running_dev_servers))
+        .route(
+            "/projects/:id/running-dev-servers",
+            get(get_running_dev_servers),
+        )
 }
