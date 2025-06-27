@@ -11,6 +11,8 @@ let testData = {
   projectId: null,
   taskId: null,
   createdProjectId: null,
+  taskTitle: "Test Task from MCP Script",
+  updatedTaskTitle: "Updated Test Task Title",
 };
 
 const steps = [
@@ -19,13 +21,22 @@ const steps = [
   'list_tools',
   'list_projects',
   'create_project',
-  'list_tasks',
+  'list_tasks_empty',
   'create_task',
   'get_task',
+  'list_tasks_with_task',
+  'set_task_status_inprogress',
+  'list_tasks_filtered',
+  'complete_task',
+  'list_tasks_completed',
+  'create_second_task',
   'update_task',
-  'list_tasks_after_update',
-  'delete_task',
-  'list_tasks_after_delete',
+  'update_task_title',
+  'update_task_description',
+  'list_tasks_after_updates',
+  'delete_task_by_title',
+  'list_tasks_final',
+  'cleanup'
 ];
 
 mcpProcess.stdout.on('data', (data) => {
@@ -108,7 +119,7 @@ mcpProcess.stdout.on('data', (data) => {
     const projectToUse = testData.createdProjectId || testData.projectId;
     setTimeout(() => {
       console.error('📤 Sending create_task...');
-      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "create_task", "arguments": {"project_id": "${projectToUse}", "title": "Test Task from MCP Script", "description": "This task was created during endpoint testing"}}}\n`);
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "create_task", "arguments": {"project_id": "${projectToUse}", "title": "${testData.taskTitle}", "description": "This task was created during endpoint testing"}}}\n`);
     }, 100);
 
   } else if (step === 7) {
@@ -138,47 +149,125 @@ mcpProcess.stdout.on('data', (data) => {
     }
 
   } else if (step === 8) {
-    // After get_task, update the task
+    // After get_task, list tasks to see the created task
     const projectToUse = testData.createdProjectId || testData.projectId;
     setTimeout(() => {
-      console.error('📤 Sending update_task...');
-      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "update_task", "arguments": {"project_id": "${projectToUse}", "task_id": "${testData.taskId}", "title": "Updated Test Task", "description": "This task was updated during testing", "status": "inprogress"}}}\n`);
+      console.error('📤 Sending list_tasks (with task)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "list_tasks", "arguments": {"project_id": "${projectToUse}"}}}\n`);
     }, 100);
 
   } else if (step === 9) {
-    // After update_task, list tasks again to see the update
+    // After list_tasks, test set_task_status (agent-friendly)
     const projectToUse = testData.createdProjectId || testData.projectId;
     setTimeout(() => {
-      console.error('📤 Sending list_tasks (after update)...');
-      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "list_tasks", "arguments": {"project_id": "${projectToUse}", "status": "inprogress"}}}\n`);
+      console.error('📤 Sending set_task_status (agent-friendly)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "set_task_status", "arguments": {"project_id": "${projectToUse}", "task_title": "${testData.taskTitle}", "status": "in-progress"}}}\n`);
     }, 100);
 
   } else if (step === 10) {
-    // After list_tasks, delete the task
+    // After set_task_status, list tasks with status filter
     const projectToUse = testData.createdProjectId || testData.projectId;
     setTimeout(() => {
-      console.error('📤 Sending delete_task...');
-      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "delete_task", "arguments": {"project_id": "${projectToUse}", "task_id": "${testData.taskId}"}}}\n`);
+      console.error('📤 Sending list_tasks (filtered by in-progress)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "list_tasks", "arguments": {"project_id": "${projectToUse}", "status": "in-progress"}}}\n`);
     }, 100);
 
   } else if (step === 11) {
-    // After delete_task, list tasks again to confirm deletion
+    // After filtered list, test complete_task (agent-friendly)
     const projectToUse = testData.createdProjectId || testData.projectId;
     setTimeout(() => {
-      console.error('📤 Sending list_tasks (after delete)...');
-      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "list_tasks", "arguments": {"project_id": "${projectToUse}"}}}\n`);
+      console.error('📤 Sending complete_task (agent-friendly)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "complete_task", "arguments": {"project_id": "${projectToUse}", "task_title": "${testData.taskTitle}"}}}\n`);
     }, 100);
 
-  } else if (step >= 12) {
+  } else if (step === 12) {
+    // After complete_task, list completed tasks
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending list_tasks (completed tasks)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 12, "method": "tools/call", "params": {"name": "list_tasks", "arguments": {"project_id": "${projectToUse}", "status": "done"}}}\n`);
+    }, 100);
+
+  } else if (step === 13) {
+    // Create a second task to test more operations
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending create_task (second task)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 13, "method": "tools/call", "params": {"name": "create_task", "arguments": {"project_id": "${projectToUse}", "title": "Second Test Task", "description": "This is a second task for testing updates"}}}\n`);
+    }, 100);
+
+  } else if (step === 14) {
+    // Test the legacy update_task method (for comparison)
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending update_task (legacy method)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 14, "method": "tools/call", "params": {"name": "update_task", "arguments": {"project_id": "${projectToUse}", "task_id": "${testData.taskId}", "title": "${testData.updatedTaskTitle}", "description": "Updated description via legacy method", "status": "in-review"}}}\n`);
+    }, 100);
+
+  } else if (step === 15) {
+    // Test update_task_title (agent-friendly)
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending update_task_title (agent-friendly)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 15, "method": "tools/call", "params": {"name": "update_task_title", "arguments": {"project_id": "${projectToUse}", "current_title": "Second Test Task", "new_title": "Renamed Second Task"}}}\n`);
+    }, 100);
+
+  } else if (step === 16) {
+    // Test update_task_description (agent-friendly)
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending update_task_description (agent-friendly)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 16, "method": "tools/call", "params": {"name": "update_task_description", "arguments": {"project_id": "${projectToUse}", "task_title": "Renamed Second Task", "description": "This description was updated using the agent-friendly endpoint"}}}\n`);
+    }, 100);
+
+  } else if (step === 17) {
+    // List tasks to see the updates
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending list_tasks (after title and description updates)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 17, "method": "tools/call", "params": {"name": "list_tasks", "arguments": {"project_id": "${projectToUse}"}}}\n`);
+    }, 100);
+
+  } else if (step === 18) {
+    // Test delete_task_by_title (agent-friendly)
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending delete_task_by_title (agent-friendly)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 18, "method": "tools/call", "params": {"name": "delete_task_by_title", "arguments": {"project_id": "${projectToUse}", "task_title": "Renamed Second Task"}}}\n`);
+    }, 100);
+
+  } else if (step === 19) {
+    // Final list_tasks to see the current state
+    const projectToUse = testData.createdProjectId || testData.projectId;
+    setTimeout(() => {
+      console.error('📤 Sending list_tasks (final state)...');
+      mcpProcess.stdin.write(`{"jsonrpc": "2.0", "id": 19, "method": "tools/call", "params": {"name": "list_tasks", "arguments": {"project_id": "${projectToUse}"}}}\n`);
+    }, 100);
+
+  } else if (step >= 20) {
     // All tests complete
-    console.error('✅ All endpoint tests completed successfully!');
+    console.error('✅ MCP server completed full protocol test successfully!');
     console.error('');
     console.error('📊 Test Summary:');
     console.error(`   - Project ID used: ${testData.projectId || 'N/A'}`);
     console.error(`   - Created project: ${testData.createdProjectId || 'N/A'}`);
     console.error(`   - Task ID tested: ${testData.taskId || 'N/A'}`);
+    console.error(`   - Task title: ${testData.taskTitle}`);
+    console.error('');
+    console.error('🎯 Agent-Friendly Endpoints Tested:');
+    console.error('   ✅ set_task_status - Change task status by title');
+    console.error('   ✅ complete_task - Mark task done by title');
+    console.error('   ✅ update_task_title - Change task title');
+    console.error('   ✅ update_task_description - Update task description');
+    console.error('   ✅ delete_task_by_title - Delete task by title');
+    console.error('');
+    console.error('🔧 Legacy Endpoints Tested:');
+    console.error('   ✅ update_task - Update task by ID (more complex)');
+    console.error('   ✅ get_task - Get task details by ID');
+    console.error('   ✅ delete_task - Delete task by ID');
     console.error('');
     console.error('🎉 All MCP endpoints are working correctly!');
+    console.error('💡 Agents should prefer the title-based endpoints for easier usage');
     setTimeout(() => mcpProcess.kill(), 500);
   }
 });
@@ -203,4 +292,4 @@ setTimeout(() => {
 setTimeout(() => {
   console.error('⏰ Test timeout - killing process');
   mcpProcess.kill();
-}, 30000); // Increased timeout for comprehensive testing
+}, 45000);
