@@ -118,12 +118,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -133,11 +127,18 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
-        env:
-          RUST_CACHE_DEBUG: true
         with:
-          workspaces: "backend"
-          key: ${{ matrix.target }}-${{ matrix.os }}
+          workspaces: "."
+          key: ${{ matrix.target }}
+          cache-on-failure: true
+          shared-key: "shared"
+          cache-all-crates: true
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
 
       - name: Install system dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -151,7 +152,7 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build backend for target
-        run: cargo build --release --target ${{ matrix.target }} --manifest-path backend/Cargo.toml
+        run: cargo build --release --target ${{ matrix.target }} -p vibe-kanban
 
       - name: Prepare binary
         shell: bash
