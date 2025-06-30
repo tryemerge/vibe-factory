@@ -72,43 +72,59 @@ async fn commit_execution_changes(
 
 /// Play a system sound notification
 async fn play_sound_notification(sound_file: &crate::models::config::SoundFile) {
+    let sound_path = sound_file.to_path();
+    let current_dir = std::env::current_dir().unwrap_or_else(|e| {
+        tracing::error!("Failed to get current directory: {}", e);
+        std::path::PathBuf::from(".")
+    });
+    let absolute_path = current_dir.join(&sound_path);
+
+    if !absolute_path.exists() {
+        tracing::error!(
+            "Sound file not found: {} (resolved from {})",
+            absolute_path.display(),
+            sound_path.display()
+        );
+    }
+
     // Use platform-specific sound notification
     // Note: spawn() calls are intentionally not awaited - sound notifications should be fire-and-forget
     if cfg!(target_os = "macos") {
-        let sound_path = sound_file.to_path();
-        let _ = tokio::process::Command::new("afplay")
-            .arg(sound_path)
-            .spawn();
+        if absolute_path.exists() {
+            let _ = tokio::process::Command::new("afplay")
+                .arg(&absolute_path)
+                .spawn();
+        }
     } else if cfg!(target_os = "linux") {
         // Try different Linux notification sounds
-        let sound_path = sound_file.to_path();
-        if tokio::process::Command::new("paplay")
-            .arg(&sound_path)
-            .spawn()
-            .is_ok()
-        {
-            // Success with paplay
-        } else if tokio::process::Command::new("aplay")
-            .arg(&sound_path)
-            .spawn()
-            .is_ok()
-        {
-            // Success with aplay
+        if absolute_path.exists() {
+            if tokio::process::Command::new("paplay")
+                .arg(&absolute_path)
+                .spawn()
+                .is_ok()
+            {
+                // Success with paplay
+            } else if tokio::process::Command::new("aplay")
+                .arg(&absolute_path)
+                .spawn()
+                .is_ok()
+            {
+                // Success with aplay
+            } else {
+                // Try system bell as fallback
+                let _ = tokio::process::Command::new("echo")
+                    .arg("-e")
+                    .arg("\\a")
+                    .spawn();
+            }
         } else {
-            // Try system bell as fallback
+            // Try system bell as fallback if sound file doesn't exist
             let _ = tokio::process::Command::new("echo")
                 .arg("-e")
                 .arg("\\a")
                 .spawn();
         }
     } else if cfg!(target_os = "windows") {
-        let sound_path = sound_file.to_path();
-        let current_dir = std::env::current_dir().unwrap_or_else(|e| {
-            tracing::error!("Failed to get current directory: {}", e);
-            std::path::PathBuf::from(".")
-        });
-        let absolute_path = current_dir.join(&sound_path);
-
         if absolute_path.exists() {
             let _ = tokio::process::Command::new("powershell")
                 .arg("-Command")
