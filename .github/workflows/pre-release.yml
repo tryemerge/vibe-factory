@@ -283,7 +283,7 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             name: linux-arm64
             binary: vibe-kanban
-            mcp_binary: vibe-kanban
+            mcp_binary: vibe-kanban-mcp
     steps:
       - uses: actions/checkout@v4
 
