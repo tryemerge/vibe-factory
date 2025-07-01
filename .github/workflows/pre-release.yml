@@ -42,40 +42,21 @@ jobs:
       - name: Setup Node
         uses: ./.github/actions/setup-node
 
-      - name: Determine new version
+      - name: Determine and update versions
         id: version
         run: |
-          current_version=$(node -p "require('./package.json').version")
-          echo "Current version: $current_version"
+          # Update root package.json and get new version
+          npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          new_version=$(node -p "require('./package.json').version")
           
-          case "${{ github.event.inputs.version_type }}" in
-            major)
-              new_version=$(node -p "require('semver').inc('$current_version', 'major')")
-              ;;
-            minor)
-              new_version=$(node -p "require('semver').inc('$current_version', 'minor')")
-              ;;
-            prerelease)
-              new_version=$(node -p "require('semver').inc('$current_version', 'prerelease')")
-              ;;
-            *)
-              new_version=$(node -p "require('semver').inc('$current_version', 'patch')")
-              ;;
-          esac
+          # Update npx-cli package.json to match
+          cd npx-cli
+          npm version $new_version --no-git-tag-version
+          cd ..
           
           echo "New version: $new_version"
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
           echo "new_tag=v$new_version" >> $GITHUB_OUTPUT
-
-      - name: Update package.json files
-        run: |
-          # Update root package.json
-          npm version ${{ steps.version.outputs.new_version }} --no-git-tag-version
-          
-          # Update npx-cli package.json
-          cd npx-cli
-          npm version ${{ steps.version.outputs.new_version }} --no-git-tag-version
-          cd ..
 
       - name: Commit changes and create tag
         run: |
