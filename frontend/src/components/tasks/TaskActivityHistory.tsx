@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, ChevronDown, ChevronUp, Code } from 'lucide-react';
+import { Clock, ChevronDown, ChevronUp, Code, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Chip } from '@/components/ui/chip';
@@ -147,6 +147,23 @@ export function TaskActivityHistory({
                     <pre className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap break-words">
                       {activity.prompt}
                     </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Show summary for completed coding agent executions */}
+              {activity.summary && activity.status === 'executorcomplete' && (
+                <div className="mt-2 mb-4">
+                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800">
+                    <div className="flex items-start gap-2 mb-3">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                      <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                        Agent Summary
+                      </span>
+                    </div>
+                    <div className="text-sm text-green-800 dark:text-green-200 whitespace-pre-wrap break-words">
+                      {activity.summary}
+                    </div>
                   </div>
                 </div>
               )}

@@ -33,6 +33,7 @@ pub struct TaskAttemptActivityWithPrompt {
     pub note: Option<String>,
     pub created_at: DateTime<Utc>,
     pub prompt: Option<String>, // From executor_session
+    pub summary: Option<String>, // From executor_session
 }
 
 impl TaskAttemptActivity {
@@ -110,7 +111,8 @@ impl TaskAttemptActivity {
                 taa.status as "status!: TaskAttemptStatus",
                 taa.note,
                 taa.created_at as "created_at!: DateTime<Utc>",
-                es.prompt
+                es.prompt,
+                es.summary
                FROM task_attempt_activities taa
                INNER JOIN execution_processes ep ON taa.execution_process_id = ep.id
                LEFT JOIN executor_sessions es ON es.execution_process_id = ep.id
@@ -130,6 +132,7 @@ impl TaskAttemptActivity {
                 note: record.note,
                 created_at: record.created_at,
                 prompt: record.prompt,
+                summary: record.summary,
             })
             .collect())
     }
