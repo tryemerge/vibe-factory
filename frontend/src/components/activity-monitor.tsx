@@ -8,7 +8,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ExecutionProcessSummary, ExecutionProcessType, TaskInfoByAttemptResponse } from '../../../shared/types';
+import {
+  ExecutionProcessSummary,
+  ExecutionProcessType,
+  TaskInfoByAttemptResponse,
+} from '../../../shared/types';
 
 interface ActivityMonitorProps {
   refreshInterval?: number;
@@ -20,15 +24,23 @@ interface ProcessWithTaskInfo extends ExecutionProcessSummary {
 
 const API_BASE_URL = '/api';
 
-export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps) {
+export function ActivityMonitor({
+  refreshInterval = 3000,
+}: ActivityMonitorProps) {
   const navigate = useNavigate();
-  const [runningProcesses, setRunningProcesses] = useState<ProcessWithTaskInfo[]>([]);
+  const [runningProcesses, setRunningProcesses] = useState<
+    ProcessWithTaskInfo[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTaskInfo = async (taskAttemptId: string): Promise<TaskInfoByAttemptResponse | null> => {
+  const fetchTaskInfo = async (
+    taskAttemptId: string
+  ): Promise<TaskInfoByAttemptResponse | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/task-info-by-attempt/${taskAttemptId}`);
+      const response = await fetch(
+        `${API_BASE_URL}/task-info-by-attempt/${taskAttemptId}`
+      );
       if (!response.ok) {
         return null;
       }
@@ -44,13 +56,13 @@ export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps
     try {
       setError(null);
       const response = await fetch(`${API_BASE_URL}/running-processes`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch running processes');
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         // Fetch task info for each process
         const processesWithTaskInfo: ProcessWithTaskInfo[] = await Promise.all(
@@ -72,7 +84,9 @@ export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps
 
   const handleProcessClick = (process: ProcessWithTaskInfo) => {
     if (process.taskInfo) {
-      navigate(`/projects/${process.taskInfo.project_id}/tasks/${process.taskInfo.task_id}`);
+      navigate(
+        `/projects/${process.taskInfo.project_id}/tasks/${process.taskInfo.task_id}`
+      );
     }
   };
 
@@ -127,8 +141,12 @@ export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps
   };
 
   const runningCount = runningProcesses.length;
-  const agentCount = runningProcesses.filter(p => p.process_type === 'codingagent').length;
-  const devServerCount = runningProcesses.filter(p => p.process_type === 'devserver').length;
+  const agentCount = runningProcesses.filter(
+    (p) => p.process_type === 'codingagent'
+  ).length;
+  const devServerCount = runningProcesses.filter(
+    (p) => p.process_type === 'devserver'
+  ).length;
 
   return (
     <DropdownMenu>
@@ -137,8 +155,8 @@ export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps
           <Activity className="mr-2 h-4 w-4" />
           Activity
           {runningCount > 0 && (
-            <Badge 
-              variant="destructive" 
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
               {runningCount}
@@ -176,14 +194,12 @@ export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps
             </div>
           )}
         </div>
-        
+
         <div className="max-h-64 overflow-y-auto">
           {error && (
-            <div className="p-4 text-sm text-red-600">
-              Error: {error}
-            </div>
+            <div className="p-4 text-sm text-red-600">Error: {error}</div>
           )}
-          
+
           {runningCount === 0 && !error && !isLoading && (
             <div className="p-6 text-center">
               <Activity className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
@@ -195,12 +211,14 @@ export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps
               </div>
             </div>
           )}
-          
+
           {runningProcesses.map((process) => (
-            <div 
-              key={process.id} 
+            <div
+              key={process.id}
               className={`border-b last:border-b-0 p-3 ${
-                process.taskInfo ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''
+                process.taskInfo
+                  ? 'cursor-pointer hover:bg-muted/50 transition-colors'
+                  : ''
               }`}
               onClick={() => handleProcessClick(process)}
             >
@@ -232,13 +250,13 @@ export function ActivityMonitor({ refreshInterval = 3000 }: ActivityMonitorProps
                   )}
                 </div>
               </div>
-              
+
               {process.args && process.args.trim().length > 0 && (
                 <div className="mt-1 text-xs text-muted-foreground">
                   Args: {process.args}
                 </div>
               )}
-              
+
               <div className="mt-1 text-xs text-muted-foreground">
                 Started: {new Date(process.started_at).toLocaleTimeString()}
               </div>
