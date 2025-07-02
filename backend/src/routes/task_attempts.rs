@@ -897,7 +897,11 @@ pub async fn get_task_info_by_attempt_id(
         })),
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(e) => {
-            tracing::error!("Failed to fetch task info for attempt {}: {}", attempt_id, e);
+            tracing::error!(
+                "Failed to fetch task info for attempt {}: {}",
+                attempt_id,
+                e
+            );
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -934,7 +938,7 @@ pub async fn get_running_processes(
                     updated_at: p.updated_at,
                 })
                 .collect();
-                
+
             Ok(ResponseJson(ApiResponse {
                 success: true,
                 data: Some(summaries),
