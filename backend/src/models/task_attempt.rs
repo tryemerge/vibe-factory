@@ -1906,10 +1906,16 @@ impl TaskAttempt {
             .get_ref(&octocrab::params::repos::Reference::Branch(head_branch.to_string())).await
             .map_err(|e| TaskAttemptError::ValidationError(format!("Head branch '{}' does not exist. Make sure the branch was pushed successfully: {}", head_branch, e)))?;
 
+        // Add co-authored message to the body
+        let enhanced_body = match body {
+            Some(b) if !b.is_empty() => format!("{}\n\nCo-authored by `npx vibe-kanban`", b),
+            _ => "Co-authored by `npx vibe-kanban`".to_string(),
+        };
+
         let pr = octocrab
             .pulls(owner, repo_name)
             .create(title, head_branch, base_branch)
-            .body(body.unwrap_or(""))
+            .body(&enhanced_body)
             .send()
             .await
             .map_err(|e| match e {
