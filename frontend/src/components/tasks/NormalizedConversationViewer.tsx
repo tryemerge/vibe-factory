@@ -10,7 +10,7 @@ import {
   Plus, 
   Settings,
   Brain,
-  MessageSquare 
+  Hammer
 } from 'lucide-react';
 import { makeRequest } from '@/lib/api';
 import type { NormalizedConversation, NormalizedEntryType, ExecutionProcess, ApiResponse } from 'shared/types';
@@ -56,7 +56,7 @@ const getEntryIcon = (entryType: NormalizedEntryType) => {
     }
     return <Settings className="h-4 w-4 text-gray-600" />;
   }
-  return <MessageSquare className="h-4 w-4 text-gray-400" />;
+  return <Settings className="h-4 w-4 text-gray-400" />;
 };
 
 
@@ -160,6 +160,15 @@ export function NormalizedConversationViewer({
   }
 
   if (!conversation || conversation.entries.length === 0) {
+    // If the execution process is still running, show loading instead of "no data"
+    if (executionProcess.status === 'running') {
+      return (
+        <div className="text-xs text-muted-foreground italic text-center">
+          Waiting for logs...
+        </div>
+      );
+    }
+    
     return (
       <div className="text-xs text-muted-foreground italic text-center">
         No conversation data available
@@ -168,19 +177,36 @@ export function NormalizedConversationViewer({
   }
 
   return (
-    <div className="space-y-2">
-      {conversation.entries.map((entry, index) => (
-        <div key={index} className="flex items-start gap-3">
+    <div>
+      {/* Display prompt if available */}
+      {conversation.prompt && (
+        <div className="flex items-start gap-3 mb-6">
           <div className="flex-shrink-0 mt-1">
-            {getEntryIcon(entry.entry_type)}
+            <Hammer className="h-4 w-4 text-blue-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className={getContentClassName(entry.entry_type)}>
-              {entry.content}
+            <div className="text-sm whitespace-pre-wrap text-foreground">
+              {conversation.prompt}
             </div>
           </div>
         </div>
-      ))}
+      )}
+      
+      {/* Display conversation entries */}
+      <div className="space-y-2">
+        {conversation.entries.map((entry, index) => (
+          <div key={index} className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-1">
+              {getEntryIcon(entry.entry_type)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className={getContentClassName(entry.entry_type)}>
+                {entry.content}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
