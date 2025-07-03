@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   User, 
   Bot, 
@@ -18,6 +18,7 @@ import type { NormalizedConversation, NormalizedEntryType, ExecutionProcess, Api
 interface NormalizedConversationViewerProps {
   executionProcess: ExecutionProcess;
   projectId: string;
+  onConversationUpdate?: () => void;
 }
 
 const getEntryIcon = (entryType: NormalizedEntryType) => {
@@ -71,59 +72,14 @@ const getContentClassName = (entryType: NormalizedEntryType) => {
 
 export function NormalizedConversationViewer({ 
   executionProcess, 
-  projectId 
+  projectId,
+  onConversationUpdate 
 }: NormalizedConversationViewerProps) {
   const [conversation, setConversation] = useState<NormalizedConversation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const scrollTimeoutRef = useRef<number | null>(null);
-  const lastScrollTop = useRef<number>(0);
 
-  // Check if user is at the bottom of scroll
-  const isAtBottom = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return true;
-    
-    const threshold = 5; // 5px threshold
-    return container.scrollTop + container.clientHeight >= container.scrollHeight - threshold;
-  }, []);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (container && !isUserScrolling) {
-      container.scrollTop = container.scrollHeight;
-    }
-  }, [isUserScrolling]);
-
-  // Handle scroll events
-  const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const currentScrollTop = container.scrollTop;
-    const isAtBottomNow = isAtBottom();
-
-    // If user scrolled up from bottom, mark as manual scrolling
-    if (currentScrollTop < lastScrollTop.current && !isAtBottomNow) {
-      setIsUserScrolling(true);
-    }
-    
-    // If user scrolled back to bottom, resume auto-scrolling
-    if (isAtBottomNow && isUserScrolling) {
-      setIsUserScrolling(false);
-    }
-
-    lastScrollTop.current = currentScrollTop;
-
-    // Clear existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-  }, [isAtBottom, isUserScrolling]);
 
   const fetchNormalizedLogs = useCallback(async (isPolling = false) => {
     try {
@@ -142,6 +98,11 @@ export function NormalizedConversationViewer({
           setConversation(prev => {
             // Only update if content actually changed
             if (!prev || JSON.stringify(prev) !== JSON.stringify(result.data)) {
+              // Notify parent component of conversation update
+              if (onConversationUpdate) {
+                // Use setTimeout to ensure state update happens first
+                setTimeout(onConversationUpdate, 0);
+              }
               return result.data;
             }
             return prev;
@@ -162,7 +123,7 @@ export function NormalizedConversationViewer({
         setLoading(false);
       }
     }
-  }, [executionProcess.id, projectId]);
+  }, [executionProcess.id, projectId, onConversationUpdate]);
 
   // Initial fetch
   useEffect(() => {
@@ -180,24 +141,7 @@ export function NormalizedConversationViewer({
     }
   }, [executionProcess.status, fetchNormalizedLogs]);
 
-  // Auto-scroll when conversation updates
-  useEffect(() => {
-    if (conversation && conversation.entries.length > 0) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        scrollToBottom();
-      }, 50);
-    }
-  }, [conversation, scrollToBottom]);
 
-  // Cleanup scroll timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, []);
 
   if (loading) {
     return (
@@ -224,11 +168,7 @@ export function NormalizedConversationViewer({
   }
 
   return (
-    <div 
-      ref={scrollContainerRef}
-      className="space-y-2 max-h-96 overflow-y-auto"
-      onScroll={handleScroll}
-    >
+    <div className="space-y-2">
       {conversation.entries.map((entry, index) => (
         <div key={index} className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-1">
