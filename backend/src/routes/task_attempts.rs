@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -1128,13 +1130,9 @@ pub async fn get_execution_process_normalized_logs(
 
     // Determine executor type and create appropriate executor for normalization
     let executor_type = process.executor_type.as_deref().unwrap_or("unknown");
-    let executor_config = match executor_type {
-        "amp" => ExecutorConfig::Amp,
-        "claude" => ExecutorConfig::Claude,
-        "echo" => ExecutorConfig::Echo,
-        "gemini" => ExecutorConfig::Gemini,
-        "opencode" => ExecutorConfig::Opencode,
-        _ => {
+    let executor_config = match ExecutorConfig::from_str(executor_type) {
+        Ok(config) => config,
+        Err(_) => {
             return Ok(ResponseJson(ApiResponse {
                 success: false,
                 data: None,
