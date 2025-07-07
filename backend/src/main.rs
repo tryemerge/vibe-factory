@@ -2,7 +2,6 @@ use std::{str::FromStr, sync::Arc};
 
 use axum::{
     body::Body,
-    extract::Extension,
     http::{header, HeaderValue, StatusCode},
     response::{IntoResponse, Json as ResponseJson, Response},
     routing::{get, post},
