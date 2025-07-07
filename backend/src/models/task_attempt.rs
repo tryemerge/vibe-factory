@@ -614,7 +614,13 @@ impl TaskAttempt {
             .await?
             .ok_or(TaskAttemptError::TaskNotFound)?;
 
-        let executor_config = Self::resolve_executor_config(&task_attempt.executor);
+        let executor_config = task_attempt
+            .executor
+            .as_ref()
+            .map(|s| s.parse::<crate::executor::ExecutorConfig>())
+            .transpose()
+            .map_err(|e| TaskAttemptError::ValidationError(e.to_string()))?
+            .unwrap_or(crate::executor::ExecutorConfig::Echo);
 
         Self::start_process_execution(
             pool,
@@ -734,13 +740,12 @@ impl TaskAttempt {
                 .ok_or(TaskAttemptError::TaskNotFound)?; // No session found
 
         // Determine the executor config from the stored executor_type
-        let executor_config = match most_recent_coding_agent.executor_type.as_deref() {
-            Some("claude") => crate::executor::ExecutorConfig::Claude,
-            Some("amp") => crate::executor::ExecutorConfig::Amp,
-            Some("gemini") => crate::executor::ExecutorConfig::Gemini,
-            Some("echo") => crate::executor::ExecutorConfig::Echo,
-            _ => return Err(TaskAttemptError::TaskNotFound), // Invalid executor type
-        };
+        let executor_config = most_recent_coding_agent
+            .executor_type
+            .as_ref()
+            .ok_or(TaskAttemptError::TaskNotFound)?
+            .parse::<crate::executor::ExecutorConfig>()
+            .map_err(|_| TaskAttemptError::TaskNotFound)?;
 
         // Create the follow-up executor type
         let followup_executor = crate::executor::ExecutorType::FollowUpCodingAgent {
@@ -761,17 +766,6 @@ impl TaskAttempt {
             &task_attempt.worktree_path,
         )
         .await
-    }
-
-    /// Resolve executor configuration from string name
-    fn resolve_executor_config(executor_name: &Option<String>) -> crate::executor::ExecutorConfig {
-        match executor_name.as_ref().map(|s| s.as_str()) {
-            Some("claude") => crate::executor::ExecutorConfig::Claude,
-            Some("amp") => crate::executor::ExecutorConfig::Amp,
-            Some("gemini") => crate::executor::ExecutorConfig::Gemini,
-            Some("opencode") => crate::executor::ExecutorConfig::Opencode,
-            _ => crate::executor::ExecutorConfig::Echo, // Default for "echo" or None
-        }
     }
 
     /// Unified function to start any type of process execution
@@ -880,33 +874,13 @@ impl TaskAttempt {
                 None, // Dev servers don't have an executor type
             ),
             crate::executor::ExecutorType::CodingAgent(config) => {
-                let executor_type_str = match config {
-                    crate::executor::ExecutorConfig::Echo => "echo",
-                    crate::executor::ExecutorConfig::Claude => "claude",
-                    crate::executor::ExecutorConfig::Amp => "amp",
-                    crate::executor::ExecutorConfig::Gemini => "gemini",
-                    crate::executor::ExecutorConfig::Opencode => "opencode",
-                };
-                (
-                    "executor".to_string(),
-                    None,
-                    Some(executor_type_str.to_string()),
-                )
+                ("executor".to_string(), None, Some(config.to_string()))
             }
-            crate::executor::ExecutorType::FollowUpCodingAgent { config, .. } => {
-                let executor_type_str = match config {
-                    crate::executor::ExecutorConfig::Echo => "echo",
-                    crate::executor::ExecutorConfig::Claude => "claude",
-                    crate::executor::ExecutorConfig::Amp => "amp",
-                    crate::executor::ExecutorConfig::Gemini => "gemini",
-                    crate::executor::ExecutorConfig::Opencode => "opencode",
-                };
-                (
-                    "followup_executor".to_string(),
-                    None,
-                    Some(executor_type_str.to_string()),
-                )
-            }
+            crate::executor::ExecutorType::FollowUpCodingAgent { config, .. } => (
+                "followup_executor".to_string(),
+                None,
+                Some(config.to_string()),
+            ),
         };
 
         let create_process = CreateExecutionProcess {
@@ -1218,7 +1192,11 @@ impl TaskAttempt {
                                     });
                                 }
                                 Err(e) => {
-                                    eprintln!("Error generating diff for {}: {:?}", path_str, e);
+                                    tracing::error!(
+                                        "Error generating diff for {}: {:?}",
+                                        path_str,
+                                        e
+                                    );
                                 }
                                 _ => {}
                             }
@@ -1303,7 +1281,11 @@ impl TaskAttempt {
                                     });
                                 }
                                 Err(e) => {
-                                    eprintln!("Error generating diff for {}: {:?}", path_str, e);
+                                    tracing::error!(
+                                        "Error generating diff for {}: {:?}",
+                                        path_str,
+                                        e
+                                    );
                                 }
                                 _ => {}
                             }
@@ -1456,7 +1438,7 @@ impl TaskAttempt {
                     });
                 }
                 Err(e) => {
-                    eprintln!("Error generating unstaged diff for {}: {:?}", path_str, e);
+                    tracing::error!("Error generating unstaged diff for {}: {:?}", path_str, e);
                 }
                 _ => {}
             }

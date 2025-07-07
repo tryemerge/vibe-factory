@@ -81,7 +81,7 @@ impl PrMonitorService {
             return Ok(());
         }
 
-        info!("Checking {} open PRs", open_prs.len());
+        debug!("Checking {} open PRs", open_prs.len());
 
         for pr_info in open_prs {
             if let Err(e) = self.check_pr_status(&pr_info).await {

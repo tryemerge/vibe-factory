@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use axum::{
     extract::{Query, State},
@@ -100,8 +100,7 @@ fn resolve_executor_config(
     saved_config: &ExecutorConfig,
 ) -> Result<ExecutorConfig, String> {
     let executor_config = match query_executor {
-        Some(executor_type) => executor_type
-            .parse::<ExecutorConfig>()
+        Some(executor_type) => ExecutorConfig::from_str(&executor_type)
             .map_err(|e| e.to_string())?,
         None => saved_config.clone(),
     };
