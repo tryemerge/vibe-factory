@@ -198,9 +198,7 @@ fn main() -> anyhow::Result<()> {
                         .merge(filesystem::filesystem_router())
                         .merge(config::config_router())
                         .route("/sounds/:filename", get(serve_sound_file)),
-                )
-                .layer(Extension(pool.clone()))
-                .layer(Extension(config_arc));
+                );
 
             let app = Router::new()
                 .merge(public_routes)
@@ -208,8 +206,7 @@ fn main() -> anyhow::Result<()> {
                 // Static file serving routes
                 .route("/", get(index_handler))
                 .route("/*path", get(static_handler))
-                .layer(Extension(pool))
-                .layer(Extension(app_state))
+                .with_state(app_state)
                 .layer(CorsLayer::permissive())
                 .layer(NewSentryLayer::new_from_top());
 
