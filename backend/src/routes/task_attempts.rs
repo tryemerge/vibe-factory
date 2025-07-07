@@ -918,7 +918,18 @@ pub async fn create_followup_attempt(
                 attempt_id,
                 e
             );
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            
+            // Handle specific error types with appropriate HTTP status codes
+            match e {
+                crate::models::task_attempt::TaskAttemptError::FollowupNotSupported(msg) => {
+                    Ok(ResponseJson(ApiResponse {
+                        success: false,
+                        data: None,
+                        message: Some(msg),
+                    }))
+                }
+                _ => Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         }
     }
 }

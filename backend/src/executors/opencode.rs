@@ -11,12 +11,6 @@ use crate::{
 /// An executor that uses OpenCode to process tasks
 pub struct OpencodeExecutor;
 
-/// An executor that continues an OpenCode thread
-pub struct OpencodeFollowupExecutor {
-    pub session_id: String,
-    pub prompt: String,
-}
-
 #[async_trait]
 impl Executor for OpencodeExecutor {
     async fn spawn(
@@ -76,45 +70,53 @@ impl Executor for OpencodeExecutor {
     }
 }
 
-#[async_trait]
-impl Executor for OpencodeFollowupExecutor {
-    async fn spawn(
-        &self,
-        _pool: &sqlx::SqlitePool,
-        _task_id: Uuid,
-        worktree_path: &str,
-    ) -> Result<AsyncGroupChild, ExecutorError> {
-        use std::process::Stdio;
+// TODO: Uncomment when OpenCode supports follow up in headless mode
 
-        use tokio::process::Command;
+// An executor that continues an OpenCode thread
+// pub struct OpencodeFollowupExecutor {
+//     pub session_id: String,
+//     pub prompt: String,
+// }
+//
+// #[async_trait]
+// impl Executor for OpencodeFollowupExecutor {
+//     async fn spawn(
+//         &self,
+//         _pool: &sqlx::SqlitePool,
+//         _task_id: Uuid,
+//         worktree_path: &str,
+//     ) -> Result<AsyncGroupChild, ExecutorError> {
+//         use std::process::Stdio;
 
-        // Use shell command for cross-platform compatibility
-        let (shell_cmd, shell_arg) = get_shell_command();
-        let opencode_command = format!(
-            "opencode -p \"{}\" --output-format=json",
-            self.prompt.replace('"', "\\\"")
-        );
+//         use tokio::process::Command;
 
-        let mut command = Command::new(shell_cmd);
-        command
-            .kill_on_drop(true)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .current_dir(worktree_path)
-            .arg(shell_arg)
-            .arg(&opencode_command);
+//         // Use shell command for cross-platform compatibility
+//         let (shell_cmd, shell_arg) = get_shell_command();
+//         let opencode_command = format!(
+//             "opencode -p \"{}\" --output-format=json",
+//             self.prompt.replace('"', "\\\"")
+//         );
 
-        let child = command
-            .group_spawn() // Create new process group so we can kill entire tree
-            .map_err(|e| {
-                crate::executor::SpawnContext::from_command(&command, "OpenCode")
-                    .with_context(format!(
-                        "OpenCode CLI followup execution for session {}",
-                        self.session_id
-                    ))
-                    .spawn_error(e)
-            })?;
+//         let mut command = Command::new(shell_cmd);
+//         command
+//             .kill_on_drop(true)
+//             .stdout(Stdio::piped())
+//             .stderr(Stdio::piped())
+//             .current_dir(worktree_path)
+//             .arg(shell_arg)
+//             .arg(&opencode_command);
 
-        Ok(child)
-    }
-}
+//         let child = command
+//             .group_spawn() // Create new process group so we can kill entire tree
+//             .map_err(|e| {
+//                 crate::executor::SpawnContext::from_command(&command, "OpenCode")
+//                     .with_context(format!(
+//                         "OpenCode CLI followup execution for session {}",
+//                         self.session_id
+//                     ))
+//                     .spawn_error(e)
+//             })?;
+
+//         Ok(child)
+//     }
+// }

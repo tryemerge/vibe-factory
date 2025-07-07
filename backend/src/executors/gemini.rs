@@ -14,12 +14,6 @@ use crate::{
 /// An executor that uses Gemini CLI to process tasks
 pub struct GeminiExecutor;
 
-/// An executor that resumes a Gemini session
-pub struct GeminiFollowupExecutor {
-    pub session_id: String,
-    pub prompt: String,
-}
-
 #[async_trait]
 impl Executor for GeminiExecutor {
     async fn spawn(
@@ -376,108 +370,116 @@ impl GeminiExecutor {
     }
 }
 
-#[async_trait]
-impl Executor for GeminiFollowupExecutor {
-    async fn spawn(
-        &self,
-        _pool: &sqlx::SqlitePool,
-        _task_id: Uuid,
-        worktree_path: &str,
-    ) -> Result<AsyncGroupChild, ExecutorError> {
-        // --resume is currently not supported by the gemini-cli. This will error!
-        // TODO: Check again when this issue has been addressed: https://github.com/google-gemini/gemini-cli/issues/2222
+// TODO: Uncomment when Gemini supports follow up in headless mode
 
-        // Use shell command for cross-platform compatibility
-        let (shell_cmd, shell_arg) = get_shell_command();
-        let gemini_command = format!("npx @google/gemini-cli --yolo --resume={}", self.session_id);
+// pub struct GeminiFollowupExecutor {
+//     pub session_id: String,
+//     pub prompt: String,
+// }
+//
+// --resume is currently not supported by the gemini-cli.
+// Check again when this issue has been addressed: https://github.com/google-gemini/gemini-cli/issues/2222
+//
+// #[async_trait]
+// impl Executor for GeminiFollowupExecutor {
+//     async fn spawn(
+//         &self,
+//         _pool: &sqlx::SqlitePool,
+//         _task_id: Uuid,
+//         worktree_path: &str,
+//     ) -> Result<AsyncGroupChild, ExecutorError> {
 
-        let mut command = Command::new(shell_cmd);
-        command
-            .kill_on_drop(true)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .current_dir(worktree_path)
-            .arg(shell_arg)
-            .arg(&gemini_command)
-            .env("NODE_NO_WARNINGS", "1");
+//         // Use shell command for cross-platform compatibility
+//         let (shell_cmd, shell_arg) = get_shell_command();
+//         let gemini_command = format!("npx @google/gemini-cli --yolo --resume={}", self.session_id);
 
-        let mut child = command
-            .group_spawn() // Create new process group so we can kill entire tree
-            .map_err(|e| {
-                crate::executor::SpawnContext::from_command(&command, "Gemini")
-                    .with_context(format!(
-                        "Gemini CLI followup execution for session {}",
-                        self.session_id
-                    ))
-                    .spawn_error(e)
-            })?;
+//         let mut command = Command::new(shell_cmd);
+//         command
+//             .kill_on_drop(true)
+//             .stdin(Stdio::piped())
+//             .stdout(Stdio::piped())
+//             .stderr(Stdio::piped())
+//             .current_dir(worktree_path)
+//             .arg(shell_arg)
+//             .arg(&gemini_command)
+//             .env("NODE_NO_WARNINGS", "1");
 
-        // Send the prompt via stdin instead of command line arguments
-        // This avoids Windows command line parsing issues
-        if let Some(mut stdin) = child.inner().stdin.take() {
-            stdin.write_all(self.prompt.as_bytes()).await.map_err(|e| {
-                let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
-                    .with_context(format!(
-                        "Failed to write prompt to Gemini CLI stdin for session {}",
-                        self.session_id
-                    ));
-                ExecutorError::spawn_failed(e, context)
-            })?;
-            stdin.shutdown().await.map_err(|e| {
-                let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
-                    .with_context(format!(
-                        "Failed to close Gemini CLI stdin for session {}",
-                        self.session_id
-                    ));
-                ExecutorError::spawn_failed(e, context)
-            })?;
-        }
+//         let mut child = command
+//             .group_spawn() // Create new process group so we can kill entire tree
+//             .map_err(|e| {
+//                 crate::executor::SpawnContext::from_command(&command, "Gemini")
+//                     .with_context(format!(
+//                         "Gemini CLI followup execution for session {}",
+//                         self.session_id
+//                     ))
+//                     .spawn_error(e)
+//             })?;
 
-        Ok(child)
-    }
+//         // Send the prompt via stdin instead of command line arguments
+//         // This avoids Windows command line parsing issues
+//         if let Some(mut stdin) = child.inner().stdin.take() {
+//             stdin.write_all(self.prompt.as_bytes()).await.map_err(|e| {
+//                 let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
+//                     .with_context(format!(
+//                         "Failed to write prompt to Gemini CLI stdin for session {}",
+//                         self.session_id
+//                     ));
+//                 ExecutorError::spawn_failed(e, context)
+//             })?;
+//             stdin.shutdown().await.map_err(|e| {
+//                 let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
+//                     .with_context(format!(
+//                         "Failed to close Gemini CLI stdin for session {}",
+//                         self.session_id
+//                     ));
+//                 ExecutorError::spawn_failed(e, context)
+//             })?;
+//         }
 
-    async fn execute_streaming(
-        &self,
-        pool: &sqlx::SqlitePool,
-        task_id: Uuid,
-        attempt_id: Uuid,
-        execution_process_id: Uuid,
-        worktree_path: &str,
-    ) -> Result<AsyncGroupChild, ExecutorError> {
-        let mut child = self.spawn(pool, task_id, worktree_path).await?;
+//         Ok(child)
+//     }
 
-        // Take stdout and stderr pipes for streaming
-        let stdout = child
-            .inner()
-            .stdout
-            .take()
-            .expect("Failed to take stdout from child process");
-        let stderr = child
-            .inner()
-            .stderr
-            .take()
-            .expect("Failed to take stderr from child process");
+//     async fn execute_streaming(
+//         &self,
+//         pool: &sqlx::SqlitePool,
+//         task_id: Uuid,
+//         attempt_id: Uuid,
+//         execution_process_id: Uuid,
+//         worktree_path: &str,
+//     ) -> Result<AsyncGroupChild, ExecutorError> {
+//         let mut child = self.spawn(pool, task_id, worktree_path).await?;
 
-        // Start streaming tasks with Gemini-specific line-based message updates
-        let pool_clone1 = pool.clone();
-        let pool_clone2 = pool.clone();
+//         // Take stdout and stderr pipes for streaming
+//         let stdout = child
+//             .inner()
+//             .stdout
+//             .take()
+//             .expect("Failed to take stdout from child process");
+//         let stderr = child
+//             .inner()
+//             .stderr
+//             .take()
+//             .expect("Failed to take stderr from child process");
 
-        tokio::spawn(GeminiExecutor::stream_gemini_with_lines(
-            stdout,
-            pool_clone1,
-            attempt_id,
-            execution_process_id,
-            true,
-        ));
-        tokio::spawn(GeminiExecutor::stream_gemini_with_lines(
-            stderr,
-            pool_clone2,
-            attempt_id,
-            execution_process_id,
-            false,
-        ));
+//         // Start streaming tasks with Gemini-specific line-based message updates
+//         let pool_clone1 = pool.clone();
+//         let pool_clone2 = pool.clone();
 
-        Ok(child)
-    }
-}
+//         tokio::spawn(GeminiExecutor::stream_gemini_with_lines(
+//             stdout,
+//             pool_clone1,
+//             attempt_id,
+//             execution_process_id,
+//             true,
+//         ));
+//         tokio::spawn(GeminiExecutor::stream_gemini_with_lines(
+//             stderr,
+//             pool_clone2,
+//             attempt_id,
+//             execution_process_id,
+//             false,
+//         ));
+
+//         Ok(child)
+//     }
+// }

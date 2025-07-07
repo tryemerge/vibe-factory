@@ -542,15 +542,23 @@ export function useTaskDetails(
       );
 
       if (response.ok) {
-        setFollowUpMessage('');
-        fetchAttemptData(selectedAttempt.id);
+        const result: ApiResponse<string> = await response.json();
+        if (result.success) {
+          setFollowUpMessage('');
+          fetchAttemptData(selectedAttempt.id);
+        } else {
+          // Handle case where response is ok but success is false (e.g., followup not supported)
+          setFollowUpError(result.message || 'Failed to start follow-up execution');
+        }
       } else {
-        const errorText = await response.text();
-        setFollowUpError(
-          `Failed to start follow-up execution: ${
-            errorText || response.statusText
-          }`
-        );
+        // Handle HTTP error responses
+        try {
+          const errorResult: ApiResponse<any> = await response.json();
+          setFollowUpError(errorResult.message || `HTTP ${response.status}: ${response.statusText}`);
+        } catch {
+          // Fallback if response is not JSON
+          setFollowUpError(`HTTP ${response.status}: ${response.statusText}`);
+        }
       }
     } catch (err) {
       setFollowUpError(

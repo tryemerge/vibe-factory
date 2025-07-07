@@ -19,6 +19,7 @@ pub enum TaskAttemptError {
     ProjectNotFound,
     ValidationError(String),
     BranchNotFound(String),
+    FollowupNotSupported(String),
 }
 
 impl std::fmt::Display for TaskAttemptError {
@@ -30,6 +31,7 @@ impl std::fmt::Display for TaskAttemptError {
             TaskAttemptError::ProjectNotFound => write!(f, "Project not found"),
             TaskAttemptError::ValidationError(e) => write!(f, "Validation error: {}", e),
             TaskAttemptError::BranchNotFound(e) => write!(f, "Branch not found: {}", e),
+            TaskAttemptError::FollowupNotSupported(e) => write!(f, "Followup not supported: {}", e),
         }
     }
 }
@@ -993,10 +995,7 @@ impl TaskAttempt {
                 session_id,
                 prompt,
             } => {
-                use crate::executors::{
-                    AmpFollowupExecutor, ClaudeFollowupExecutor, GeminiFollowupExecutor,
-                    OpencodeFollowupExecutor,
-                };
+                use crate::executors::{AmpFollowupExecutor, ClaudeFollowupExecutor};
 
                 let executor: Box<dyn crate::executor::Executor> = match config {
                     crate::executor::ExecutorConfig::Claude => {
@@ -1020,28 +1019,18 @@ impl TaskAttempt {
                         }
                     }
                     crate::executor::ExecutorConfig::Gemini => {
-                        if let Some(sid) = session_id {
-                            Box::new(GeminiFollowupExecutor {
-                                session_id: sid.clone(),
-                                prompt: prompt.clone(),
-                            })
-                        } else {
-                            return Err(TaskAttemptError::TaskNotFound); // No session ID for followup
-                        }
+                        return Err(TaskAttemptError::FollowupNotSupported(
+                            "Gemini executor does not support followup operations. The --resume flag is not supported by gemini-cli.".to_string()
+                        ));
                     }
                     crate::executor::ExecutorConfig::Echo => {
                         // Echo doesn't support followup, use regular echo
                         config.create_executor()
                     }
                     crate::executor::ExecutorConfig::Opencode => {
-                        if let Some(sid) = session_id {
-                            Box::new(OpencodeFollowupExecutor {
-                                session_id: sid.clone(),
-                                prompt: prompt.clone(),
-                            })
-                        } else {
-                            return Err(TaskAttemptError::TaskNotFound); // No session ID for followup
-                        }
+                        return Err(TaskAttemptError::FollowupNotSupported(
+                            "OpenCode executor does not support followup operations. Session resumption is not implemented.".to_string()
+                        ));
                     }
                 };
 
