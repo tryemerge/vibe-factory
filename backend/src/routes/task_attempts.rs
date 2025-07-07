@@ -981,7 +981,15 @@ pub async fn start_dev_server(
     }
 
     // Start dev server execution
-    match TaskAttempt::start_dev_server(&app_state.db_pool, &app_state, attempt_id, task_id, project_id).await {
+    match TaskAttempt::start_dev_server(
+        &app_state.db_pool,
+        &app_state,
+        attempt_id,
+        task_id,
+        project_id,
+    )
+    .await
+    {
         Ok(_) => Ok(ResponseJson(ApiResponse {
             success: true,
             data: None,
@@ -1077,18 +1085,22 @@ pub async fn get_execution_process_normalized_logs(
             // If the process is still running, return empty logs instead of an error
             if process.status == ExecutionProcessStatus::Running {
                 // Get executor session data for this execution process
-                let executor_session =
-                    match ExecutorSession::find_by_execution_process_id(&app_state.db_pool, process_id).await {
-                        Ok(session) => session,
-                        Err(e) => {
-                            tracing::error!(
-                                "Failed to fetch executor session for process {}: {}",
-                                process_id,
-                                e
-                            );
-                            None
-                        }
-                    };
+                let executor_session = match ExecutorSession::find_by_execution_process_id(
+                    &app_state.db_pool,
+                    process_id,
+                )
+                .await
+                {
+                    Ok(session) => session,
+                    Err(e) => {
+                        tracing::error!(
+                            "Failed to fetch executor session for process {}: {}",
+                            process_id,
+                            e
+                        );
+                        None
+                    }
+                };
 
                 return Ok(ResponseJson(ApiResponse {
                     success: true,
