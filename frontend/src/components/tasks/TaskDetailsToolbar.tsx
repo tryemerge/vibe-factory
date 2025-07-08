@@ -704,6 +704,36 @@ export function TaskDetailsToolbar({
                           </span>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 items-start">
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Worktree Path
+                          </div>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onOpenInEditor()}
+                                  className="h-4 w-4 p-0 hover:bg-muted"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Open in editor</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded break-all">
+                          {selectedAttempt.worktree_path}
+                        </div>
+                      </div>
 
                       <div>
                         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
@@ -729,34 +759,6 @@ export function TaskDetailsToolbar({
                             </div>
                           )}
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="col-span-4">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          Worktree Path
-                        </div>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onOpenInEditor()}
-                                className="h-4 w-4 p-0 hover:bg-muted"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Open in editor</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded break-all">
-                        {selectedAttempt.worktree_path}
                       </div>
                     </div>
 
