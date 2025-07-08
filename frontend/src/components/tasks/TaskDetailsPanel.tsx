@@ -117,9 +117,11 @@ export function TaskDetailsPanel({
     canSendFollowUp,
     processedDevServerLogs,
     executionState,
+    createAttemptError,
     setFollowUpMessage,
     setFollowUpError,
     setIsHoveringDevServer,
+    setCreateAttemptError,
     handleAttemptChange,
     createNewAttempt,
     stopAllExecutions,
@@ -1273,6 +1275,8 @@ export function TaskDetailsPanel({
                 onStopDevServer={stopDevServer}
                 onOpenInEditor={handleOpenInEditor}
                 onSetIsHoveringDevServer={setIsHoveringDevServer}
+                createAttemptError={createAttemptError}
+                onCreateAttemptErrorChange={setCreateAttemptError}
               />
 
               {/* Main Content - Dynamic based on execution state */}

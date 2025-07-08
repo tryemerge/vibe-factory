@@ -230,8 +230,15 @@ impl TaskAttempt {
         };
 
         // Generate worktree path automatically using cross-platform temporary directory
+        // Always use the auto-generated format for consistency
+        let task_title_id = crate::utils::text::git_branch_id(&task.title);
+        let worktree_branch_name = format!(
+            "vk-{}-{}",
+            crate::utils::text::short_uuid(&attempt_id),
+            task_title_id
+        );
         let temp_dir = std::env::temp_dir();
-        let worktree_path = temp_dir.join(&task_attempt_branch);
+        let worktree_path = temp_dir.join(&worktree_branch_name);
         let worktree_path_str = worktree_path.to_string_lossy().to_string();
 
         // Then get the project using the project_id

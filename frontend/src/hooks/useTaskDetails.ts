@@ -49,6 +49,7 @@ export function useTaskDetails(
   const [executionState, setExecutionState] = useState<TaskAttemptState | null>(
     null
   );
+  const [createAttemptError, setCreateAttemptError] = useState<string | null>(null);
 
   // Find running dev server in current project
   const runningDevServer = useMemo(() => {
@@ -394,6 +395,7 @@ export function useTaskDetails(
     if (!task) return;
 
     try {
+      setCreateAttemptError(null);
       const response = await makeRequest(
         `/api/projects/${projectId}/tasks/${task.id}/attempts`,
         {
@@ -411,9 +413,18 @@ export function useTaskDetails(
 
       if (response.ok) {
         fetchTaskAttempts();
+      } else {
+        const errorText = await response.text();
+        setCreateAttemptError(
+          `Failed to create attempt: ${errorText || response.statusText}`
+        );
       }
     } catch (err) {
-      console.error('Failed to create new attempt:', err);
+      setCreateAttemptError(
+        `Failed to create attempt: ${
+          err instanceof Error ? err.message : 'Unknown error'
+        }`
+      );
     }
   };
 
@@ -589,6 +600,7 @@ export function useTaskDetails(
     branches,
     selectedBranch,
     executionState,
+    createAttemptError,
 
     // Computed
     runningDevServer,
@@ -602,6 +614,7 @@ export function useTaskDetails(
     setFollowUpError,
     setIsHoveringDevServer,
     setSelectedBranch,
+    setCreateAttemptError,
     handleAttemptChange,
     createNewAttempt,
     stopAllExecutions,

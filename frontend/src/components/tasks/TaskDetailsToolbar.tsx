@@ -89,6 +89,8 @@ interface TaskDetailsToolbarProps {
   onStopDevServer: () => void;
   onOpenInEditor: () => void;
   onSetIsHoveringDevServer: (hovering: boolean) => void;
+  createAttemptError: string | null;
+  onCreateAttemptErrorChange: (error: string | null) => void;
 }
 
 const availableExecutors = [
@@ -121,6 +123,8 @@ export function TaskDetailsToolbar({
   onStopDevServer,
   onOpenInEditor,
   onSetIsHoveringDevServer,
+  createAttemptError,
+  onCreateAttemptErrorChange,
 }: TaskDetailsToolbarProps) {
   const { config } = useConfig();
   const [branchSearchTerm, setBranchSearchTerm] = useState('');
@@ -422,6 +426,7 @@ export function TaskDetailsToolbar({
   const handleExitCreateAttemptMode = () => {
     setIsInCreateAttemptMode(false);
     setCreateAttemptBranchName('');
+    onCreateAttemptErrorChange(null);
   };
 
   // Handle creating the attempt
@@ -437,6 +442,13 @@ export function TaskDetailsToolbar({
   // Render create attempt UI
   const renderCreateAttemptUI = () => (
     <div className="space-y-3">
+      {/* Error Display */}
+      {createAttemptError && (
+        <div className="p-2 bg-red-50 border border-red-200 rounded text-red-800 text-xs">
+          {createAttemptError}
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold">Create Attempt</h3>
         {taskAttempts.length > 0 && (
@@ -517,11 +529,12 @@ export function TaskDetailsToolbar({
                     >
                       <div className="flex items-center justify-between w-full">
                         <span
-                          className={branch.is_current ? 'font-medium' : ''}
+                          className={`${branch.is_current ? 'font-medium' : ''} truncate max-w-[200px]`}
+                          title={branch.name}
                         >
                           {branch.name}
                         </span>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 ml-2 flex-shrink-0">
                           {branch.is_current && (
                             <span className="text-xs bg-green-100 text-green-800 px-1 rounded">
                               current
@@ -676,6 +689,18 @@ export function TaskDetailsToolbar({
                           <span className="text-sm font-medium">
                             {branchStatus?.base_branch_name ||
                               selectedBranchDisplayName}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                          Task Branch
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <GitBranchIcon className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm font-medium">
+                            {selectedAttempt.branch}
                           </span>
                         </div>
                       </div>
