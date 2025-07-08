@@ -33,15 +33,10 @@ struct DevicePollRequest {
 
 /// POST /auth/github/device/start
 async fn device_start() -> ResponseJson<ApiResponse<DeviceStartResponse>> {
-    let client_id = option_env!("GITHUB_APP_CLIENT_ID").unwrap_or("");
-    if client_id.is_empty() {
-        return ResponseJson(ApiResponse {
-            success: false,
-            data: None,
-            message: Some("GitHub App client ID not set on server".to_string()),
-        });
-    }
-    let params = [("client_id", client_id), ("scope", "user:email")];
+    let params = [
+        ("client_id", "Ov23li9bxz3kKfPOIsGm"),
+        ("scope", "user:email,repo"),
+    ];
     let client = reqwest::Client::new();
     let res = client
         .post("https://github.com/login/device/code")
@@ -107,16 +102,8 @@ async fn device_poll(
     State(app_state): State<AppState>,
     Json(payload): Json<DevicePollRequest>,
 ) -> ResponseJson<ApiResponse<String>> {
-    let client_id = option_env!("GITHUB_APP_CLIENT_ID").unwrap_or("");
-    if client_id.is_empty() {
-        return ResponseJson(ApiResponse {
-            success: false,
-            data: None,
-            message: Some("GitHub App client ID not set on server".to_string()),
-        });
-    }
     let params = [
-        ("client_id", client_id),
+        ("client_id", "Ov23li9bxz3kKfPOIsGm"),
         ("device_code", payload.device_code.as_str()),
         ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
     ];
