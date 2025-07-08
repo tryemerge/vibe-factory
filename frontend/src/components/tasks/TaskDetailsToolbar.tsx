@@ -484,8 +484,8 @@ export function TaskDetailsToolbar({
                 size="sm"
                 className="w-full justify-between text-xs"
               >
-                <div className="flex items-center gap-1.5">
-                  <GitBranchIcon className="h-3 w-3" />
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <GitBranchIcon className="h-3 w-3 flex-shrink-0" />
                   <span className="truncate">
                     {createAttemptBranch
                       ? createAttemptBranch.includes('/')
@@ -494,7 +494,7 @@ export function TaskDetailsToolbar({
                       : 'current'}
                   </span>
                 </div>
-                <ArrowDown className="h-3 w-3" />
+                <ArrowDown className="h-3 w-3 flex-shrink-0" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-80">
