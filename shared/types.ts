@@ -58,7 +58,7 @@ export type TaskAttemptStatus = "setuprunning" | "setupcomplete" | "setupfailed"
 
 export type TaskAttempt = { id: string, task_id: string, worktree_path: string, branch: string, base_branch: string, merge_commit: string | null, executor: string | null, pr_url: string | null, pr_number: bigint | null, pr_status: string | null, pr_merged_at: string | null, created_at: string, updated_at: string, };
 
-export type CreateTaskAttempt = { executor: string | null, base_branch: string | null, };
+export type CreateTaskAttempt = { executor: string | null, base_branch: string | null, branch_name_override: string | null, };
 
 export type UpdateTaskAttempt = Record<string, never>;
 

@@ -390,7 +390,7 @@ export function useTaskDetails(
     }
   };
 
-  const createNewAttempt = async (executor?: string, baseBranch?: string) => {
+  const createNewAttempt = async (executor?: string, baseBranch?: string, branchNameOverride?: string) => {
     if (!task) return;
 
     try {
@@ -404,6 +404,7 @@ export function useTaskDetails(
           body: JSON.stringify({
             executor: executor || selectedExecutor,
             base_branch: baseBranch || selectedBranch,
+            branch_name_override: branchNameOverride || undefined,
           }),
         }
       );

@@ -84,6 +84,7 @@ pub struct TaskAttempt {
 pub struct CreateTaskAttempt {
     pub executor: Option<String>, // Optional executor name (defaults to "echo")
     pub base_branch: Option<String>, // Optional base branch to checkout (defaults to current HEAD)
+    pub branch_name_override: Option<String>, // Optional custom branch name (defaults to auto-generated)
 }
 
 #[derive(Debug, Deserialize, TS)]
@@ -215,12 +216,18 @@ impl TaskAttempt {
             .ok_or(TaskAttemptError::TaskNotFound)?;
 
         // Create a unique and helpful branch name
-        let task_title_id = crate::utils::text::git_branch_id(&task.title);
-        let task_attempt_branch = format!(
-            "vk-{}-{}",
-            crate::utils::text::short_uuid(&attempt_id),
-            task_title_id
-        );
+        let task_attempt_branch = if let Some(branch_name_override) = &data.branch_name_override {
+            // Use the provided branch name override
+            branch_name_override.clone()
+        } else {
+            // Generate default branch name
+            let task_title_id = crate::utils::text::git_branch_id(&task.title);
+            format!(
+                "vk-{}-{}",
+                crate::utils::text::short_uuid(&attempt_id),
+                task_title_id
+            )
+        };
 
         // Generate worktree path automatically using cross-platform temporary directory
         let temp_dir = std::env::temp_dir();

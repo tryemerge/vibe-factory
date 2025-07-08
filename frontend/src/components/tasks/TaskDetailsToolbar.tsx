@@ -79,7 +79,11 @@ interface TaskDetailsToolbarProps {
   branches: GitBranch[];
   selectedBranch: string | null;
   onAttemptChange: (attemptId: string) => void;
-  onCreateNewAttempt: (executor?: string, baseBranch?: string) => void;
+  onCreateNewAttempt: (
+    executor?: string,
+    baseBranch?: string,
+    branchNameOverride?: string
+  ) => void;
   onStopAllExecutions: () => void;
   onStartDevServer: () => void;
   onStopDevServer: () => void;
@@ -128,6 +132,8 @@ export function TaskDetailsToolbar({
   );
   const [createAttemptExecutor, setCreateAttemptExecutor] =
     useState<string>(selectedExecutor);
+  const [createAttemptBranchName, setCreateAttemptBranchName] =
+    useState<string>('');
 
   // Branch status and git operations state
   const [branchStatus, setBranchStatus] = useState<BranchStatus | null>(null);
@@ -409,16 +415,22 @@ export function TaskDetailsToolbar({
       setCreateAttemptBranch(selectedBranch);
       setCreateAttemptExecutor(selectedExecutor);
     }
+    setCreateAttemptBranchName('');
   };
 
   // Handle exiting create attempt mode
   const handleExitCreateAttemptMode = () => {
     setIsInCreateAttemptMode(false);
+    setCreateAttemptBranchName('');
   };
 
   // Handle creating the attempt
   const handleCreateAttempt = () => {
-    onCreateNewAttempt(createAttemptExecutor, createAttemptBranch || undefined);
+    onCreateNewAttempt(
+      createAttemptExecutor,
+      createAttemptBranch || undefined,
+      createAttemptBranchName || undefined
+    );
     handleExitCreateAttemptMode();
   };
 
@@ -445,7 +457,7 @@ export function TaskDetailsToolbar({
         </label>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 items-end">
+      <div className="grid grid-cols-4 gap-3 items-end">
         {/* Step 1: Choose Base Branch */}
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
@@ -572,7 +584,22 @@ export function TaskDetailsToolbar({
           </DropdownMenu>
         </div>
 
-        {/* Step 3: Start Attempt */}
+        {/* Step 3: Branch Name Override */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Branch name (optional)
+            </label>
+          </div>
+          <Input
+            value={createAttemptBranchName}
+            onChange={(e) => setCreateAttemptBranchName(e.target.value)}
+            placeholder="Custom branch name"
+            className="w-full text-xs"
+          />
+        </div>
+
+        {/* Step 4: Start Attempt */}
         <div className="space-y-1">
           <Button
             onClick={handleCreateAttempt}
