@@ -300,6 +300,35 @@ export function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="github-token">Personal Access Token</Label>
+                <Input
+                  id="github-token"
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  value={config.github.pat || ''}
+                  onChange={(e) =>
+                    updateConfig({
+                      github: {
+                        ...config.github,
+                        pat: e.target.value || null,
+                      },
+                    })
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  GitHub Personal Access Token with 'repo' permissions. Required
+                  for creating pull requests.{' '}
+                  <a
+                    href="https://github.com/settings/tokens"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Create token here
+                  </a>
+                </p>
+              </div>
               {config && isAuthenticated ? (
                 <div className="flex items-center justify-between gap-4">
                   <div>
