@@ -14,7 +14,7 @@ const Dialog = React.forwardRef<
 >(({ className, open, onOpenChange, children, uncloseable, ...props }, ref) => {
   // Add keyboard shortcut support for closing dialog with Esc
   useDialogKeyboardShortcuts(() => {
-    if (open && onOpenChange) {
+    if (open && onOpenChange && !uncloseable) {
       onOpenChange(false);
     }
   });
