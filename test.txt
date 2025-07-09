@@ -1,0 +1,24 @@
+In code we trust, but verify we must,
+Through tests that guard against the rust
+Of bugs that creep in quiet night,
+Our assertions shine their light.
+
+Unit tests so small and clean,
+Test the parts we've never seen,
+Integration tests that bind
+The pieces of our coding mind.
+
+Red, green, refactor's sacred dance,
+Gives our software fighting chance,
+Each test case a faithful friend,
+On whom we can always depend.
+
+Mock the world and stub the call,
+Catch the bugs before they fall,
+In the realm of ones and zeros,
+Tests become our coding heroes.
+
+So write your tests with care and thought,
+For quality cannot be bought,
+Only through this testing art,
+Can we build code close to heart.
