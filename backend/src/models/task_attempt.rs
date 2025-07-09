@@ -12,7 +12,7 @@ use super::{project::Project, task::Task};
 use crate::{
     executor::Executor,
     services::{GitService, GitServiceError},
-    utils::{shell::get_shell_command, worktree_manager::WorktreeManager},
+    utils::shell::get_shell_command,
 };
 
 #[derive(Debug)]
@@ -905,76 +905,18 @@ impl TaskAttempt {
             .await?
             .ok_or(TaskAttemptError::ProjectNotFound)?;
 
-        let repo = Repository::open(&project.git_repo_path)?;
-
-        // Verify branch exists before proceeding
-        let _branch = repo
-            .find_branch(&task_attempt.branch, BranchType::Local)
-            .map_err(|_| TaskAttemptError::BranchNotFound(task_attempt.branch.clone()))?;
-        drop(_branch);
+        // Create GitService instance
+        let git_service = GitService::new(&project.git_repo_path)?;
 
         // Use the stored worktree path from database - this ensures we recreate in the exact same location
         // where Claude originally created its session, maintaining session continuity
         let stored_worktree_path = std::path::PathBuf::from(&task_attempt.worktree_path);
-        let stored_worktree_path_str = stored_worktree_path.to_string_lossy().to_string();
 
-        info!(
-            "Recreating worktree using stored path: {} (branch: {})",
-            stored_worktree_path_str, task_attempt.branch
-        );
+        let result_path = git_service
+            .recreate_worktree_from_branch(&task_attempt.branch, &stored_worktree_path)
+            .await?;
 
-        // Clean up existing directory if it exists to avoid git sync issues
-        // If we're in this method, we intend to recreate anyway
-        if stored_worktree_path.exists() {
-            debug!(
-                "Removing existing directory before worktree recreation: {}",
-                stored_worktree_path_str
-            );
-            std::fs::remove_dir_all(&stored_worktree_path).map_err(|e| {
-                TaskAttemptError::Git(GitError::from_str(&format!(
-                    "Failed to remove existing worktree directory {}: {}",
-                    stored_worktree_path_str, e
-                )))
-            })?;
-        }
-
-        // Ensure parent directory exists - critical for session continuity
-        if let Some(parent) = stored_worktree_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| {
-                TaskAttemptError::Git(GitError::from_str(&format!(
-                    "Failed to create parent directory for worktree path {}: {}",
-                    stored_worktree_path_str, e
-                )))
-            })?;
-        }
-
-        // Create worktree at the exact same path as originally created
-        // Use the WorktreeManager for proper synchronization and race condition handling
-
-        // Extract repository path for WorktreeManager
-        let repo_path = repo
-            .workdir()
-            .ok_or_else(|| {
-                TaskAttemptError::Git(GitError::from_str("Repository has no working directory"))
-            })?
-            .to_str()
-            .ok_or_else(|| {
-                TaskAttemptError::Git(GitError::from_str("Repository path is not valid UTF-8"))
-            })?
-            .to_string();
-
-        WorktreeManager::ensure_worktree_exists(
-            repo_path,
-            task_attempt.branch.clone(),
-            stored_worktree_path,
-        )
-        .await?;
-
-        info!(
-            "Successfully recreated worktree at original path: {} -> {}",
-            task_attempt.branch, stored_worktree_path_str
-        );
-        Ok(stored_worktree_path_str)
+        Ok(result_path.to_string_lossy().to_string())
     }
 
     /// Resolve executor configuration from string name
@@ -1366,594 +1308,25 @@ impl TaskAttempt {
             .await?
             .ok_or(TaskAttemptError::ProjectNotFound)?;
 
-        let mut files = Vec::new();
+        // Create GitService instance
+        let git_service = GitService::new(&project.git_repo_path)?;
 
         if let Some(merge_commit_id) = &attempt.merge_commit {
             // Task attempt has been merged - show the diff from the merge commit
-            let main_repo = Repository::open(&project.git_repo_path)?;
-            let merge_commit = main_repo.find_commit(git2::Oid::from_str(merge_commit_id)?)?;
-
-            // A merge commit has multiple parents - first parent is the main branch before merge,
-            // second parent is the branch that was merged
-            let parents: Vec<_> = merge_commit.parents().collect();
-
-            // Create diff options with more context
-            let mut diff_opts = git2::DiffOptions::new();
-            diff_opts.context_lines(10); // Include 10 lines of context around changes
-            diff_opts.interhunk_lines(0); // Don't merge hunks
-
-            let diff = if parents.len() >= 2 {
-                let base_tree = parents[0].tree()?; // Main branch before merge
-                let merged_tree = parents[1].tree()?; // The branch that was merged
-                main_repo.diff_tree_to_tree(
-                    Some(&base_tree),
-                    Some(&merged_tree),
-                    Some(&mut diff_opts),
-                )?
-            } else {
-                // Fast-forward merge or single parent - compare merge commit with its parent
-                let base_tree = if !parents.is_empty() {
-                    parents[0].tree()?
-                } else {
-                    // No parents (shouldn't happen), use empty tree
-                    main_repo.find_tree(git2::Oid::zero())?
-                };
-                let merged_tree = merge_commit.tree()?;
-                main_repo.diff_tree_to_tree(
-                    Some(&base_tree),
-                    Some(&merged_tree),
-                    Some(&mut diff_opts),
-                )?
-            };
-
-            // Process each diff delta (file change)
-            diff.foreach(
-                &mut |delta, _progress| {
-                    if let Some(path_str) = delta.new_file().path().and_then(|p| p.to_str()) {
-                        let old_file = delta.old_file();
-                        let new_file = delta.new_file();
-
-                        // Get old content
-                        let old_content = if !old_file.id().is_zero() {
-                            match main_repo.find_blob(old_file.id()) {
-                                Ok(blob) => String::from_utf8_lossy(blob.content()).to_string(),
-                                Err(_) => String::new(),
-                            }
-                        } else {
-                            String::new() // File didn't exist in base commit
-                        };
-
-                        // Get new content
-                        let new_content = if !new_file.id().is_zero() {
-                            match main_repo.find_blob(new_file.id()) {
-                                Ok(blob) => String::from_utf8_lossy(blob.content()).to_string(),
-                                Err(_) => String::new(),
-                            }
-                        } else {
-                            String::new() // File was deleted
-                        };
-
-                        // Generate Git-native diff chunks
-                        // Always generate diff for file changes, even if both contents are empty
-                        // This handles cases where empty files are added or files are deleted
-                        if old_content != new_content || delta.status() != git2::Delta::Modified {
-                            match Self::generate_git_diff_chunks(
-                                &main_repo, &old_file, &new_file, path_str,
-                            ) {
-                                Ok(diff_chunks) if !diff_chunks.is_empty() => {
-                                    files.push(FileDiff {
-                                        path: path_str.to_string(),
-                                        chunks: diff_chunks,
-                                    });
-                                }
-                                // For added or deleted files without content, still show the file
-                                Ok(_)
-                                    if delta.status() == git2::Delta::Added
-                                        || delta.status() == git2::Delta::Deleted =>
-                                {
-                                    files.push(FileDiff {
-                                        path: path_str.to_string(),
-                                        chunks: vec![DiffChunk {
-                                            chunk_type: if delta.status() == git2::Delta::Added {
-                                                DiffChunkType::Insert
-                                            } else {
-                                                DiffChunkType::Delete
-                                            },
-                                            content: format!(
-                                                "{} file",
-                                                if delta.status() == git2::Delta::Added {
-                                                    "Added"
-                                                } else {
-                                                    "Deleted"
-                                                }
-                                            ),
-                                        }],
-                                    });
-                                }
-                                Err(e) => {
-                                    eprintln!("Error generating diff for {}: {:?}", path_str, e);
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                    true // Continue processing
-                },
-                None,
-                None,
-                None,
-            )?;
+            git_service.get_enhanced_diff(Path::new(""), Some(merge_commit_id))
+                .map_err(TaskAttemptError::from)
         } else {
-            // Task attempt not yet merged - use the original logic with fork point
+            // Task attempt not yet merged - get worktree diff
             // Ensure worktree exists (recreate if needed for cold task support)
             let worktree_path =
                 Self::ensure_worktree_exists(pool, attempt_id, project_id, "diff").await?;
 
-            let worktree_repo = Repository::open(&worktree_path)?;
-            let main_repo = Repository::open(&project.git_repo_path)?;
-            let main_head_oid = main_repo.head()?.peel_to_commit()?.id();
-
-            // Get the current worktree HEAD commit
-            let worktree_head = worktree_repo.head()?;
-            let worktree_head_oid = worktree_head.peel_to_commit()?.id();
-
-            // Find the merge base (common ancestor) between main and the worktree branch
-            // This represents the point where the worktree branch forked off from main
-            let base_oid = worktree_repo.merge_base(main_head_oid, worktree_head_oid)?;
-            let base_commit = worktree_repo.find_commit(base_oid)?;
-            let base_tree = base_commit.tree()?;
-
-            // Get the current tree from the worktree HEAD commit we already retrieved
-            let current_commit = worktree_repo.find_commit(worktree_head_oid)?;
-            let current_tree = current_commit.tree()?;
-
-            // Create a diff between the base tree and current tree with more context
-            let mut diff_opts = git2::DiffOptions::new();
-            diff_opts.context_lines(10); // Include 10 lines of context around changes
-            diff_opts.interhunk_lines(0); // Don't merge hunks
-
-            let diff = worktree_repo.diff_tree_to_tree(
-                Some(&base_tree),
-                Some(&current_tree),
-                Some(&mut diff_opts),
-            )?;
-
-            // Process each diff delta (file change)
-            diff.foreach(
-                &mut |delta, _progress| {
-                    if let Some(path_str) = delta.new_file().path().and_then(|p| p.to_str()) {
-                        let old_file = delta.old_file();
-                        let new_file = delta.new_file();
-
-                        // Get old content
-                        let old_content = if !old_file.id().is_zero() {
-                            match worktree_repo.find_blob(old_file.id()) {
-                                Ok(blob) => String::from_utf8_lossy(blob.content()).to_string(),
-                                Err(_) => String::new(),
-                            }
-                        } else {
-                            String::new() // File didn't exist in base commit
-                        };
-
-                        // Get new content
-                        let new_content = if !new_file.id().is_zero() {
-                            match worktree_repo.find_blob(new_file.id()) {
-                                Ok(blob) => String::from_utf8_lossy(blob.content()).to_string(),
-                                Err(_) => String::new(),
-                            }
-                        } else {
-                            String::new() // File was deleted
-                        };
-
-                        // Generate Git-native diff chunks
-                        // Always generate diff for file changes, even if both contents are empty
-                        // This handles cases where empty files are added or files are deleted
-                        if old_content != new_content || delta.status() != git2::Delta::Modified {
-                            match Self::generate_git_diff_chunks(
-                                &worktree_repo,
-                                &old_file,
-                                &new_file,
-                                path_str,
-                            ) {
-                                Ok(diff_chunks) if !diff_chunks.is_empty() => {
-                                    files.push(FileDiff {
-                                        path: path_str.to_string(),
-                                        chunks: diff_chunks,
-                                    });
-                                }
-                                // For added or deleted files without content, still show the file
-                                Ok(_)
-                                    if delta.status() == git2::Delta::Added
-                                        || delta.status() == git2::Delta::Deleted =>
-                                {
-                                    files.push(FileDiff {
-                                        path: path_str.to_string(),
-                                        chunks: vec![DiffChunk {
-                                            chunk_type: if delta.status() == git2::Delta::Added {
-                                                DiffChunkType::Insert
-                                            } else {
-                                                DiffChunkType::Delete
-                                            },
-                                            content: format!(
-                                                "{} file",
-                                                if delta.status() == git2::Delta::Added {
-                                                    "Added"
-                                                } else {
-                                                    "Deleted"
-                                                }
-                                            ),
-                                        }],
-                                    });
-                                }
-                                Err(e) => {
-                                    eprintln!("Error generating diff for {}: {:?}", path_str, e);
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                    true // Continue processing
-                },
-                None,
-                None,
-                None,
-            )?;
-
-            // Now also get unstaged changes (working directory changes)
-            let current_tree = worktree_repo.head()?.peel_to_tree()?;
-
-            // Create diff from HEAD to working directory for unstaged changes
-            let mut unstaged_diff_opts = git2::DiffOptions::new();
-            unstaged_diff_opts.context_lines(10);
-            unstaged_diff_opts.interhunk_lines(0);
-            unstaged_diff_opts.include_untracked(true); // Include untracked files
-
-            let unstaged_diff = worktree_repo.diff_tree_to_workdir_with_index(
-                Some(&current_tree),
-                Some(&mut unstaged_diff_opts),
-            )?;
-
-            // Process unstaged changes
-            unstaged_diff.foreach(
-                &mut |delta, _progress| {
-                    if let Some(path_str) = delta.new_file().path().and_then(|p| p.to_str()) {
-                        if let Err(e) = Self::process_unstaged_file(
-                            &mut files,
-                            &worktree_repo,
-                            base_oid,
-                            &worktree_path,
-                            path_str,
-                            &delta,
-                        ) {
-                            eprintln!("Error processing unstaged file {}: {:?}", path_str, e);
-                        }
-                    }
-                    true
-                },
-                None,
-                None,
-                None,
-            )?;
+            git_service.get_enhanced_diff(Path::new(&worktree_path), None)
+                .map_err(TaskAttemptError::from)
         }
-
-        Ok(WorktreeDiff { files })
     }
 
-    fn process_unstaged_file(
-        files: &mut Vec<FileDiff>,
-        worktree_repo: &Repository,
-        base_oid: git2::Oid,
-        worktree_path: &str,
-        path_str: &str,
-        delta: &git2::DiffDelta,
-    ) -> Result<(), TaskAttemptError> {
-        let old_file = delta.old_file();
-        let new_file = delta.new_file();
 
-        // Check if we already have a diff for this file from committed changes
-        if let Some(existing_file) = files.iter_mut().find(|f| f.path == path_str) {
-            // File already has committed changes, need to create a combined diff
-            // from the base branch to the current working directory (including unstaged changes)
-
-            // Get the base content (from the fork point)
-            let base_content = if let Ok(base_commit) = worktree_repo.find_commit(base_oid) {
-                if let Ok(base_tree) = base_commit.tree() {
-                    match base_tree.get_path(std::path::Path::new(path_str)) {
-                        Ok(entry) => {
-                            if let Ok(blob) = worktree_repo.find_blob(entry.id()) {
-                                String::from_utf8_lossy(blob.content()).to_string()
-                            } else {
-                                String::new()
-                            }
-                        }
-                        Err(_) => String::new(),
-                    }
-                } else {
-                    String::new()
-                }
-            } else {
-                String::new()
-            };
-
-            // Get the working directory content
-            let working_content = if delta.status() != git2::Delta::Deleted {
-                let file_path = std::path::Path::new(worktree_path).join(path_str);
-                std::fs::read_to_string(&file_path).unwrap_or_default()
-            } else {
-                String::new()
-            };
-
-            // Create a combined diff from base to working directory
-            if base_content != working_content {
-                // Use git's patch generation with the content directly
-                let mut diff_opts = git2::DiffOptions::new();
-                diff_opts.context_lines(10);
-                diff_opts.interhunk_lines(0);
-
-                if let Ok(patch) = git2::Patch::from_buffers(
-                    base_content.as_bytes(),
-                    Some(std::path::Path::new(path_str)),
-                    working_content.as_bytes(),
-                    Some(std::path::Path::new(path_str)),
-                    Some(&mut diff_opts),
-                ) {
-                    let mut combined_chunks = Vec::new();
-
-                    // Process the patch hunks
-                    for hunk_idx in 0..patch.num_hunks() {
-                        if let Ok((_hunk, hunk_lines)) = patch.hunk(hunk_idx) {
-                            // Process each line in the hunk
-                            for line_idx in 0..hunk_lines {
-                                if let Ok(line) = patch.line_in_hunk(hunk_idx, line_idx) {
-                                    let content =
-                                        String::from_utf8_lossy(line.content()).to_string();
-
-                                    let chunk_type = match line.origin() {
-                                        ' ' => DiffChunkType::Equal,
-                                        '+' => DiffChunkType::Insert,
-                                        '-' => DiffChunkType::Delete,
-                                        _ => continue, // Skip other line types
-                                    };
-
-                                    combined_chunks.push(DiffChunk {
-                                        chunk_type,
-                                        content,
-                                    });
-                                }
-                            }
-                        }
-                    }
-
-                    if !combined_chunks.is_empty() {
-                        existing_file.chunks = combined_chunks;
-                    }
-                }
-            }
-        } else {
-            // File only has unstaged changes (new file or uncommitted changes only)
-            // First check if this is a new file or changed file by comparing with base
-            let base_content = if let Ok(base_commit) = worktree_repo.find_commit(base_oid) {
-                if let Ok(base_tree) = base_commit.tree() {
-                    match base_tree.get_path(std::path::Path::new(path_str)) {
-                        Ok(entry) => {
-                            if let Ok(blob) = worktree_repo.find_blob(entry.id()) {
-                                String::from_utf8_lossy(blob.content()).to_string()
-                            } else {
-                                String::new()
-                            }
-                        }
-                        Err(_) => String::new(),
-                    }
-                } else {
-                    String::new()
-                }
-            } else {
-                String::new()
-            };
-
-            // Get the working directory content
-            let working_content = if delta.status() != git2::Delta::Deleted {
-                let file_path = std::path::Path::new(worktree_path).join(path_str);
-                std::fs::read_to_string(&file_path).unwrap_or_default()
-            } else {
-                String::new()
-            };
-
-            // Create diff from base to working directory (including unstaged changes)
-            if base_content != working_content || delta.status() != git2::Delta::Modified {
-                if let Ok(patch) = git2::Patch::from_buffers(
-                    base_content.as_bytes(),
-                    Some(std::path::Path::new(path_str)),
-                    working_content.as_bytes(),
-                    Some(std::path::Path::new(path_str)),
-                    Some(&mut git2::DiffOptions::new()),
-                ) {
-                    let mut chunks = Vec::new();
-
-                    // Process the patch hunks
-                    for hunk_idx in 0..patch.num_hunks() {
-                        if let Ok((_hunk, hunk_lines)) = patch.hunk(hunk_idx) {
-                            for line_idx in 0..hunk_lines {
-                                if let Ok(line) = patch.line_in_hunk(hunk_idx, line_idx) {
-                                    let content =
-                                        String::from_utf8_lossy(line.content()).to_string();
-                                    let chunk_type = match line.origin() {
-                                        ' ' => DiffChunkType::Equal,
-                                        '+' => DiffChunkType::Insert,
-                                        '-' => DiffChunkType::Delete,
-                                        _ => continue,
-                                    };
-                                    chunks.push(DiffChunk {
-                                        chunk_type,
-                                        content,
-                                    });
-                                }
-                            }
-                        }
-                    }
-
-                    // If no hunks but file status changed, add a placeholder
-                    if chunks.is_empty() && delta.status() != git2::Delta::Modified {
-                        chunks.push(DiffChunk {
-                            chunk_type: if delta.status() == git2::Delta::Added {
-                                DiffChunkType::Insert
-                            } else {
-                                DiffChunkType::Delete
-                            },
-                            content: format!(
-                                "{} file",
-                                if delta.status() == git2::Delta::Added {
-                                    "Added"
-                                } else {
-                                    "Deleted"
-                                }
-                            ),
-                        });
-                    }
-
-                    if !chunks.is_empty() {
-                        files.push(FileDiff {
-                            path: path_str.to_string(),
-                            chunks,
-                        });
-                    }
-                } else {
-                    // Fallback to the original method if patch creation fails
-                    match Self::generate_git_diff_chunks(
-                        worktree_repo,
-                        &old_file,
-                        &new_file,
-                        path_str,
-                    ) {
-                        Ok(diff_chunks) if !diff_chunks.is_empty() => {
-                            files.push(FileDiff {
-                                path: path_str.to_string(),
-                                chunks: diff_chunks,
-                            });
-                        }
-                        // For added or deleted files without content, still show the file
-                        Ok(_)
-                            if delta.status() == git2::Delta::Added
-                                || delta.status() == git2::Delta::Deleted =>
-                        {
-                            files.push(FileDiff {
-                                path: path_str.to_string(),
-                                chunks: vec![DiffChunk {
-                                    chunk_type: if delta.status() == git2::Delta::Added {
-                                        DiffChunkType::Insert
-                                    } else {
-                                        DiffChunkType::Delete
-                                    },
-                                    content: format!(
-                                        "{} file",
-                                        if delta.status() == git2::Delta::Added {
-                                            "Added"
-                                        } else {
-                                            "Deleted"
-                                        }
-                                    ),
-                                }],
-                            });
-                        }
-                        Err(e) => {
-                            eprintln!("Error generating unstaged diff for {}: {:?}", path_str, e);
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Generate diff chunks using Git's native diff algorithm
-    pub fn generate_git_diff_chunks(
-        repo: &Repository,
-        old_file: &git2::DiffFile,
-        new_file: &git2::DiffFile,
-        file_path: &str,
-    ) -> Result<Vec<DiffChunk>, TaskAttemptError> {
-        use std::path::Path;
-        let mut chunks = Vec::new();
-
-        // Create a patch for the single file using Git's native diff
-        let old_blob = if !old_file.id().is_zero() {
-            Some(repo.find_blob(old_file.id())?)
-        } else {
-            None
-        };
-
-        let new_blob = if !new_file.id().is_zero() {
-            Some(repo.find_blob(new_file.id())?)
-        } else {
-            None
-        };
-
-        // Generate patch using Git's diff algorithm with context
-        let mut diff_opts = git2::DiffOptions::new();
-        diff_opts.context_lines(10); // Include 10 lines of context around changes
-        diff_opts.interhunk_lines(0); // Don't merge hunks
-
-        let patch = match (old_blob.as_ref(), new_blob.as_ref()) {
-            (Some(old_b), Some(new_b)) => git2::Patch::from_blobs(
-                old_b,
-                Some(Path::new(file_path)),
-                new_b,
-                Some(Path::new(file_path)),
-                Some(&mut diff_opts),
-            )?,
-            (None, Some(new_b)) => {
-                // File was added - diff from empty buffer to new blob content
-                git2::Patch::from_buffers(
-                    &[], // empty buffer represents the "old" version (file didn't exist)
-                    Some(Path::new(file_path)),
-                    new_b.content(), // new blob content as buffer
-                    Some(Path::new(file_path)),
-                    Some(&mut diff_opts),
-                )?
-            }
-            (Some(old_b), None) => {
-                // File was deleted - diff from old blob to empty buffer
-                git2::Patch::from_blob_and_buffer(
-                    old_b,
-                    Some(Path::new(file_path)),
-                    &[],
-                    Some(Path::new(file_path)),
-                    Some(&mut diff_opts),
-                )?
-            }
-            (None, None) => {
-                // No change, shouldn't happen
-                return Ok(chunks);
-            }
-        };
-
-        // Process the patch hunks
-        for hunk_idx in 0..patch.num_hunks() {
-            let (_hunk, hunk_lines) = patch.hunk(hunk_idx)?;
-
-            // Process each line in the hunk
-            for line_idx in 0..hunk_lines {
-                let line = patch.line_in_hunk(hunk_idx, line_idx)?;
-                let content = String::from_utf8_lossy(line.content()).to_string();
-
-                let chunk_type = match line.origin() {
-                    ' ' => DiffChunkType::Equal,
-                    '+' => DiffChunkType::Insert,
-                    '-' => DiffChunkType::Delete,
-                    _ => continue, // Skip other line types (like context headers)
-                };
-
-                chunks.push(DiffChunk {
-                    chunk_type,
-                    content,
-                });
-            }
-        }
-
-        Ok(chunks)
-    }
 
     /// Get the branch status for this task attempt
     pub async fn get_branch_status(
@@ -1999,7 +1372,7 @@ impl TaskAttempt {
             .await?
             .ok_or(TaskAttemptError::ProjectNotFound)?;
 
-        use git2::{BranchType, Repository, Status, StatusOptions};
+        use git2::{Status, StatusOptions};
 
         // Ensure worktree exists (recreate if needed for cold task support)
         let main_repo = Repository::open(&project.git_repo_path)?;
@@ -2166,54 +1539,19 @@ impl TaskAttempt {
         let worktree_path_str =
             Self::ensure_worktree_exists(pool, attempt_id, project_id, "delete file").await?;
 
-        // Open the worktree repository
-        let repo = Repository::open(&worktree_path_str)?;
+        // Get the project to access GitService
+        let project = Project::find_by_id(pool, project_id)
+            .await?
+            .ok_or(TaskAttemptError::ProjectNotFound)?;
 
-        // Get the absolute path to the file within the worktree
-        let worktree_path = Path::new(&worktree_path_str);
-        let file_full_path = worktree_path.join(file_path);
+        // Create GitService instance
+        let git_service = GitService::new(&project.git_repo_path)?;
 
-        // Check if file exists and delete it
-        if file_full_path.exists() {
-            std::fs::remove_file(&file_full_path).map_err(|e| {
-                TaskAttemptError::Git(GitError::from_str(&format!(
-                    "Failed to delete file {}: {}",
-                    file_path, e
-                )))
-            })?;
+        // Use GitService to delete file and commit
+        let commit_id = git_service
+            .delete_file_and_commit(Path::new(&worktree_path_str), file_path)?;
 
-            debug!("Deleted file: {}", file_path);
-        } else {
-            info!("File {} does not exist, skipping deletion", file_path);
-        }
-
-        // Stage the deletion
-        let mut index = repo.index()?;
-        index.remove_path(Path::new(file_path))?;
-        index.write()?;
-
-        // Create a commit for the file deletion
-        let signature = repo.signature()?;
-        let tree_id = index.write_tree()?;
-        let tree = repo.find_tree(tree_id)?;
-
-        // Get the current HEAD commit
-        let head = repo.head()?;
-        let parent_commit = head.peel_to_commit()?;
-
-        let commit_message = format!("Delete file: {}", file_path);
-        let commit_id = repo.commit(
-            Some("HEAD"),
-            &signature,
-            &signature,
-            &commit_message,
-            &tree,
-            &[&parent_commit],
-        )?;
-
-        info!("File {} deleted and committed: {}", file_path, commit_id);
-
-        Ok(commit_id.to_string())
+        Ok(commit_id)
     }
 
     /// Create a GitHub PR for this task attempt
@@ -2263,7 +1601,7 @@ impl TaskAttempt {
         let (owner, repo_name) = Self::extract_github_repo_info(&project.git_repo_path)?;
 
         // Push the branch to GitHub first
-        Self::push_branch_to_github(&worktree_path, &attempt.branch, params.github_token)?;
+        Self::push_branch_to_github(&project.git_repo_path, &worktree_path, &attempt.branch, params.github_token)?;
 
         // Create the PR using Octocrab
         let pr_url = Self::create_pr_with_octocrab(
@@ -2299,90 +1637,23 @@ impl TaskAttempt {
 
     /// Extract GitHub owner and repo name from git repo path
     fn extract_github_repo_info(git_repo_path: &str) -> Result<(String, String), TaskAttemptError> {
-        // Try to extract from remote origin URL
-        let repo = Repository::open(git_repo_path)?;
-        let remote = repo.find_remote("origin").map_err(|_| {
-            TaskAttemptError::ValidationError("No 'origin' remote found".to_string())
-        })?;
-
-        let url = remote.url().ok_or_else(|| {
-            TaskAttemptError::ValidationError("Remote origin has no URL".to_string())
-        })?;
-
-        // Parse GitHub URL (supports both HTTPS and SSH formats)
-        let github_regex = regex::Regex::new(r"github\.com[:/]([^/]+)/(.+?)(?:\.git)?/?$")
-            .map_err(|e| TaskAttemptError::ValidationError(format!("Regex error: {}", e)))?;
-
-        if let Some(captures) = github_regex.captures(url) {
-            let owner = captures.get(1).unwrap().as_str().to_string();
-            let repo_name = captures.get(2).unwrap().as_str().to_string();
-            Ok((owner, repo_name))
-        } else {
-            Err(TaskAttemptError::ValidationError(format!(
-                "Not a GitHub repository: {}",
-                url
-            )))
-        }
+        // Use GitService to extract GitHub repo info
+        let git_service = GitService::new(git_repo_path)?;
+        git_service.get_github_repo_info()
+            .map_err(|e| TaskAttemptError::ValidationError(e.to_string()))
     }
 
     /// Push the branch to GitHub remote
     fn push_branch_to_github(
+        git_repo_path: &str,
         worktree_path: &str,
         branch_name: &str,
         github_token: &str,
     ) -> Result<(), TaskAttemptError> {
-        let repo = Repository::open(worktree_path)?;
-
-        // Get the remote
-        let remote = repo.find_remote("origin")?;
-        let remote_url = remote.url().ok_or_else(|| {
-            TaskAttemptError::ValidationError("Remote origin has no URL".to_string())
-        })?;
-
-        // Convert SSH URL to HTTPS URL if necessary
-        let https_url = if remote_url.starts_with("git@github.com:") {
-            // Convert git@github.com:owner/repo.git to https://github.com/owner/repo.git
-            remote_url.replace("git@github.com:", "https://github.com/")
-        } else if remote_url.starts_with("ssh://git@github.com/") {
-            // Convert ssh://git@github.com/owner/repo.git to https://github.com/owner/repo.git
-            remote_url.replace("ssh://git@github.com/", "https://github.com/")
-        } else {
-            remote_url.to_string()
-        };
-
-        // Create a temporary remote with HTTPS URL for pushing
-        let temp_remote_name = "temp_https_origin";
-
-        // Remove any existing temp remote
-        let _ = repo.remote_delete(temp_remote_name);
-
-        // Create temporary HTTPS remote
-        let mut temp_remote = repo.remote(temp_remote_name, &https_url)?;
-
-        // Create refspec for pushing the branch
-        let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
-
-        // Set up authentication callback using the GitHub token
-        let mut callbacks = git2::RemoteCallbacks::new();
-        callbacks.credentials(|_url, username_from_url, _allowed_types| {
-            git2::Cred::userpass_plaintext(username_from_url.unwrap_or("git"), github_token)
-        });
-
-        // Configure push options
-        let mut push_options = git2::PushOptions::new();
-        push_options.remote_callbacks(callbacks);
-
-        // Push the branch
-        let push_result = temp_remote.push(&[&refspec], Some(&mut push_options));
-
-        // Clean up the temporary remote
-        let _ = repo.remote_delete(temp_remote_name);
-
-        // Check push result
-        push_result.map_err(TaskAttemptError::Git)?;
-
-        info!("Pushed branch {} to GitHub using HTTPS", branch_name);
-        Ok(())
+        // Use GitService to push to GitHub
+        let git_service = GitService::new(git_repo_path)?;
+        git_service.push_to_github(Path::new(worktree_path), branch_name, github_token)
+            .map_err(TaskAttemptError::from)
     }
 
     /// Create a PR using Octocrab
