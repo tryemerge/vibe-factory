@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
-use git2::{BranchType, Error as GitError, RebaseOptions, Repository, WorktreeAddOptions};
+use git2::{BranchType, Error as GitError, Repository};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool, Type};
 use tracing::{debug, info};
@@ -11,6 +11,7 @@ use uuid::Uuid;
 use super::{project::Project, task::Task};
 use crate::{
     executor::Executor,
+    services::{GitService, GitServiceError},
     utils::{shell::get_shell_command, worktree_manager::WorktreeManager},
 };
 
@@ -18,6 +19,7 @@ use crate::{
 pub enum TaskAttemptError {
     Database(sqlx::Error),
     Git(GitError),
+    GitService(GitServiceError),
     TaskNotFound,
     ProjectNotFound,
     ValidationError(String),
@@ -29,6 +31,7 @@ impl std::fmt::Display for TaskAttemptError {
         match self {
             TaskAttemptError::Database(e) => write!(f, "Database error: {}", e),
             TaskAttemptError::Git(e) => write!(f, "Git error: {}", e),
+            TaskAttemptError::GitService(e) => write!(f, "Git service error: {}", e),
             TaskAttemptError::TaskNotFound => write!(f, "Task not found"),
             TaskAttemptError::ProjectNotFound => write!(f, "Project not found"),
             TaskAttemptError::ValidationError(e) => write!(f, "Validation error: {}", e),
@@ -48,6 +51,12 @@ impl From<sqlx::Error> for TaskAttemptError {
 impl From<GitError> for TaskAttemptError {
     fn from(err: GitError) -> Self {
         TaskAttemptError::Git(err)
+    }
+}
+
+impl From<GitServiceError> for TaskAttemptError {
+    fn from(err: GitServiceError) -> Self {
+        TaskAttemptError::GitService(err)
     }
 }
 
@@ -348,95 +357,23 @@ impl TaskAttempt {
             .await?
             .ok_or(TaskAttemptError::ProjectNotFound)?;
 
+        // Create GitService instance
+        let git_service = GitService::new(&project.git_repo_path)?;
+
         // Determine the resolved base branch name first
         let resolved_base_branch = if let Some(ref base_branch) = data.base_branch {
             base_branch.clone()
         } else {
             // Default to current HEAD branch name or "main"
-            let repo = Repository::open(&project.git_repo_path)?;
-            let default_branch = match repo.head() {
-                Ok(head_ref) => head_ref.shorthand().unwrap_or("main").to_string(),
-                Err(e)
-                    if e.class() == git2::ErrorClass::Reference
-                        && e.code() == git2::ErrorCode::UnbornBranch =>
-                {
-                    "main".to_string() // Repository has no commits yet
-                }
-                Err(_) => "main".to_string(), // Fallback
-            };
-            default_branch
+            git_service.get_default_branch_name()?
         };
 
-        // Solve scoping issues
-        {
-            // Create the worktree using git2
-            let repo = Repository::open(&project.git_repo_path)?;
-
-            // Choose base reference, based on whether user specified base branch
-            let base_reference = if let Some(base_branch) = data.base_branch.clone() {
-                let branch = repo.find_branch(base_branch.as_str(), BranchType::Local)?;
-                branch.into_reference()
-            } else {
-                // Handle new repositories without any commits
-                match repo.head() {
-                    Ok(head_ref) => head_ref,
-                    Err(e)
-                        if e.class() == git2::ErrorClass::Reference
-                            && e.code() == git2::ErrorCode::UnbornBranch =>
-                    {
-                        // Repository has no commits yet, create an initial commit
-                        let signature = repo.signature().unwrap_or_else(|_| {
-                            // Fallback if no Git config is set
-                            git2::Signature::now("Vibe Kanban", "noreply@vibekanban.com")
-                                .expect("Failed to create fallback signature")
-                        });
-                        let tree_id = {
-                            let tree_builder = repo.treebuilder(None)?;
-                            tree_builder.write()?
-                        };
-                        let tree = repo.find_tree(tree_id)?;
-
-                        // Create initial commit on main branch
-                        let _commit_id = repo.commit(
-                            Some("refs/heads/main"),
-                            &signature,
-                            &signature,
-                            "Initial commit",
-                            &tree,
-                            &[],
-                        )?;
-
-                        // Set HEAD to point to main branch
-                        repo.set_head("refs/heads/main")?;
-
-                        // Return reference to main branch
-                        repo.find_reference("refs/heads/main")?
-                    }
-                    Err(e) => return Err(e.into()),
-                }
-            };
-
-            // Create branch
-            repo.branch(
-                &task_attempt_branch,
-                &base_reference.peel_to_commit()?,
-                false,
-            )?;
-
-            let branch = repo.find_branch(&task_attempt_branch, BranchType::Local)?;
-            let branch_ref = branch.into_reference();
-            let mut worktree_opts = WorktreeAddOptions::new();
-            worktree_opts.reference(Some(&branch_ref));
-
-            // Create the worktree directory if it doesn't exist
-            if let Some(parent) = worktree_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .map_err(|e| TaskAttemptError::Git(GitError::from_str(&e.to_string())))?;
-            }
-
-            // Create the worktree at the specified path
-            repo.worktree(&task_attempt_branch, &worktree_path, Some(&worktree_opts))?;
-        }
+        // Create the worktree using GitService
+        git_service.create_worktree(
+            &task_attempt_branch,
+            &worktree_path,
+            data.base_branch.as_deref(),
+        )?;
 
         // Insert the record into the database
         Ok(sqlx::query_as!(
@@ -480,129 +417,31 @@ impl TaskAttempt {
         Ok(result.is_some())
     }
 
-    /// Perform the actual merge operation (synchronous)
+    /// Perform the actual merge operation using GitService
     fn perform_merge_operation(
         worktree_path: &str,
         main_repo_path: &str,
         branch_name: &str,
         task_title: &str,
     ) -> Result<String, TaskAttemptError> {
-        // Open the main repository
-        let main_repo = Repository::open(main_repo_path)?;
-
-        // Open the worktree repository to get the latest commit
-        let worktree_repo = Repository::open(worktree_path)?;
-        let worktree_head = worktree_repo.head()?;
-        let worktree_commit = worktree_head.peel_to_commit()?;
-
-        // Verify the branch exists in the main repo
-        main_repo
-            .find_branch(branch_name, BranchType::Local)
-            .map_err(|_| TaskAttemptError::BranchNotFound(branch_name.to_string()))?;
-
-        // Get the current HEAD of the main repo (usually main/master)
-        let main_head = main_repo.head()?;
-        let main_commit = main_head.peel_to_commit()?;
-
-        // Get the signature for the merge commit
-        let signature = main_repo.signature()?;
-
-        // Get the tree from the worktree commit and find it in the main repo
-        let worktree_tree_id = worktree_commit.tree_id();
-        let main_tree = main_repo.find_tree(worktree_tree_id)?;
-
-        // Find the worktree commit in the main repo
-        let main_worktree_commit = main_repo.find_commit(worktree_commit.id())?;
-
-        // Create a merge commit
-        let merge_commit_id = main_repo.commit(
-            Some("HEAD"),                                    // Update HEAD
-            &signature,                                      // Author
-            &signature,                                      // Committer
-            &format!("Merge: {} (vibe-kanban)", task_title), // Message using task title
-            &main_tree,                                      // Use the tree from main repo
-            &[&main_commit, &main_worktree_commit], // Parents: main HEAD and worktree commit
-        )?;
-
-        info!("Created merge commit: {}", merge_commit_id);
-
-        Ok(merge_commit_id.to_string())
+        let git_service = GitService::new(main_repo_path)?;
+        let worktree_path = Path::new(worktree_path);
+        
+        git_service.merge_changes(worktree_path, branch_name, task_title)
+            .map_err(TaskAttemptError::from)
     }
 
-    /// Perform the actual git rebase operations (synchronous)
+    /// Perform the actual git rebase operations using GitService
     fn perform_rebase_operation(
         worktree_path: &str,
         main_repo_path: &str,
         new_base_branch: Option<String>,
     ) -> Result<String, TaskAttemptError> {
-        // Open the worktree repository
-        let worktree_repo = Repository::open(worktree_path)?;
-
-        // Open the main repository to get the target base commit
-        let main_repo = Repository::open(main_repo_path)?;
-
-        // Get the target base branch reference
-        let base_branch_name = new_base_branch.unwrap_or_else(|| {
-            main_repo
-                .head()
-                .ok()
-                .and_then(|head| head.shorthand().map(|s| s.to_string()))
-                .unwrap_or_else(|| "main".to_string())
-        });
-
-        // Check if the specified base branch exists in the main repo
-        let base_branch = main_repo
-            .find_branch(&base_branch_name, BranchType::Local)
-            .map_err(|_| TaskAttemptError::BranchNotFound(base_branch_name.clone()))?;
-
-        let base_commit_id = base_branch.get().peel_to_commit()?.id();
-
-        // Get the HEAD commit of the worktree (the changes to rebase)
-        let head = worktree_repo.head()?;
-
-        // Set up rebase
-        let mut rebase_opts = RebaseOptions::new();
-        let signature = worktree_repo.signature()?;
-
-        // Start the rebase
-        let head_annotated = worktree_repo.reference_to_annotated_commit(&head)?;
-        let base_annotated = worktree_repo.find_annotated_commit(base_commit_id)?;
-
-        let mut rebase = worktree_repo.rebase(
-            Some(&head_annotated),
-            Some(&base_annotated),
-            None, // onto (use upstream if None)
-            Some(&mut rebase_opts),
-        )?;
-
-        // Process each rebase operation
-        while let Some(operation) = rebase.next() {
-            let _operation = operation?;
-
-            // Check for conflicts
-            let index = worktree_repo.index()?;
-            if index.has_conflicts() {
-                // For now, abort the rebase on conflicts
-                rebase.abort()?;
-                return Err(TaskAttemptError::Git(GitError::from_str(
-                    "Rebase failed due to conflicts. Please resolve conflicts manually.",
-                )));
-            }
-
-            // Commit the rebased operation
-            rebase.commit(None, &signature, None)?;
-        }
-
-        // Finish the rebase
-        rebase.finish(None)?;
-
-        // Get the final commit ID after rebase
-        let final_head = worktree_repo.head()?;
-        let final_commit = final_head.peel_to_commit()?;
-
-        info!("Rebase completed. New HEAD: {}", final_commit.id());
-
-        Ok(final_commit.id().to_string())
+        let git_service = GitService::new(main_repo_path)?;
+        let worktree_path = Path::new(worktree_path);
+        
+        git_service.rebase_branch(worktree_path, new_base_branch.as_deref())
+            .map_err(TaskAttemptError::from)
     }
 
     /// Merge the worktree changes back to the main repository
