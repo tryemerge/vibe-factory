@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FolderOpen, Settings, BookOpen, Server } from 'lucide-react';
+import { FolderOpen, Settings, Server } from 'lucide-react';
 import { Logo } from '@/components/logo';
 
 export function Navbar() {
@@ -50,18 +50,6 @@ export function Navbar() {
                 </Link>
               </Button>
             </div>
-          </div>
-          <div className="flex items-center">
-            <Button asChild variant="ghost" size="sm">
-              <a
-                href="https://vibekanban.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <BookOpen className="mr-2 h-4 w-4" />
-                Docs
-              </a>
-            </Button>
           </div>
         </div>
       </div>
