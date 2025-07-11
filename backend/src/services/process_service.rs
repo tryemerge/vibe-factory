@@ -12,7 +12,7 @@ use crate::{
         task_attempt::{TaskAttempt, TaskAttemptError, TaskAttemptStatus},
         task_attempt_activity::{CreateTaskAttemptActivity, TaskAttemptActivity},
     },
-    runners::{DevServerRunner, ScriptRunner},
+    runners::{ScriptRunner, ScriptType},
     utils::shell::get_shell_command,
 };
 
@@ -755,23 +755,17 @@ impl ProcessService {
     ) -> Result<command_group::AsyncGroupChild, TaskAttemptError> {
         use crate::executor::stream_output_to_db;
 
-        let mut child = match process_type {
-            ExecutionProcessType::SetupScript => {
-                let runner = ScriptRunner::new(script.to_string());
-                runner
-                    .spawn(pool, task_id, worktree_path)
-                    .await
-                    .map_err(|e| TaskAttemptError::ValidationError(e.to_string()))?
-            }
-            ExecutionProcessType::DevServer => {
-                let runner = DevServerRunner::new(script.to_string());
-                runner
-                    .spawn(pool, task_id, worktree_path)
-                    .await
-                    .map_err(|e| TaskAttemptError::ValidationError(e.to_string()))?
-            }
+        let script_type = match process_type {
+            ExecutionProcessType::SetupScript => ScriptType::Setup,
+            ExecutionProcessType::DevServer => ScriptType::DevServer,
             _ => unreachable!("This method should only be called for scripts"),
         };
+
+        let runner = ScriptRunner::new(script.to_string(), script_type);
+        let mut child = runner
+            .spawn(pool, task_id, worktree_path)
+            .await
+            .map_err(|e| TaskAttemptError::ValidationError(e.to_string()))?;
 
         // Take stdout and stderr pipes for streaming
         let stdout = child

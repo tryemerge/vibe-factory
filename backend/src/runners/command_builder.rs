@@ -96,6 +96,7 @@ impl CommandBuilder {
     }
 
     /// Add multiple arguments to the command
+    #[allow(dead_code)]
     pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -112,6 +113,7 @@ impl CommandBuilder {
     }
 
     /// Set an environment variable
+    #[allow(dead_code)]
     pub fn env<K, V>(mut self, key: K, val: V) -> Self
     where
         K: AsRef<OsStr>,
@@ -122,18 +124,21 @@ impl CommandBuilder {
     }
 
     /// Remove an environment variable
+    #[allow(dead_code)]
     pub fn env_remove<K: AsRef<OsStr>>(mut self, key: K) -> Self {
         self.command.env_remove(key);
         self
     }
 
     /// Clear all environment variables
+    #[allow(dead_code)]
     pub fn env_clear(mut self) -> Self {
         self.command.env_clear();
         self
     }
 
     /// Set stdin handling
+    #[allow(dead_code)]
     pub fn stdin(mut self, stdin: std::process::Stdio) -> Self {
         self.command.stdin(stdin);
         self
@@ -179,11 +184,13 @@ impl CommandBuilder {
     }
 
     /// Get a reference to the underlying command (for advanced use cases)
+    #[allow(dead_code)]
     pub fn as_command(&self) -> &Command {
         &self.command
     }
 
     /// Get a mutable reference to the underlying command (for advanced use cases)
+    #[allow(dead_code)]
     pub fn as_command_mut(&mut self) -> &mut Command {
         &mut self.command
     }
