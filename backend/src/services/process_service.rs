@@ -64,7 +64,20 @@ impl ProcessService {
             .await?
             .ok_or(TaskAttemptError::TaskNotFound)?;
 
-        let executor_config = Self::resolve_executor_config(&task_attempt.executor);
+        let executor_config = task_attempt
+            .executor
+            .as_ref()
+            .ok_or(TaskAttemptError::ValidationError(
+                "No executor configured for this task attempt".to_string(),
+            ))?
+            .parse()
+            .unwrap_or_else(|_| {
+                tracing::warn!(
+                    "Invalid executor configuration for task attempt {}, defaulting to Echo",
+                    attempt_id
+                );
+                crate::executor::ExecutorConfig::Echo
+            });
 
         Self::start_process_execution(
             pool,
@@ -427,17 +440,6 @@ impl ProcessService {
             worktree_path,
         )
         .await
-    }
-
-    /// Resolve executor configuration from string name
-    fn resolve_executor_config(executor_name: &Option<String>) -> crate::executor::ExecutorConfig {
-        match executor_name.as_ref().map(|s| s.as_str()) {
-            Some("claude") => crate::executor::ExecutorConfig::Claude,
-            Some("amp") => crate::executor::ExecutorConfig::Amp,
-            Some("gemini") => crate::executor::ExecutorConfig::Gemini,
-            Some("opencode") => crate::executor::ExecutorConfig::Opencode,
-            _ => crate::executor::ExecutorConfig::Echo, // Default for "echo" or None
-        }
     }
 
     /// Create execution process database record
