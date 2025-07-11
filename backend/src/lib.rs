@@ -9,6 +9,7 @@ pub mod executors;
 pub mod mcp;
 pub mod models;
 pub mod routes;
+pub mod runners;
 pub mod services;
 pub mod utils;
 

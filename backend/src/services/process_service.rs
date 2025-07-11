@@ -12,6 +12,7 @@ use crate::{
         task_attempt::{TaskAttempt, TaskAttemptError, TaskAttemptStatus},
         task_attempt_activity::{CreateTaskAttemptActivity, TaskAttemptActivity},
     },
+    runners::{DevServerRunner, ScriptRunner},
     utils::shell::get_shell_command,
 };
 
@@ -122,15 +123,12 @@ impl ProcessService {
             ));
         }
 
-        let result = Self::start_process_execution(
+        let result = Self::start_dev_server_execution(
             pool,
             app_state,
             attempt_id,
             task_id,
-            crate::executor::ExecutorType::DevServer(dev_script),
-            "Starting dev server".to_string(),
-            TaskAttemptStatus::ExecutorRunning, // Dev servers don't create activities, just use generic status
-            ExecutionProcessType::DevServer,
+            dev_script,
             &worktree_path,
         )
         .await;
@@ -428,12 +426,12 @@ impl ProcessService {
     ) -> Result<(), TaskAttemptError> {
         let setup_script = project.setup_script.as_ref().unwrap();
 
-        Self::start_process_execution(
+        Self::start_script_execution(
             pool,
             app_state,
             attempt_id,
             task_id,
-            crate::executor::ExecutorType::SetupScript(setup_script.clone()),
+            setup_script.clone(),
             "Starting setup script".to_string(),
             TaskAttemptStatus::SetupRunning,
             ExecutionProcessType::SetupScript,
@@ -451,18 +449,7 @@ impl ProcessService {
         process_type: ExecutionProcessType,
         worktree_path: &str,
     ) -> Result<ExecutionProcess, TaskAttemptError> {
-        let (shell_cmd, shell_arg) = get_shell_command();
         let (command, args, executor_type_string) = match executor_type {
-            crate::executor::ExecutorType::SetupScript(_) => (
-                shell_cmd.to_string(),
-                Some(serde_json::to_string(&[shell_arg, "setup_script"]).unwrap()),
-                None, // Setup scripts don't have an executor type
-            ),
-            crate::executor::ExecutorType::DevServer(_) => (
-                shell_cmd.to_string(),
-                Some(serde_json::to_string(&[shell_arg, "dev_server"]).unwrap()),
-                None, // Dev servers don't have an executor type
-            ),
             crate::executor::ExecutorType::CodingAgent(config) => {
                 ("executor".to_string(), None, Some(format!("{}", config)))
             }
@@ -547,25 +534,7 @@ impl ProcessService {
         process_id: Uuid,
         worktree_path: &str,
     ) -> Result<command_group::AsyncGroupChild, TaskAttemptError> {
-        use crate::executors::{DevServerExecutor, SetupScriptExecutor};
-
         let result = match executor_type {
-            crate::executor::ExecutorType::SetupScript(script) => {
-                let executor = SetupScriptExecutor {
-                    script: script.clone(),
-                };
-                executor
-                    .execute_streaming(pool, task_id, attempt_id, process_id, worktree_path)
-                    .await
-            }
-            crate::executor::ExecutorType::DevServer(script) => {
-                let executor = DevServerExecutor {
-                    script: script.clone(),
-                };
-                executor
-                    .execute_streaming(pool, task_id, attempt_id, process_id, worktree_path)
-                    .await
-            }
             crate::executor::ExecutorType::CodingAgent(config) => {
                 let executor = config.create_executor();
                 executor
@@ -582,7 +551,7 @@ impl ProcessService {
                     OpencodeFollowupExecutor,
                 };
 
-                let executor: Box<dyn crate::executor::Executor> = match config {
+                let executor: Box<dyn Executor> = match config {
                     crate::executor::ExecutorConfig::Claude => {
                         if let Some(sid) = session_id {
                             Box::new(ClaudeFollowupExecutor {
@@ -662,5 +631,179 @@ impl ProcessService {
                 },
             )
             .await;
+    }
+
+    /// Start script execution (setup scripts or dev servers)
+    async fn start_script_execution(
+        pool: &SqlitePool,
+        app_state: &crate::app_state::AppState,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        script: String,
+        activity_note: String,
+        activity_status: TaskAttemptStatus,
+        process_type: ExecutionProcessType,
+        worktree_path: &str,
+    ) -> Result<(), TaskAttemptError> {
+        let process_id = Uuid::new_v4();
+
+        // Create execution process record
+        let _execution_process = Self::create_script_execution_process_record(
+            pool,
+            attempt_id,
+            process_id,
+            &script,
+            process_type.clone(),
+            worktree_path,
+        )
+        .await?;
+
+        // Create activity record (skip for dev servers as they run in parallel)
+        if !matches!(process_type, ExecutionProcessType::DevServer) {
+            Self::create_activity_record(pool, process_id, activity_status.clone(), &activity_note)
+                .await?;
+        }
+
+        tracing::info!("Starting {} for task attempt {}", activity_note, attempt_id);
+
+        // Execute the script
+        let child = Self::execute_script(
+            pool,
+            task_id,
+            attempt_id,
+            process_id,
+            &script,
+            &process_type,
+            worktree_path,
+        )
+        .await?;
+
+        // Register for monitoring
+        Self::register_for_monitoring(app_state, process_id, attempt_id, &process_type, child)
+            .await;
+
+        tracing::info!(
+            "Started script execution {} for task attempt {}",
+            process_id,
+            attempt_id
+        );
+        Ok(())
+    }
+
+    /// Start dev server execution specifically
+    async fn start_dev_server_execution(
+        pool: &SqlitePool,
+        app_state: &crate::app_state::AppState,
+        attempt_id: Uuid,
+        task_id: Uuid,
+        dev_script: String,
+        worktree_path: &str,
+    ) -> Result<(), TaskAttemptError> {
+        Self::start_script_execution(
+            pool,
+            app_state,
+            attempt_id,
+            task_id,
+            dev_script,
+            "Starting dev server".to_string(),
+            TaskAttemptStatus::ExecutorRunning,
+            ExecutionProcessType::DevServer,
+            worktree_path,
+        )
+        .await
+    }
+
+    /// Create execution process record for scripts
+    async fn create_script_execution_process_record(
+        pool: &SqlitePool,
+        attempt_id: Uuid,
+        process_id: Uuid,
+        _script: &str,
+        process_type: ExecutionProcessType,
+        worktree_path: &str,
+    ) -> Result<ExecutionProcess, TaskAttemptError> {
+        let (shell_cmd, shell_arg) = get_shell_command();
+        let script_type = match process_type {
+            ExecutionProcessType::SetupScript => "setup_script",
+            ExecutionProcessType::DevServer => "dev_server",
+            _ => unreachable!("This method should only be called for scripts"),
+        };
+
+        let create_process = CreateExecutionProcess {
+            task_attempt_id: attempt_id,
+            command: shell_cmd.to_string(),
+            args: Some(serde_json::to_string(&[shell_arg, script_type]).unwrap()),
+            working_directory: worktree_path.to_string(),
+            process_type,
+            executor_type: None, // Scripts don't have an executor type
+        };
+
+        ExecutionProcess::create(pool, &create_process, process_id)
+            .await
+            .map_err(TaskAttemptError::from)
+    }
+
+    /// Execute a script using the appropriate runner
+    async fn execute_script(
+        pool: &SqlitePool,
+        task_id: Uuid,
+        attempt_id: Uuid,
+        process_id: Uuid,
+        script: &str,
+        process_type: &ExecutionProcessType,
+        worktree_path: &str,
+    ) -> Result<command_group::AsyncGroupChild, TaskAttemptError> {
+        use crate::executor::stream_output_to_db;
+
+        let mut child = match process_type {
+            ExecutionProcessType::SetupScript => {
+                let runner = ScriptRunner::new(script.to_string());
+                runner
+                    .spawn(pool, task_id, worktree_path)
+                    .await
+                    .map_err(|e| TaskAttemptError::ValidationError(e.to_string()))?
+            }
+            ExecutionProcessType::DevServer => {
+                let runner = DevServerRunner::new(script.to_string());
+                runner
+                    .spawn(pool, task_id, worktree_path)
+                    .await
+                    .map_err(|e| TaskAttemptError::ValidationError(e.to_string()))?
+            }
+            _ => unreachable!("This method should only be called for scripts"),
+        };
+
+        // Take stdout and stderr pipes for streaming
+        let stdout = child
+            .inner()
+            .stdout
+            .take()
+            .expect("Failed to take stdout from child process");
+        let stderr = child
+            .inner()
+            .stderr
+            .take()
+            .expect("Failed to take stderr from child process");
+
+        // Start streaming tasks
+        let pool_clone1 = pool.clone();
+        let pool_clone2 = pool.clone();
+
+        tokio::spawn(stream_output_to_db(
+            stdout,
+            pool_clone1,
+            attempt_id,
+            process_id,
+            true,
+        ));
+        tokio::spawn(stream_output_to_db(
+            stderr,
+            pool_clone2,
+            attempt_id,
+            process_id,
+            false,
+        ));
+
+        Ok(child)
     }
 }

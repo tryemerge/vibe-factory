@@ -1,3 +1,13 @@
+//! Executor trait and related types for coding agents
+//!
+//! This module defines the core `Executor` trait that all coding agents must implement.
+//! Coding agents are interactive tools that can:
+//! - Execute prompts and generate responses
+//! - Parse and normalize their output logs into a conversation format
+//! - Support follow-up sessions with context
+//!
+//! For simple script execution (setup scripts, dev servers), use the `runners` module instead.
+
 use std::str::FromStr;
 
 use async_trait::async_trait;
@@ -208,10 +218,18 @@ impl SpawnContext {
     }
 }
 
-/// Trait for defining CLI commands that can be executed for task attempts
+/// Trait for coding agents that can execute tasks, normalize logs, and support follow-up sessions
+///
+/// This trait is specifically designed for interactive coding agents (like Claude, Amp, Gemini, etc.)
+/// that can:
+/// - Execute prompts and generate responses
+/// - Parse and normalize their output logs into a conversation format
+/// - Support follow-up sessions with context
+///
+/// For simple script execution (setup scripts, dev servers), use the runners module instead.
 #[async_trait]
 pub trait Executor: Send + Sync {
-    /// Spawn the command for a given task attempt
+    /// Spawn the coding agent process for a given task attempt
     async fn spawn(
         &self,
         pool: &sqlx::SqlitePool,
@@ -219,7 +237,10 @@ pub trait Executor: Send + Sync {
         worktree_path: &str,
     ) -> Result<command_group::AsyncGroupChild, ExecutorError>;
 
-    /// Normalize executor logs into a standard format
+    /// Normalize executor logs into a standard conversation format
+    ///
+    /// This method should parse the agent's output (typically JSONL) and convert it
+    /// into a normalized format that can be displayed consistently across different agents.
     fn normalize_logs(
         &self,
         _logs: &str,
@@ -236,6 +257,9 @@ pub trait Executor: Send + Sync {
     }
 
     /// Execute the command and stream output to database in real-time
+    ///
+    /// This method handles the common pattern of spawning the process and setting up
+    /// stdout/stderr streaming to the database. Most implementations don't need to override this.
     async fn execute_streaming(
         &self,
         pool: &sqlx::SqlitePool,
@@ -281,11 +305,9 @@ pub trait Executor: Send + Sync {
     }
 }
 
-/// Runtime executor types for internal use
+/// Runtime executor types for coding agents
 #[derive(Debug, Clone)]
 pub enum ExecutorType {
-    SetupScript(String),
-    DevServer(String),
     CodingAgent(ExecutorConfig),
     FollowUpCodingAgent {
         config: ExecutorConfig,
