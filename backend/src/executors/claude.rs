@@ -17,12 +17,6 @@ use crate::{
 /// An executor that uses Claude CLI to process tasks
 pub struct ClaudeExecutor;
 
-/// An executor that resumes a Claude session
-pub struct ClaudeFollowupExecutor {
-    pub session_id: String,
-    pub prompt: String,
-}
-
 #[async_trait]
 impl Executor for ClaudeExecutor {
     async fn spawn(
@@ -77,6 +71,58 @@ Task title: {}"#,
                 crate::executor::SpawnContext::from_command(&command, "Claude")
                     .with_task(task_id, Some(task.title.clone()))
                     .with_context("Claude CLI execution for new task")
+                    .spawn_error(e)
+            })?;
+
+        Ok(child)
+    }
+
+    async fn spawn_followup(
+        &self,
+        session_id: &str,
+        prompt: &str,
+        worktree_path: &str,
+    ) -> Result<AsyncGroupChild, ExecutorError> {
+        tracing::info!(
+            "Claude: Starting follow-up execution with session ID: {} in worktree: {}",
+            session_id,
+            worktree_path
+        );
+
+        // Use shell command for cross-platform compatibility
+        let (shell_cmd, shell_arg) = get_shell_command();
+        let claude_command = format!(
+            "npx -y @anthropic-ai/claude-code \"{}\" -p --dangerously-skip-permissions --verbose --output-format=stream-json --resume={}",
+            prompt.replace("\"", "\\\""),
+            session_id
+        );
+
+        let mut command = Command::new(shell_cmd);
+        command
+            .kill_on_drop(true)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .current_dir(worktree_path)
+            .arg(shell_arg)
+            .arg(&claude_command)
+            .env("NODE_NO_WARNINGS", "1");
+
+        tracing::info!(
+            "Claude: Executing follow-up command: {} {} \"{}\"",
+            shell_cmd,
+            shell_arg,
+            claude_command
+        );
+
+        let child = command
+            .group_spawn() // Create new process group so we can kill entire tree
+            .map_err(|e| {
+                crate::executor::SpawnContext::from_command(&command, "Claude")
+                    .with_context(format!(
+                        "Claude CLI followup execution for session {}",
+                        session_id
+                    ))
                     .spawn_error(e)
             })?;
 
@@ -474,57 +520,6 @@ impl ClaudeExecutor {
                 description: format!("Tool: {}", tool_name),
             },
         }
-    }
-}
-
-#[async_trait]
-impl Executor for ClaudeFollowupExecutor {
-    async fn spawn(
-        &self,
-        _pool: &sqlx::SqlitePool,
-        _task_id: Uuid,
-        worktree_path: &str,
-    ) -> Result<AsyncGroupChild, ExecutorError> {
-        // Use shell command for cross-platform compatibility
-        let (shell_cmd, shell_arg) = get_shell_command();
-        let claude_command = format!(
-            "npx -y @anthropic-ai/claude-code \"{}\" -p --dangerously-skip-permissions --verbose --output-format=stream-json --resume={}",
-            self.prompt.replace("\"", "\\\""),
-            self.session_id
-        );
-
-        let mut command = Command::new(shell_cmd);
-        command
-            .kill_on_drop(true)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .current_dir(worktree_path)
-            .arg(shell_arg)
-            .arg(&claude_command);
-
-        let child = command
-            .group_spawn() // Create new process group so we can kill entire tree
-            .map_err(|e| {
-                crate::executor::SpawnContext::from_command(&command, "Claude")
-                    .with_context(format!(
-                        "Claude CLI followup execution for session {}",
-                        self.session_id
-                    ))
-                    .spawn_error(e)
-            })?;
-
-        Ok(child)
-    }
-
-    fn normalize_logs(
-        &self,
-        logs: &str,
-        worktree_path: &str,
-    ) -> Result<NormalizedConversation, String> {
-        // Reuse the same logic as the main ClaudeExecutor
-        let main_executor = ClaudeExecutor;
-        main_executor.normalize_logs(logs, worktree_path)
     }
 }
 

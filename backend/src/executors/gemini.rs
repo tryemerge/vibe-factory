@@ -16,12 +16,6 @@ use crate::{
 /// An executor that uses Gemini CLI to process tasks
 pub struct GeminiExecutor;
 
-/// An executor that resumes a Gemini session
-pub struct GeminiFollowupExecutor {
-    pub session_id: String,
-    pub prompt: String,
-}
-
 #[async_trait]
 impl Executor for GeminiExecutor {
     async fn spawn(
@@ -99,6 +93,65 @@ Task title: {}"#,
                 "Successfully sent prompt to Gemini stdin for task {}",
                 task_id
             );
+        }
+
+        Ok(child)
+    }
+
+    async fn spawn_followup(
+        &self,
+        session_id: &str,
+        prompt: &str,
+        worktree_path: &str,
+    ) -> Result<AsyncGroupChild, ExecutorError> {
+        // --resume is currently not supported by the gemini-cli. This will error!
+        // TODO: Check again when this issue has been addressed: https://github.com/google-gemini/gemini-cli/issues/2222
+
+        // Use shell command for cross-platform compatibility
+        let (shell_cmd, shell_arg) = get_shell_command();
+        let gemini_command = format!("npx @google/gemini-cli --yolo --resume={}", session_id);
+
+        let mut command = Command::new(shell_cmd);
+        command
+            .kill_on_drop(true)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .current_dir(worktree_path)
+            .arg(shell_arg)
+            .arg(&gemini_command)
+            .env("NODE_NO_WARNINGS", "1");
+
+        let mut child = command
+            .group_spawn() // Create new process group so we can kill entire tree
+            .map_err(|e| {
+                crate::executor::SpawnContext::from_command(&command, "Gemini")
+                    .with_context(format!(
+                        "Gemini CLI followup execution for session {}",
+                        session_id
+                    ))
+                    .spawn_error(e)
+            })?;
+
+        // Send the prompt via stdin instead of command line arguments
+        // This avoids Windows command line parsing issues
+        if let Some(mut stdin) = child.inner().stdin.take() {
+            stdin.write_all(prompt.as_bytes()).await.map_err(|e| {
+                let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
+                    .with_context(format!(
+                        "Failed to write prompt to Gemini CLI stdin for session {}",
+                        session_id
+                    ));
+                ExecutorError::spawn_failed(e, context)
+            })?;
+            stdin.shutdown().await.map_err(|e| {
+                let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
+                    .with_context(format!(
+                        "Failed to close Gemini CLI stdin for session {}",
+                        session_id
+                    ));
+                ExecutorError::spawn_failed(e, context)
+            })?;
         }
 
         Ok(child)
@@ -507,77 +560,5 @@ impl GeminiExecutor {
                 );
             }
         }
-    }
-}
-
-#[async_trait]
-impl Executor for GeminiFollowupExecutor {
-    async fn spawn(
-        &self,
-        _pool: &sqlx::SqlitePool,
-        _task_id: Uuid,
-        worktree_path: &str,
-    ) -> Result<AsyncGroupChild, ExecutorError> {
-        // --resume is currently not supported by the gemini-cli. This will error!
-        // TODO: Check again when this issue has been addressed: https://github.com/google-gemini/gemini-cli/issues/2222
-
-        // Use shell command for cross-platform compatibility
-        let (shell_cmd, shell_arg) = get_shell_command();
-        let gemini_command = format!("npx @google/gemini-cli --yolo --resume={}", self.session_id);
-
-        let mut command = Command::new(shell_cmd);
-        command
-            .kill_on_drop(true)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .current_dir(worktree_path)
-            .arg(shell_arg)
-            .arg(&gemini_command)
-            .env("NODE_NO_WARNINGS", "1");
-
-        let mut child = command
-            .group_spawn() // Create new process group so we can kill entire tree
-            .map_err(|e| {
-                crate::executor::SpawnContext::from_command(&command, "Gemini")
-                    .with_context(format!(
-                        "Gemini CLI followup execution for session {}",
-                        self.session_id
-                    ))
-                    .spawn_error(e)
-            })?;
-
-        // Send the prompt via stdin instead of command line arguments
-        // This avoids Windows command line parsing issues
-        if let Some(mut stdin) = child.inner().stdin.take() {
-            stdin.write_all(self.prompt.as_bytes()).await.map_err(|e| {
-                let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
-                    .with_context(format!(
-                        "Failed to write prompt to Gemini CLI stdin for session {}",
-                        self.session_id
-                    ));
-                ExecutorError::spawn_failed(e, context)
-            })?;
-            stdin.shutdown().await.map_err(|e| {
-                let context = crate::executor::SpawnContext::from_command(&command, "Gemini")
-                    .with_context(format!(
-                        "Failed to close Gemini CLI stdin for session {}",
-                        self.session_id
-                    ));
-                ExecutorError::spawn_failed(e, context)
-            })?;
-        }
-
-        Ok(child)
-    }
-
-    fn normalize_logs(
-        &self,
-        logs: &str,
-        worktree_path: &str,
-    ) -> Result<NormalizedConversation, String> {
-        // Reuse the same logic as the main GeminiExecutor
-        let main_executor = GeminiExecutor;
-        main_executor.normalize_logs(logs, worktree_path)
     }
 }

@@ -439,6 +439,9 @@ impl TaskAttempt {
             data.base_branch.as_deref(),
         )?;
 
+        // Use provided executor or default to "echo"
+        let executor = data.executor.clone().or_else(|| Some("echo".to_string()));
+
         // Insert the record into the database
         Ok(sqlx::query_as!(
             TaskAttempt,
@@ -451,7 +454,7 @@ impl TaskAttempt {
             task_attempt_branch,
             resolved_base_branch,
             Option::<String>::None, // merge_commit is always None during creation
-            data.executor,
+            executor,
             Option::<String>::None, // pr_url is None during creation
             Option::<i64>::None, // pr_number is None during creation
             Option::<String>::None, // pr_status is None during creation

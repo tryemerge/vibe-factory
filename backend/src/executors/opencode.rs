@@ -11,12 +11,6 @@ use crate::{
 /// An executor that uses OpenCode to process tasks
 pub struct OpencodeExecutor;
 
-/// An executor that continues an OpenCode thread
-pub struct OpencodeFollowupExecutor {
-    pub session_id: String,
-    pub prompt: String,
-}
-
 #[async_trait]
 impl Executor for OpencodeExecutor {
     async fn spawn(
@@ -78,25 +72,25 @@ Task title: {}"#,
 
         Ok(child)
     }
-}
 
-#[async_trait]
-impl Executor for OpencodeFollowupExecutor {
-    async fn spawn(
+    async fn spawn_followup(
         &self,
-        _pool: &sqlx::SqlitePool,
-        _task_id: Uuid,
+        _session_id: &str,
+        prompt: &str,
         worktree_path: &str,
     ) -> Result<AsyncGroupChild, ExecutorError> {
         use std::process::Stdio;
 
         use tokio::process::Command;
 
+        // Note: OpenCode doesn't appear to support session resumption yet
+        // For now, we'll just start a new session with the provided prompt
+
         // Use shell command for cross-platform compatibility
         let (shell_cmd, shell_arg) = get_shell_command();
         let opencode_command = format!(
             "opencode -p \"{}\" --output-format=json",
-            self.prompt.replace('"', "\\\"")
+            prompt.replace('"', "\\\"")
         );
 
         let mut command = Command::new(shell_cmd);
@@ -112,10 +106,7 @@ impl Executor for OpencodeFollowupExecutor {
             .group_spawn() // Create new process group so we can kill entire tree
             .map_err(|e| {
                 crate::executor::SpawnContext::from_command(&command, "OpenCode")
-                    .with_context(format!(
-                        "OpenCode CLI followup execution for session {}",
-                        self.session_id
-                    ))
+                    .with_context("OpenCode CLI followup execution (new session)")
                     .spawn_error(e)
             })?;
 

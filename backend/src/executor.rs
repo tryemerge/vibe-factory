@@ -149,6 +149,7 @@ pub enum ExecutorError {
     },
     TaskNotFound,
     DatabaseError(sqlx::Error),
+    ValidationError(String),
 }
 
 impl std::fmt::Display for ExecutorError {
@@ -183,6 +184,7 @@ impl std::fmt::Display for ExecutorError {
             }
             ExecutorError::TaskNotFound => write!(f, "Task not found"),
             ExecutorError::DatabaseError(e) => write!(f, "Database error: {}", e),
+            ExecutorError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
         }
     }
 }
@@ -256,6 +258,22 @@ pub trait Executor: Send + Sync {
         })
     }
 
+    /// Spawn a follow-up session for executors that support it
+    ///
+    /// This method is used to continue an existing session with a new prompt.
+    /// Not all executors support follow-up sessions, so the default implementation
+    /// returns an error.
+    async fn spawn_followup(
+        &self,
+        _session_id: &str,
+        _prompt: &str,
+        _worktree_path: &str,
+    ) -> Result<command_group::AsyncGroupChild, ExecutorError> {
+        Err(ExecutorError::ValidationError(
+            "This executor does not support follow-up sessions".to_string(),
+        ))
+    }
+
     /// Execute the command and stream output to database in real-time
     ///
     /// This method handles the common pattern of spawning the process and setting up
@@ -308,12 +326,18 @@ pub trait Executor: Send + Sync {
 /// Runtime executor types for coding agents
 #[derive(Debug, Clone)]
 pub enum ExecutorType {
-    CodingAgent(ExecutorConfig),
-    FollowUpCodingAgent {
+    CodingAgent {
         config: ExecutorConfig,
-        session_id: Option<String>,
-        prompt: String,
+        // Follow-up session information (if this is a continuation)
+        follow_up: Option<FollowUpInfo>,
     },
+}
+
+/// Information needed to continue a previous session
+#[derive(Debug, Clone)]
+pub struct FollowUpInfo {
+    pub session_id: String,
+    pub prompt: String,
 }
 
 /// Configuration for different executor types
