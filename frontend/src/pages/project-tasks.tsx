@@ -98,6 +98,10 @@ export function ProjectTasks() {
         });
         setIsPanelOpen(true);
       }
+    } else if (!taskId) {
+      // Close panel when taskId is removed from URL
+      setIsPanelOpen(false);
+      setSelectedTask(null);
     }
   }, [taskId, tasks]);
 
