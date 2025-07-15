@@ -66,14 +66,7 @@ export function FolderPicker({
 
     try {
       const result = await fileSystemApi.list(path);
-
-      // Ensure result exists and has the expected structure
-      if (!result || typeof result !== 'object') {
-        throw new Error('Invalid response from file system API');
-      }
-      // Safely access entries, ensuring it's an array
-      const entries = Array.isArray(result.entries) ? result.entries : [];
-      setEntries(entries);
+      setEntries(result.entries || []);
       const newPath = result.current_path || '';
       setCurrentPath(newPath);
       // Update manual path if we have a specific path (not for initial home directory load)
@@ -82,8 +75,6 @@ export function FolderPicker({
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load directory');
-      // Reset entries to empty array on error
-      setEntries([]);
     } finally {
       setLoading(false);
     }

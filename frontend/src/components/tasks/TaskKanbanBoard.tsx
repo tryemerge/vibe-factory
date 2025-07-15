@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   type DragEndEvent,
   KanbanBoard,
@@ -44,7 +44,7 @@ const statusBoardColors: Record<TaskStatus, string> = {
   cancelled: 'hsl(var(--destructive))',
 };
 
-function TaskKanbanBoard({
+export function TaskKanbanBoard({
   tasks,
   searchQuery = '',
   onDragEnd,
@@ -108,5 +108,3 @@ function TaskKanbanBoard({
     </KanbanProvider>
   );
 }
-
-export default memo(TaskKanbanBoard);

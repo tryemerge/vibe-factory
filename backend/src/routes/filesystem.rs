@@ -20,13 +20,6 @@ pub struct DirectoryEntry {
     pub is_git_repo: bool,
 }
 
-#[derive(Debug, Serialize, TS)]
-#[ts(export)]
-pub struct DirectoryListResponse {
-    pub entries: Vec<DirectoryEntry>,
-    pub current_path: String,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct ListDirectoryQuery {
     path: Option<String>,
@@ -34,7 +27,7 @@ pub struct ListDirectoryQuery {
 
 pub async fn list_directory(
     Query(query): Query<ListDirectoryQuery>,
-) -> Result<ResponseJson<ApiResponse<DirectoryListResponse>>, StatusCode> {
+) -> Result<ResponseJson<ApiResponse<Vec<DirectoryEntry>>>, StatusCode> {
     let path_str = query.path.unwrap_or_else(|| {
         // Default to user's home directory
         dirs::home_dir()
@@ -110,10 +103,7 @@ pub async fn list_directory(
 
             Ok(ResponseJson(ApiResponse {
                 success: true,
-                data: Some(DirectoryListResponse {
-                    entries: directory_entries,
-                    current_path: path.to_string_lossy().to_string(),
-                }),
+                data: Some(directory_entries),
                 message: None,
             }))
         }
