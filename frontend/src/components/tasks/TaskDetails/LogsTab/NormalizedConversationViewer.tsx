@@ -11,7 +11,10 @@ import { Loader } from '@/components/ui/loader.tsx';
 import { executionProcessesApi } from '@/lib/api.ts';
 import MarkdownRenderer from '@/components/ui/markdown-renderer.tsx';
 import { applyPatch } from 'fast-json-patch';
-import { useEventSource, useEventSourceListener } from '@react-nano/use-event-source';
+import {
+  useEventSource,
+  useEventSourceListener,
+} from '@react-nano/use-event-source';
 import type {
   ExecutionProcess,
   NormalizedConversation,
@@ -50,19 +53,19 @@ export function NormalizedConversationViewer({
 
   // Track fetched processes to prevent redundant database calls
   const fetchedProcesses = useRef(new Set<string>());
-  
+
   // Track highest batch ID for SSE resume functionality
   const highestBatchId = useRef(0);
-  
+
   // Track previous process ID to detect changes
   const prevProcessId = useRef<string | null>(null);
 
   // SSE URL construction with resume cursor support
   const sseUrl = useMemo(() => {
     if (executionProcess.status !== 'running') return null;
-    
+
     const baseUrl = `/api/projects/${projectId}/execution-processes/${executionProcess.id}/normalized-logs/stream`;
-    return highestBatchId.current > 0 
+    return highestBatchId.current > 0
       ? `${baseUrl}?since_batch_id=${highestBatchId.current}`
       : baseUrl;
   }, [executionProcess.id, executionProcess.status, projectId]);
@@ -71,72 +74,77 @@ export function NormalizedConversationViewer({
   const [eventSource, connectionStatus] = useEventSource(sseUrl || '');
 
   // Handle SSE connection events
-  useEventSourceListener(eventSource, ['patch'], (event) => {
-    try {
-      const batchData = JSON.parse(event.data);
-      const { batch_id, patches } = batchData;
+  useEventSourceListener(
+    eventSource,
+    ['patch'],
+    (event) => {
+      try {
+        const batchData = JSON.parse(event.data);
+        const { batch_id, patches } = batchData;
 
-      // Skip duplicates
-      if (batch_id && batch_id <= highestBatchId.current) {
-        debugLog(
-          `⏭️ SSE: Skipping duplicate batch_id=${batch_id} (current=${highestBatchId.current})`
-        );
-        return;
-      }
-
-      // Update cursor BEFORE processing
-      if (batch_id) {
-        highestBatchId.current = batch_id;
-        debugLog(`📍 SSE: Processing batch_id=${batch_id}`);
-      }
-
-      setConversation((prev) => {
-        // Create empty conversation if none exists
-        const baseConversation = prev || {
-          entries: [],
-          session_id: null,
-          executor_type: 'unknown',
-          prompt: null,
-          summary: null,
-        };
-
-        try {
-          const updated = applyPatch(
-            JSON.parse(JSON.stringify(baseConversation)),
-            patches
-          ).newDocument as NormalizedConversation;
-
-          updated.entries = updated.entries.filter(Boolean);
-
+        // Skip duplicates
+        if (batch_id && batch_id <= highestBatchId.current) {
           debugLog(
-            `🔧 SSE: Applied batch_id=${batch_id}, entries: ${updated.entries.length}`
+            `⏭️ SSE: Skipping duplicate batch_id=${batch_id} (current=${highestBatchId.current})`
           );
-
-          // Clear loading state on first successful patch
-          if (!prev) {
-            setLoading(false);
-            setError(null);
-          }
-
-          if (onConversationUpdate) {
-            setTimeout(onConversationUpdate, 0);
-          }
-
-          return updated;
-        } catch (patchError) {
-          console.warn('❌ SSE: Patch failed:', patchError);
-          // Reset cursor on failure for potential retry
-          if (batch_id && batch_id > 0) {
-            highestBatchId.current = batch_id - 1;
-          }
-          debugLog(`⚠️ SSE: Patch failure for batch_id=${batch_id}`);
-          return prev || baseConversation;
+          return;
         }
-      });
-    } catch (e) {
-      console.warn('❌ SSE: Parse failed:', e);
-    }
-  }, [onConversationUpdate, debugLog]);
+
+        // Update cursor BEFORE processing
+        if (batch_id) {
+          highestBatchId.current = batch_id;
+          debugLog(`📍 SSE: Processing batch_id=${batch_id}`);
+        }
+
+        setConversation((prev) => {
+          // Create empty conversation if none exists
+          const baseConversation = prev || {
+            entries: [],
+            session_id: null,
+            executor_type: 'unknown',
+            prompt: null,
+            summary: null,
+          };
+
+          try {
+            const updated = applyPatch(
+              JSON.parse(JSON.stringify(baseConversation)),
+              patches
+            ).newDocument as NormalizedConversation;
+
+            updated.entries = updated.entries.filter(Boolean);
+
+            debugLog(
+              `🔧 SSE: Applied batch_id=${batch_id}, entries: ${updated.entries.length}`
+            );
+
+            // Clear loading state on first successful patch
+            if (!prev) {
+              setLoading(false);
+              setError(null);
+            }
+
+            if (onConversationUpdate) {
+              setTimeout(onConversationUpdate, 0);
+            }
+
+            return updated;
+          } catch (patchError) {
+            console.warn('❌ SSE: Patch failed:', patchError);
+            // Reset cursor on failure for potential retry
+            if (batch_id && batch_id > 0) {
+              highestBatchId.current = batch_id - 1;
+            }
+            debugLog(`⚠️ SSE: Patch failure for batch_id=${batch_id}`);
+            return prev || baseConversation;
+          }
+        });
+      } catch (e) {
+        console.warn('❌ SSE: Parse failed:', e);
+      }
+    },
+    [onConversationUpdate, debugLog]
+  );
 
   // Handle connection status changes
   useEffect(() => {
@@ -217,7 +225,7 @@ export function NormalizedConversationViewer({
       if (fetchedProcesses.current.size > 10) {
         fetchedProcesses.current.clear();
       }
-      
+
       prevProcessId.current = processId;
     }
 
@@ -235,7 +243,6 @@ export function NormalizedConversationViewer({
     fetchNormalizedLogsOnce,
     debugLog,
   ]);
-
 
   // Memoize display entries to avoid unnecessary re-renders
   const displayEntries = useMemo(() => {
