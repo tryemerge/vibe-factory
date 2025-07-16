@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import {
   FolderOpen,
   Settings,
-  BookOpen,
   Server,
   MessageCircleQuestion,
 } from 'lucide-react';
@@ -58,16 +57,7 @@ export function Navbar() {
             </div>
           </div>
           <div className="flex items-center space-x-1">
-            <Button asChild variant="ghost" size="sm">
-              <a
-                href="https://vibekanban.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <BookOpen className="mr-2 h-4 w-4" />
-                Docs
-              </a>
-            </Button>
+
             <Button asChild variant="ghost" size="sm">
               <a
                 href="https://github.com/BloopAI/vibe-kanban/issues"
