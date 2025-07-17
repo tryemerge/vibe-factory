@@ -100,7 +100,8 @@ impl Task {
             CASE 
               WHEN fa.task_id IS NOT NULL THEN true 
               ELSE false 
-            END                         AS "has_failed_attempt!: i64"
+            END                         AS "has_failed_attempt!: i64",
+            latest_executor_attempts.executor AS "latest_attempt_executor"
         FROM tasks t
 
         -- in-progress if any running setupscript/codingagent
@@ -144,6 +145,18 @@ impl Task {
         ) fa
           ON t.id = fa.task_id
 
+        -- get the executor of the latest attempt
+        LEFT JOIN (
+            SELECT task_id, executor
+            FROM (
+                SELECT task_id, executor, created_at,
+                        ROW_NUMBER() OVER (PARTITION BY task_id ORDER BY created_at DESC) AS rn
+                FROM task_attempts
+            ) latest_attempts
+            WHERE rn = 1
+        ) latest_executor_attempts 
+        ON t.id = latest_executor_attempts.task_id
+
         WHERE t.project_id = $1
         ORDER BY t.created_at DESC;
         "#,
@@ -160,11 +173,13 @@ impl Task {
                 title: rec.title,
                 description: rec.description,
                 status: rec.status,
+                parent_task_attempt: rec.parent_task_attempt,
                 created_at: rec.created_at,
                 updated_at: rec.updated_at,
                 has_in_progress_attempt: rec.has_in_progress_attempt != 0,
                 has_merged_attempt: rec.has_merged_attempt != 0,
                 has_failed_attempt: rec.has_failed_attempt != 0,
+                latest_attempt_executor: rec.latest_attempt_executor,
             })
             .collect();
 
