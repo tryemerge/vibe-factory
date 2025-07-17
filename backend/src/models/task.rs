@@ -140,7 +140,7 @@ impl Task {
                 WHERE ep.process_type IN ('setupscript','codingagent')
             ) sub
             WHERE sub.rn = 1
-              AND sub.status = 'failed'
+              AND sub.status IN ('failed','killed')
         ) fa
           ON t.id = fa.task_id
 
