@@ -108,7 +108,6 @@ fn generate_types_content() -> String {
         vibe_kanban::models::task_attempt::CreateTaskAttempt::decl(),
         vibe_kanban::models::task_attempt::UpdateTaskAttempt::decl(),
         vibe_kanban::models::task_attempt::CreateFollowUpAttempt::decl(),
-
         vibe_kanban::routes::filesystem::DirectoryEntry::decl(),
         vibe_kanban::routes::filesystem::DirectoryListResponse::decl(),
         vibe_kanban::routes::auth::DeviceStartResponse::decl(),

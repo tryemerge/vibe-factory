@@ -7,7 +7,6 @@ use crate::{
         execution_process::{ExecutionProcess, ExecutionProcessStatus, ExecutionProcessType},
         task::{Task, TaskStatus},
         task_attempt::TaskAttempt,
-
     },
     services::{NotificationConfig, NotificationService, ProcessService},
     utils::worktree_manager::WorktreeManager,
@@ -573,10 +572,8 @@ pub async fn execution_monitor(app_state: AppState) {
                                 handle_setup_completion(
                                     &app_state,
                                     task_attempt_id,
-                                    execution_process_id,
                                     execution_process,
                                     success,
-                                    exit_code,
                                 )
                                 .await;
                             }
@@ -743,17 +740,9 @@ pub async fn execution_monitor(app_state: AppState) {
 async fn handle_setup_completion(
     app_state: &AppState,
     task_attempt_id: Uuid,
-    execution_process_id: Uuid,
     execution_process: ExecutionProcess,
     success: bool,
-    exit_code: Option<i64>,
 ) {
-    let exit_text = if let Some(code) = exit_code {
-        format!(" with exit code {}", code)
-    } else {
-        String::new()
-    };
-
     if success {
         // Mark setup as completed in database
         if let Err(e) = TaskAttempt::mark_setup_completed(&app_state.db_pool, task_attempt_id).await
@@ -839,12 +828,6 @@ async fn handle_coding_agent_completion(
     success: bool,
     exit_code: Option<i64>,
 ) {
-    let exit_text = if let Some(code) = exit_code {
-        format!(" with exit code {}", code)
-    } else {
-        String::new()
-    };
-
     // Extract and store assistant message from execution logs
     let summary = if let Some(stdout) = &execution_process.stdout {
         if let Some(assistant_message) = crate::executor::parse_assistant_message_from_logs(stdout)
@@ -969,8 +952,7 @@ async fn handle_coding_agent_completion(
         );
 
         // Get task to access task_id and project_id for status update
-        if let Ok(Some(task)) = Task::find_by_id(&app_state.db_pool, task_attempt.task_id).await
-        {
+        if let Ok(Some(task)) = Task::find_by_id(&app_state.db_pool, task_attempt.task_id).await {
             app_state
                 .track_analytics_event(
                     "task_attempt_finished",

@@ -9,8 +9,7 @@ use crate::{
         executor_session::{CreateExecutorSession, ExecutorSession},
         project::Project,
         task::Task,
-        task_attempt::{TaskAttempt, TaskAttemptError, TaskAttemptStatus},
-
+        task_attempt::{TaskAttempt, TaskAttemptError},
     },
     utils::shell::get_shell_command,
 };
@@ -211,7 +210,6 @@ impl ProcessService {
             task_id,
             crate::executor::ExecutorType::CodingAgent(executor_config),
             "Starting executor".to_string(),
-            TaskAttemptStatus::ExecutorRunning,
             ExecutionProcessType::CodingAgent,
             &task_attempt.worktree_path,
         )
@@ -279,7 +277,6 @@ impl ProcessService {
             task_id,
             crate::executor::ExecutorType::DevServer(dev_script),
             "Starting dev server".to_string(),
-            TaskAttemptStatus::ExecutorRunning, // Dev servers don't create activities, just use generic status
             ExecutionProcessType::DevServer,
             &worktree_path,
         )
@@ -459,7 +456,6 @@ impl ProcessService {
             task_id,
             followup_executor,
             "Starting follow-up executor".to_string(),
-            TaskAttemptStatus::ExecutorRunning,
             ExecutionProcessType::CodingAgent,
             &worktree_path,
         )
@@ -485,7 +481,6 @@ impl ProcessService {
                 task_id,
                 new_session_executor,
                 "Starting new executor session (follow-up session failed)".to_string(),
-                TaskAttemptStatus::ExecutorRunning,
                 ExecutionProcessType::CodingAgent,
                 &worktree_path,
             )
@@ -507,7 +502,6 @@ impl ProcessService {
         task_id: Uuid,
         executor_type: crate::executor::ExecutorType,
         activity_note: String,
-        activity_status: TaskAttemptStatus,
         process_type: ExecutionProcessType,
         worktree_path: &str,
     ) -> Result<(), TaskAttemptError> {
@@ -614,7 +608,6 @@ impl ProcessService {
             task_id,
             crate::executor::ExecutorType::SetupScript(setup_script.clone()),
             "Starting setup script".to_string(),
-            TaskAttemptStatus::SetupRunning,
             ExecutionProcessType::SetupScript,
             worktree_path,
         )
@@ -709,8 +702,6 @@ impl ProcessService {
             .map(|_| ())
             .map_err(TaskAttemptError::from)
     }
-
-
 
     /// Execute the process based on type
     async fn execute_process(

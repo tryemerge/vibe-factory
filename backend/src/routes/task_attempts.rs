@@ -23,7 +23,6 @@ use crate::{
             BranchStatus, CreateFollowUpAttempt, CreatePrParams, CreateTaskAttempt, TaskAttempt,
             TaskAttemptState, WorktreeDiff,
         },
-
         ApiResponse,
     },
 };
@@ -73,8 +72,6 @@ pub async fn get_task_attempts(
         }
     }
 }
-
-
 
 pub async fn create_task_attempt(
     Path((project_id, task_id)): Path<(Uuid, Uuid)>,
@@ -139,8 +136,6 @@ pub async fn create_task_attempt(
         }
     }
 }
-
-
 
 pub async fn get_task_attempt_diff(
     Path((project_id, task_id, attempt_id)): Path<(Uuid, Uuid, Uuid)>,
@@ -708,7 +703,7 @@ pub async fn stop_execution_process(
     }
 
     // Verify execution process exists and belongs to the task attempt
-    let process = match ExecutionProcess::find_by_id(&app_state.db_pool, process_id).await {
+    match ExecutionProcess::find_by_id(&app_state.db_pool, process_id).await {
         Ok(Some(process)) if process.task_attempt_id == attempt_id => process,
         Ok(Some(_)) => return Err(StatusCode::NOT_FOUND), // Process exists but wrong attempt
         Ok(None) => return Err(StatusCode::NOT_FOUND),
