@@ -33,7 +33,8 @@ export function TaskFollowUpSection() {
     }
 
     const completedCodingAgentProcesses = attemptData.processes.filter(
-      (process) => process.process_type === 'codingagent' && process.status === 'completed'
+      (process) =>
+        process.process_type === 'codingagent' && process.status === 'completed'
     );
 
     return completedCodingAgentProcesses.length > 0;

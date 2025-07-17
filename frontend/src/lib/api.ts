@@ -19,7 +19,6 @@ import {
   ProjectWithBranch,
   Task,
   TaskAttempt,
-
   TaskAttemptState,
   TaskTemplate,
   TaskWithAttemptStatus,
@@ -317,8 +316,6 @@ export const attemptsApi = {
     );
     return handleApiResponse<void>(response);
   },
-
-
 
   getDiff: async (
     projectId: string,

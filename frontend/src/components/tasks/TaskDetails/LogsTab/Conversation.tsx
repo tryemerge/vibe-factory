@@ -27,11 +27,7 @@ function Conversation() {
       scrollContainerRef.current.scrollTop =
         scrollContainerRef.current.scrollHeight;
     }
-  }, [
-    attemptData.processes,
-    conversationUpdateTrigger,
-    shouldAutoScrollLogs,
-  ]);
+  }, [attemptData.processes, conversationUpdateTrigger, shouldAutoScrollLogs]);
 
   const handleLogsScroll = useCallback(() => {
     if (scrollContainerRef.current) {

@@ -233,7 +233,11 @@ const TaskDetailsProvider: FC<{
       if (!task) return;
 
       try {
-        const processesResult = await attemptsApi.getExecutionProcesses(projectId, taskId, attemptId);
+        const processesResult = await attemptsApi.getExecutionProcesses(
+          projectId,
+          taskId,
+          attemptId
+        );
 
         if (processesResult !== undefined) {
           const runningProcesses = processesResult.filter(
