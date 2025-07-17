@@ -97,7 +97,6 @@ pub struct CreateExecutionProcess {
 
 #[derive(Debug, Deserialize, TS)]
 #[ts(export)]
-#[allow(dead_code)]
 pub struct UpdateExecutionProcess {
     pub status: Option<ExecutionProcessStatus>,
     pub exit_code: Option<i64>,
@@ -409,19 +408,5 @@ impl ExecutionProcess {
         Ok(())
     }
 
-    /// Delete execution processes for a task attempt (cleanup)
-    #[allow(dead_code)]
-    pub async fn delete_by_task_attempt_id(
-        pool: &SqlitePool,
-        task_attempt_id: Uuid,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            "DELETE FROM execution_processes WHERE task_attempt_id = $1",
-            task_attempt_id
-        )
-        .execute(pool)
-        .await?;
 
-        Ok(())
-    }
 }

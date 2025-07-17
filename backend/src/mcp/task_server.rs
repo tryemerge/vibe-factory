@@ -198,7 +198,6 @@ pub struct TaskServer {
 }
 
 impl TaskServer {
-    #[allow(dead_code)]
     pub fn new(pool: SqlitePool) -> Self {
         Self {
             pool,
