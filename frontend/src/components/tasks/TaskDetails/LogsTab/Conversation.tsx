@@ -28,7 +28,6 @@ function Conversation() {
         scrollContainerRef.current.scrollHeight;
     }
   }, [
-    attemptData.activities,
     attemptData.processes,
     conversationUpdateTrigger,
     shouldAutoScrollLogs,

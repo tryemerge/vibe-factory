@@ -10,7 +10,7 @@ use crate::{
         project::Project,
         task::Task,
         task_attempt::{TaskAttempt, TaskAttemptError, TaskAttemptStatus},
-        task_attempt_activity::{CreateTaskAttemptActivity, TaskAttemptActivity},
+
     },
     utils::shell::get_shell_command,
 };
@@ -120,14 +120,7 @@ impl ProcessService {
         )
         .await?;
 
-        // Create activity record
-        Self::create_activity_record(
-            pool,
-            process_id,
-            TaskAttemptStatus::SetupRunning,
-            "Starting setup script with delegation",
-        )
-        .await?;
+        // Setup script starting with delegation
 
         tracing::info!(
             "Starting setup script with delegation to {} for task attempt {}",
@@ -550,11 +543,7 @@ impl ProcessService {
             .await?;
         }
 
-        // Create activity record (skip for dev servers as they run in parallel)
-        if !matches!(process_type, ExecutionProcessType::DevServer) {
-            Self::create_activity_record(pool, process_id, activity_status.clone(), &activity_note)
-                .await?;
-        }
+        // Process started successfully
 
         tracing::info!("Starting {} for task attempt {}", activity_note, attempt_id);
 
@@ -721,25 +710,7 @@ impl ProcessService {
             .map_err(TaskAttemptError::from)
     }
 
-    /// Create activity record for process start
-    async fn create_activity_record(
-        pool: &SqlitePool,
-        process_id: Uuid,
-        activity_status: TaskAttemptStatus,
-        activity_note: &str,
-    ) -> Result<(), TaskAttemptError> {
-        let activity_id = Uuid::new_v4();
-        let create_activity = CreateTaskAttemptActivity {
-            execution_process_id: process_id,
-            status: Some(activity_status.clone()),
-            note: Some(activity_note.to_string()),
-        };
 
-        TaskAttemptActivity::create(pool, &create_activity, activity_id, activity_status)
-            .await
-            .map(|_| ())
-            .map_err(TaskAttemptError::from)
-    }
 
     /// Execute the process based on type
     async fn execute_process(

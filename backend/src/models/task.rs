@@ -111,26 +111,7 @@ impl Task {
                 JOIN (
                     -- pick exactly one “latest” activity per process,
                     -- tiebreaking so that running‐states are lower priority
-                    SELECT execution_process_id, status
-                    FROM (
-                        SELECT
-                            execution_process_id,
-                            status,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY execution_process_id
-                                ORDER BY
-                                    created_at DESC,
-                                    CASE 
-                                    WHEN status IN ('setuprunning','executorrunning') THEN 1 
-                                    ELSE 0 
-                                    END
-                            ) AS rn
-                        FROM task_attempt_activities
-                    ) sub
-                    WHERE rn = 1
-                ) latest_act 
-                ON ep.id = latest_act.execution_process_id
-                WHERE latest_act.status IN ('setuprunning','executorrunning')
+                WHERE ep.status = 'running'
             ) in_progress_attempts 
             ON t.id = in_progress_attempts.task_id
             LEFT JOIN (
@@ -150,9 +131,7 @@ impl Task {
                 ) latest_attempts
                 JOIN execution_processes ep 
                 ON latest_attempts.attempt_id = ep.task_attempt_id
-                JOIN (
-                    -- pick exactly one "latest" activity per process,
-                    -- tiebreaking so that running‐states are lower priority
+
                     SELECT execution_process_id, status
                     FROM (
                         SELECT
@@ -167,13 +146,13 @@ impl Task {
                                     ELSE 0 
                                     END
                             ) AS rn
-                        FROM task_attempt_activities
+                        FROM execution_processes
                     ) sub
                     WHERE rn = 1
                 ) latest_act 
-                ON ep.id = latest_act.execution_process_id
+                ON ep.id = latest_act.id
                 WHERE latest_attempts.rn = 1  -- Only consider the latest attempt
-                  AND latest_act.status IN ('setupfailed','executorfailed')
+                  AND latest_act.status = 'failed'
             ) failed_attempts 
             ON t.id = failed_attempts.task_id
             LEFT JOIN (
