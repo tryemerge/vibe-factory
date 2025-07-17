@@ -587,14 +587,13 @@ function CurrentAttempt({
 
       <div className="col-span-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={!projectHasDevScript ? 'cursor-not-allowed' : ''}
-                  onMouseEnter={() => setIsHoveringDevServer(true)}
-                  onMouseLeave={() => setIsHoveringDevServer(false)}
-                >
+          <div
+            onMouseEnter={() => setIsHoveringDevServer(true)}
+            onMouseLeave={() => setIsHoveringDevServer(false)}
+          >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     variant={runningDevServer ? 'destructive' : 'outline'}
                     size="sm"
@@ -614,33 +613,33 @@ function CurrentAttempt({
                       </>
                     )}
                   </Button>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                className={runningDevServer ? 'max-w-2xl p-4' : ''}
-                side="top"
-                align="center"
-                avoidCollisions={true}
-              >
-                {!projectHasDevScript ? (
-                  <p>Configure a dev server command in project settings</p>
-                ) : runningDevServer && devServerDetails ? (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">
-                      Dev Server Logs (Last 10 lines):
-                    </p>
-                    <pre className="text-xs bg-muted p-2 rounded max-h-64 overflow-y-auto whitespace-pre-wrap">
-                      {processedDevServerLogs}
-                    </pre>
-                  </div>
-                ) : runningDevServer ? (
-                  <p>Stop the running dev server</p>
-                ) : (
-                  <p>Start the dev server</p>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipTrigger>
+                <TooltipContent
+                  className={runningDevServer ? 'max-w-2xl p-4' : ''}
+                  side="top"
+                  align="center"
+                  avoidCollisions={true}
+                >
+                  {!projectHasDevScript ? (
+                    <p>Configure a dev server command in project settings</p>
+                  ) : runningDevServer && devServerDetails ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">
+                        Dev Server Logs (Last 10 lines):
+                      </p>
+                      <pre className="text-xs bg-muted p-2 rounded max-h-64 overflow-y-auto whitespace-pre-wrap">
+                        {processedDevServerLogs}
+                      </pre>
+                    </div>
+                  ) : runningDevServer ? (
+                    <p>Stop the running dev server</p>
+                  ) : (
+                    <p>Start the dev server</p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
