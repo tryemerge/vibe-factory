@@ -570,6 +570,7 @@ pub async fn open_task_attempt_in_editor(
                     "intellij" => EditorType::IntelliJ,
                     "zed" => EditorType::Zed,
                     "custom" => EditorType::Custom,
+                    "cloudide" => EditorType::CloudIde,
                     _ => config_guard.editor.editor_type.clone(),
                 };
                 let temp_config = EditorConfig {

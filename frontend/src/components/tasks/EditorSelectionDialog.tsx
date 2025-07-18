@@ -58,6 +58,11 @@ const editorOptions: {
     label: 'Custom Editor',
     description: 'Use your configured custom editor',
   },
+  {
+    value: 'cloudide',
+    label: 'Cloud IDE',
+    description: 'Browser-based VS Code instance',
+  },
 ];
 
 export function EditorSelectionDialog({

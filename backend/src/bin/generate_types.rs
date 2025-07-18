@@ -22,7 +22,8 @@ export const EDITOR_TYPES: EditorType[] = [
     "windsurf",
     "intellij",
     "zed",
-    "custom"
+    "custom",
+    "cloudide"
 ];
 
 export const EXECUTOR_LABELS: Record<string, string> = {
@@ -42,7 +43,8 @@ export const EDITOR_LABELS: Record<string, string> = {
     "windsurf": "Windsurf",
     "intellij": "IntelliJ IDEA",
     "zed": "Zed",
-    "custom": "Custom"
+    "custom": "Custom",
+    "cloudide": "Cloud IDE"
 };
 
 export const SOUND_FILES: SoundFile[] = [

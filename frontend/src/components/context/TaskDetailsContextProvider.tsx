@@ -208,6 +208,20 @@ const TaskDetailsProvider: FC<{
     async (editorType?: EditorType) => {
       if (!task || !selectedAttempt) return;
 
+      console.log('handleOpenInEditor called with editorType:', editorType);
+
+      // Handle CloudIde specially - construct URL and open directly
+      if (editorType === 'cloudide') {
+        console.log('CloudIde detected, opening URL');
+        const vscodePort = '3022'; // Default VSCode port
+        let vscodeUrl = `${window.location.protocol}//${window.location.hostname}/?folder=${encodeURIComponent(selectedAttempt.worktree_path)}`;
+        vscodeUrl = vscodeUrl.replace('3001', vscodePort);
+
+        console.log('Opening URL:', vscodeUrl);
+        window.open(vscodeUrl, '_blank');
+        return;
+      }
+
       try {
         const result = await attemptsApi.openEditor(
           projectId,

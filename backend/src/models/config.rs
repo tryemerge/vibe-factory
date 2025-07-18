@@ -63,6 +63,7 @@ pub enum EditorType {
     IntelliJ,
     Zed,
     Custom,
+    CloudIde,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -102,6 +103,7 @@ impl EditorConstants {
                 EditorType::Windsurf,
                 EditorType::IntelliJ,
                 EditorType::Zed,
+                EditorType::CloudIde,
                 EditorType::Custom,
             ],
             editor_labels: vec![
@@ -110,6 +112,7 @@ impl EditorConstants {
                 "Windsurf".to_string(),
                 "IntelliJ IDEA".to_string(),
                 "Zed".to_string(),
+                "Cloud IDE".to_string(),
                 "Custom".to_string(),
             ],
         }
@@ -174,8 +177,15 @@ impl Default for Config {
 
 impl Default for EditorConfig {
     fn default() -> Self {
+        // Check if running in cloud runner mode
+        let is_cloud_runner = std::env::var("CLOUD_RUNNER").unwrap_or_default() == "true";
+
         Self {
-            editor_type: EditorType::VSCode,
+            editor_type: if is_cloud_runner {
+                EditorType::CloudIde
+            } else {
+                EditorType::VSCode
+            },
             custom_command: None,
         }
     }
@@ -207,6 +217,10 @@ impl EditorConfig {
                 } else {
                     vec!["code".to_string()] // fallback to VSCode
                 }
+            }
+            EditorType::CloudIde => {
+                // CloudIde is handled entirely in frontend, fallback to VSCode
+                vec!["code".to_string()]
             }
         }
     }

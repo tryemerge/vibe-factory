@@ -81,6 +81,8 @@ function getEditorDisplayName(editorType: string): string {
       return 'Zed';
     case 'custom':
       return 'Custom Editor';
+    case 'cloudide':
+      return 'Cloud IDE';
     default:
       return 'Editor';
   }
@@ -573,7 +575,7 @@ function CurrentAttempt({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleOpenInEditor()}
+            onClick={() => handleOpenInEditor(config?.editor?.editor_type)}
             className="h-6 px-2 text-xs hover:bg-muted gap-1"
           >
             <ExternalLink className="h-3 w-3" />
