@@ -311,6 +311,7 @@ pub async fn open_project_in_editor(
                     "windsurf" => EditorType::Windsurf,
                     "intellij" => EditorType::IntelliJ,
                     "zed" => EditorType::Zed,
+                    "xcode" => EditorType::Xcode,
                     "custom" => EditorType::Custom,
                     _ => config_guard.editor.editor_type.clone(),
                 };

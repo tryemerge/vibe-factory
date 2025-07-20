@@ -54,6 +54,11 @@ const editorOptions: {
     description: 'High-performance code editor',
   },
   {
+    value: 'xcode',
+    label: 'Xcode',
+    description: "Apple's IDE for macOS and iOS development",
+  },
+  {
     value: 'custom',
     label: 'Custom Editor',
     description: 'Use your configured custom editor',

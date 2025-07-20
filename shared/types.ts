@@ -12,7 +12,7 @@ export type EditorConfig = { editor_type: EditorType, custom_command: string | n
 
 export type GitHubConfig = { pat: string | null, token: string | null, username: string | null, primary_email: string | null, default_pr_base: string | null, };
 
-export type EditorType = "vscode" | "cursor" | "windsurf" | "intellij" | "zed" | "custom";
+export type EditorType = "vscode" | "cursor" | "windsurf" | "intellij" | "zed" | "xcode" | "custom";
 
 export type EditorConstants = { editor_types: Array<EditorType>, editor_labels: Array<string>, };
 
@@ -136,6 +136,7 @@ export const EDITOR_TYPES: EditorType[] = [
     "windsurf",
     "intellij",
     "zed",
+    "xcode",
     "custom"
 ];
 
@@ -156,6 +157,7 @@ export const EDITOR_LABELS: Record<string, string> = {
     "windsurf": "Windsurf",
     "intellij": "IntelliJ IDEA",
     "zed": "Zed",
+    "xcode": "Xcode",
     "custom": "Custom"
 };
 

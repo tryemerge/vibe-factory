@@ -22,6 +22,7 @@ export const EDITOR_TYPES: EditorType[] = [
     "windsurf",
     "intellij",
     "zed",
+    "xcode",
     "custom"
 ];
 
@@ -42,6 +43,7 @@ export const EDITOR_LABELS: Record<string, string> = {
     "windsurf": "Windsurf",
     "intellij": "IntelliJ IDEA",
     "zed": "Zed",
+    "xcode": "Xcode",
     "custom": "Custom"
 };
 

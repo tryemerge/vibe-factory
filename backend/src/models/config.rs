@@ -62,6 +62,7 @@ pub enum EditorType {
     Windsurf,
     IntelliJ,
     Zed,
+    Xcode,
     Custom,
 }
 
@@ -102,6 +103,7 @@ impl EditorConstants {
                 EditorType::Windsurf,
                 EditorType::IntelliJ,
                 EditorType::Zed,
+                EditorType::Xcode,
                 EditorType::Custom,
             ],
             editor_labels: vec![
@@ -110,6 +112,7 @@ impl EditorConstants {
                 "Windsurf".to_string(),
                 "IntelliJ IDEA".to_string(),
                 "Zed".to_string(),
+                "Xcode".to_string(),
                 "Custom".to_string(),
             ],
         }
@@ -201,6 +204,7 @@ impl EditorConfig {
             EditorType::Windsurf => vec!["windsurf".to_string()],
             EditorType::IntelliJ => vec!["idea".to_string()],
             EditorType::Zed => vec!["zed".to_string()],
+            EditorType::Xcode => vec!["xed".to_string()],
             EditorType::Custom => {
                 if let Some(custom) = &self.custom_command {
                     custom.split_whitespace().map(|s| s.to_string()).collect()
