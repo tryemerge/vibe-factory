@@ -313,8 +313,7 @@ function DisplayConversationEntry({ entry, index, diffDeletable }: Props) {
 
   // Determine if this tool call should show expandable details
   const shouldShowExpandableDetails = useMemo(() => {
-    if (!isToolUse) return false;
-    const toolName = entry.entry_type.tool_name;
+    if (!isToolUse || entry.entry_type.type !== 'tool_use') return false;
     const actionType = entry.entry_type.action_type;
 
     // Show expandable details for unrecognized tools (action type "other")
@@ -450,19 +449,7 @@ function DisplayConversationEntry({ entry, index, diffDeletable }: Props) {
                       </pre>
                     </div>
                   )}
-                  {entry.tool_result && (
-                    <div>
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                        Tool Result:
-                      </div>
-                      <pre className="text-xs bg-gray-100 dark:bg-gray-900 p-2 rounded border overflow-x-auto">
-                        <code>
-                          {JSON.stringify(entry.tool_result, null, 2)}
-                        </code>
-                      </pre>
-                    </div>
-                  )}
-                  {!entry.tool_arguments && !entry.tool_result && (
+                  {!entry.tool_arguments && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 italic">
                       No additional tool details available.
                     </div>
