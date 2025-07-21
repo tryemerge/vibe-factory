@@ -71,6 +71,7 @@ impl Executor for SetupScriptExecutor {
             entry_type: crate::executor::NormalizedEntryType::SystemMessage,
             content: format!("Executing setup script:\n{}", self.script),
             metadata: None,
+            tool_arguments: None,
         });
 
         // Process the logs - split by lines and create entries
@@ -102,6 +103,7 @@ impl Executor for SetupScriptExecutor {
                         entry_type,
                         content: current_chunk.trim().to_string(),
                         metadata: None,
+                        tool_arguments: None,
                     });
 
                     current_chunk.clear();
@@ -115,6 +117,7 @@ impl Executor for SetupScriptExecutor {
                     entry_type: crate::executor::NormalizedEntryType::SystemMessage,
                     content: current_chunk.trim().to_string(),
                     metadata: None,
+                    tool_arguments: None,
                 });
             }
         }

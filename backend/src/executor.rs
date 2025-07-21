@@ -35,6 +35,8 @@ pub struct NormalizedEntry {
     pub content: String,
     #[ts(skip)]
     pub metadata: Option<serde_json::Value>,
+    #[ts(type = "any")]
+    pub tool_arguments: Option<serde_json::Value>,
 }
 
 /// Types of entries in a normalized conversation

@@ -262,6 +262,7 @@ Task title: {}"#,
                         entry_type: NormalizedEntryType::SystemMessage,
                         content: format!("Raw output: {}", trimmed),
                         metadata: None,
+                        tool_arguments: None,
                     });
                     continue;
                 }
@@ -297,6 +298,7 @@ Task title: {}"#,
                                                             NormalizedEntryType::AssistantMessage,
                                                         content: text.to_string(),
                                                         metadata: Some(content_item.clone()),
+                                                        tool_arguments: None,
                                                     });
                                                 }
                                             }
@@ -328,6 +330,7 @@ Task title: {}"#,
                                                         },
                                                         content,
                                                         metadata: Some(content_item.clone()),
+                                                        tool_arguments: Some(input.clone()),
                                                     });
                                                 }
                                             }
@@ -356,6 +359,7 @@ Task title: {}"#,
                                                     entry_type: NormalizedEntryType::UserMessage,
                                                     content: text.to_string(),
                                                     metadata: Some(content_item.clone()),
+                                                    tool_arguments: None,
                                                 });
                                             }
                                         }
@@ -378,6 +382,7 @@ Task title: {}"#,
                                             .unwrap_or("unknown")
                                     ),
                                     metadata: Some(json.clone()),
+                                    tool_arguments: None,
                                 });
                             }
                         }
@@ -403,6 +408,7 @@ Task title: {}"#,
                     entry_type: NormalizedEntryType::SystemMessage,
                     content: format!("Unrecognized JSON: {}", trimmed),
                     metadata: Some(json),
+                    tool_arguments: None,
                 });
             }
         }

@@ -65,6 +65,7 @@ impl Executor for CleanupScriptExecutor {
             entry_type: crate::executor::NormalizedEntryType::SystemMessage,
             content: format!("Executing cleanup script:\n{}", self.script),
             metadata: None,
+            tool_arguments: None,
         });
 
         // Process the logs - split by lines and create entries
@@ -96,6 +97,7 @@ impl Executor for CleanupScriptExecutor {
                         entry_type,
                         content: current_chunk.trim().to_string(),
                         metadata: None,
+                        tool_arguments: None,
                     });
 
                     current_chunk.clear();
@@ -109,6 +111,7 @@ impl Executor for CleanupScriptExecutor {
                     entry_type: crate::executor::NormalizedEntryType::SystemMessage,
                     content: current_chunk.trim().to_string(),
                     metadata: None,
+                    tool_arguments: None,
                 });
             }
         }
