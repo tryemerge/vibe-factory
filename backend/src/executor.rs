@@ -71,7 +71,7 @@ pub enum ActionType {
 /// Context information for spawn failures to provide comprehensive error details
 #[derive(Debug, Clone)]
 pub struct SpawnContext {
-    /// The type of executor that failed (e.g., "Claude", "Amp", "Echo")
+    /// The type of executor that failed (e.g., "Claude Code", "Amp", "Echo")
     pub executor_type: String,
     /// The command that failed to spawn
     pub command: String,
@@ -517,8 +517,8 @@ impl ExecutorConfig {
             ExecutorConfig::Echo => "Echo (Test Mode)",
             ExecutorConfig::CharmOpencode => "Charm Opencode",
             ExecutorConfig::SstOpencode => "SST Opencode",
-            ExecutorConfig::Claude => "Claude",
-            ExecutorConfig::ClaudePlan => "Claude Plan",
+            ExecutorConfig::Claude => "Claude Code",
+            ExecutorConfig::ClaudePlan => "Claude Code Plan",
             ExecutorConfig::Amp => "Amp",
             ExecutorConfig::Gemini => "Gemini",
             ExecutorConfig::ClaudeCodeRouter => "Claude Code Router",
@@ -1001,7 +1001,7 @@ mod tests {
             .normalize_logs(claude_logs, "/tmp/test-worktree")
             .unwrap();
 
-        assert_eq!(result.executor_type, "Claude");
+        assert_eq!(result.executor_type, "Claude Code");
         assert_eq!(
             result.session_id,
             Some("499dcce4-04aa-4a3e-9e0c-ea0228fa87c9".to_string())
