@@ -11,3 +11,7 @@ rustflags = ["-C", "link-arg=/DEBUG:FASTLINK"]
 
 [target.aarch64-pc-windows-msvc]
 rustflags = ["-C", "link-arg=/DEBUG:FASTLINK"]
+
+[target.x86_64-apple-darwin]
+linker = "rust-lld"
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
