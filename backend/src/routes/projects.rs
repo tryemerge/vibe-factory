@@ -288,72 +288,22 @@ pub async fn delete_project(
     }
 }
 
-#[derive(serde::Deserialize)]
-pub struct OpenEditorRequest {
-    editor_type: Option<String>,
-}
 
 pub async fn open_project_in_editor(
     Extension(project): Extension<Project>,
     State(app_state): State<AppState>,
-    Json(payload): Json<Option<OpenEditorRequest>>,
+    Json(payload): Json<Option<crate::utils::editor::OpenEditorRequest>>,
 ) -> Result<ResponseJson<ApiResponse<()>>, StatusCode> {
-    // Get editor command from config or override
-    let editor_command = {
-        let config_guard = app_state.get_config().read().await;
-        if let Some(ref request) = payload {
-            if let Some(ref editor_type) = request.editor_type {
-                // Create a temporary editor config with the override
-                use crate::models::config::{EditorConfig, EditorType};
-                let override_editor_type = match editor_type.as_str() {
-                    "vscode" => EditorType::VSCode,
-                    "cursor" => EditorType::Cursor,
-                    "windsurf" => EditorType::Windsurf,
-                    "intellij" => EditorType::IntelliJ,
-                    "zed" => EditorType::Zed,
-                    "custom" => EditorType::Custom,
-                    _ => config_guard.editor.editor_type.clone(),
-                };
-                let temp_config = EditorConfig {
-                    editor_type: override_editor_type,
-                    custom_command: config_guard.editor.custom_command.clone(),
-                };
-                temp_config.get_command()
-            } else {
-                config_guard.editor.get_command()
-            }
-        } else {
-            config_guard.editor.get_command()
-        }
-    };
-
-    // Open editor in the project directory
-    let mut cmd = std::process::Command::new(&editor_command[0]);
-    for arg in &editor_command[1..] {
-        cmd.arg(arg);
-    }
-    cmd.arg(&project.git_repo_path);
-
-    match cmd.spawn() {
-        Ok(_) => {
-            tracing::info!(
-                "Opened editor ({}) for project {} at path: {}",
-                editor_command.join(" "),
-                project.id,
-                project.git_repo_path
-            );
-            Ok(ResponseJson(ApiResponse::success(())))
-        }
-        Err(e) => {
-            tracing::error!(
-                "Failed to open editor ({}) for project {}: {}",
-                editor_command.join(" "),
-                project.id,
-                e
-            );
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    let editor_type = payload.and_then(|req| req.editor_type);
+    let editor_override = editor_type.as_deref();
+    
+    crate::utils::editor::open_editor_at_path(
+        &app_state,
+        &project.git_repo_path,
+        editor_override,
+        "project",
+        project.id,
+    ).await
 }
 
 pub async fn search_project_files(

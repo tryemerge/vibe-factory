@@ -455,77 +455,24 @@ pub async fn create_github_pr(
     }
 }
 
-#[derive(serde::Deserialize)]
-pub struct OpenEditorRequest {
-    editor_type: Option<String>,
-}
 
 pub async fn open_task_attempt_in_editor(
     Extension(_project): Extension<Project>,
     Extension(_task): Extension<Task>,
     Extension(task_attempt): Extension<TaskAttempt>,
     State(app_state): State<AppState>,
-    Json(payload): Json<Option<OpenEditorRequest>>,
+    Json(payload): Json<Option<crate::utils::editor::OpenEditorRequest>>,
 ) -> Result<ResponseJson<ApiResponse<()>>, StatusCode> {
-    // Get the task attempt to access the worktree path
-    let attempt = &task_attempt;
-
-    // Get editor command from config or override
-    let editor_command = {
-        let config_guard = app_state.get_config().read().await;
-        if let Some(ref request) = payload {
-            if let Some(ref editor_type) = request.editor_type {
-                // Create a temporary editor config with the override
-                use crate::models::config::{EditorConfig, EditorType};
-                let override_editor_type = match editor_type.as_str() {
-                    "vscode" => EditorType::VSCode,
-                    "cursor" => EditorType::Cursor,
-                    "windsurf" => EditorType::Windsurf,
-                    "intellij" => EditorType::IntelliJ,
-                    "zed" => EditorType::Zed,
-                    "custom" => EditorType::Custom,
-                    _ => config_guard.editor.editor_type.clone(),
-                };
-                let temp_config = EditorConfig {
-                    editor_type: override_editor_type,
-                    custom_command: config_guard.editor.custom_command.clone(),
-                };
-                temp_config.get_command()
-            } else {
-                config_guard.editor.get_command()
-            }
-        } else {
-            config_guard.editor.get_command()
-        }
-    };
-
-    // Open editor in the worktree directory
-    let mut cmd = std::process::Command::new(&editor_command[0]);
-    for arg in &editor_command[1..] {
-        cmd.arg(arg);
-    }
-    cmd.arg(&attempt.worktree_path);
-
-    match cmd.spawn() {
-        Ok(_) => {
-            tracing::info!(
-                "Opened editor ({}) for task attempt {} at path: {}",
-                editor_command.join(" "),
-                task_attempt.id,
-                attempt.worktree_path
-            );
-            Ok(ResponseJson(ApiResponse::success(())))
-        }
-        Err(e) => {
-            tracing::error!(
-                "Failed to open editor ({}) for attempt {}: {}",
-                editor_command.join(" "),
-                task_attempt.id,
-                e
-            );
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    let editor_type = payload.and_then(|req| req.editor_type);
+    let editor_override = editor_type.as_deref();
+    
+    crate::utils::editor::open_editor_at_path(
+        &app_state,
+        &task_attempt.worktree_path,
+        editor_override,
+        "task attempt",
+        task_attempt.id,
+    ).await
 }
 
 pub async fn get_task_attempt_branch_status(
