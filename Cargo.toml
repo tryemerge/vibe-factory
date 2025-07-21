@@ -19,6 +19,3 @@ split-debuginfo = "packed"
 strip = true
 codegen-units = 16
 lto = "thin"
-
-[target.x86_64-apple-darwin]
-linker = "rust-lld"
