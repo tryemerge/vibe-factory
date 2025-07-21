@@ -61,7 +61,8 @@ pub async fn normalized_logs_stream(
     let stream = async_stream::stream! {
         // Track previous stdout length and entry count for database polling fallback
         let mut last_len: usize = 0;
-        let mut last_entry_count: usize = query.since_batch_id.unwrap_or(1) as usize;
+        // Initialize entry count based on batch_id - batch IDs start at 1, entry counts at 0
+        let mut last_entry_count: usize = query.since_batch_id.unwrap_or(1).saturating_sub(1) as usize;
         let mut interval = tokio::time::interval(Duration::from_millis(poll_interval));
         let mut last_seen_batch_id: u64 = query.since_batch_id.unwrap_or(0); // Cursor for WAL streaming
 
@@ -193,15 +194,17 @@ pub async fn normalized_logs_stream(
                     }
                 };
 
-                if last_entry_count > normalized.entries.len() {
+                // 5. Compute patches for any new entries - with bounds checking
+                if last_entry_count >= normalized.entries.len() {
+                    // No new entries, continue polling
                     continue;
                 }
 
-                // 5. Compute patches for any new entries
-                if last_entry_count >= normalized.entries.len() {
+                // Get all new entries since last check - safe slice to prevent panic
+                let new_entries = normalized.entries.get(last_entry_count..).unwrap_or(&[]);
+                if new_entries.is_empty() {
                     continue;
                 }
-                let new_entries = [&normalized.entries[last_entry_count]];
                 let patches: Vec<Value> = new_entries
                     .iter()
                     .map(|entry| serde_json::json!({
@@ -211,9 +214,9 @@ pub async fn normalized_logs_stream(
                     }))
                     .collect();
 
-                // 6. Emit the batch
+                // 6. Emit the batch with all new entries
                 let batch_data = BatchData {
-                    batch_id: fallback_batch_id - 1,
+                    batch_id: fallback_batch_id,
                     patches,
                 };
                 let json = serde_json::to_string(&batch_data).unwrap_or_default();
@@ -221,7 +224,7 @@ pub async fn normalized_logs_stream(
 
                 // 7. Update our cursors
                 fallback_batch_id += 1;
-                last_entry_count += 1;
+                last_entry_count = normalized.entries.len(); // Update to current entry count
                 last_len = stdout.len();
             }
 
