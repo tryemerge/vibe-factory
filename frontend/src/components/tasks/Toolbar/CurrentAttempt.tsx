@@ -799,9 +799,9 @@ function CurrentAttempt({
               size="sm"
               onClick={stopAllExecutions}
               disabled={isStopping}
-              className="gap-2"
+              className={`gap-2 ${isAttemptRunning && !isStopping ? 'animate-pulse border-red-500 shadow-lg shadow-red-500/20' : ''}`}
             >
-              <StopCircle className="h-4 w-4" />
+              <StopCircle className={`h-4 w-4 ${isStopping ? 'animate-spin' : isAttemptRunning ? 'animate-bounce' : ''}`} />
               {isStopping ? 'Stopping...' : 'Stop Attempt'}
             </Button>
           ) : (
