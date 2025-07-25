@@ -4,6 +4,7 @@ import {
   GitBranch as GitBranchIcon,
   GitPullRequest,
   History,
+  Loader,
   Play,
   Plus,
   RefreshCw,
@@ -799,9 +800,15 @@ function CurrentAttempt({
               size="sm"
               onClick={stopAllExecutions}
               disabled={isStopping}
-              className={`gap-2 ${isAttemptRunning && !isStopping ? 'animate-pulse border-red-500 shadow-lg shadow-red-500/20' : ''}`}
+              className="gap-2"
             >
-              <StopCircle className={`h-4 w-4 ${isStopping ? 'animate-spin' : isAttemptRunning ? 'animate-bounce' : ''}`} />
+              {isStopping ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : isAttemptRunning ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <StopCircle className="h-4 w-4" />
+              )}
               {isStopping ? 'Stopping...' : 'Stop Attempt'}
             </Button>
           ) : (
