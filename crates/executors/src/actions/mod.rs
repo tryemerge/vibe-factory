@@ -8,22 +8,22 @@ use ts_rs::TS;
 
 use crate::{
     actions::{
-        script::ScriptRequest, standard::StandardCodingAgentRequest,
-        standard_follow_up::StandardFollowUpCodingAgentRequest,
+        coding_agent_follow_up::CodingAgentFollowUpRequest,
+        coding_agent_initial::CodingAgentInitialRequest, script::ScriptRequest,
     },
     executors::ExecutorError,
 };
+pub mod coding_agent_follow_up;
+pub mod coding_agent_initial;
 pub mod script;
-pub mod standard;
-pub mod standard_follow_up;
 
 #[enum_dispatch]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 #[serde(tag = "type")]
 #[ts(export)]
 pub enum ExecutorActions {
-    StandardCodingAgentRequest,
-    StandardFollowUpCodingAgentRequest,
+    CodingAgentInitialRequest,
+    CodingAgentFollowUpRequest,
     ScriptRequest,
 }
 
