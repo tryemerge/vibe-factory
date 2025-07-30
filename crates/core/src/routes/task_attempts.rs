@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -10,15 +11,18 @@ use axum::{
     BoxError, Extension, Json, Router,
 };
 use db::models::{
-    execution_process::ExecutionProcessRunReason,
+    execution_process::{ExecutionProcess, ExecutionProcessRunReason},
+    executor_session::ExecutorSession,
+    task,
     task_attempt::{CreateTaskAttempt, TaskAttempt},
 };
 use deployment::{Deployment, DeploymentError};
 use executors::{
     actions::{
+        coding_agent_follow_up::CodingAgentFollowUpRequest,
         coding_agent_initial::CodingAgentInitialRequest,
         script::{ScriptContext, ScriptRequest, ScriptRequestLanguage},
-        ExecutorActions,
+        ExecutorActionKind, ExecutorActions,
     },
     executors::standard::{
         amp::AmpExecutor, StandardCodingAgentExecutor, StandardCodingAgentExecutors,
@@ -331,10 +335,54 @@ pub async fn follow_up(
     Extension(task_attempt): Extension<TaskAttempt>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
-) -> Result<ResponseJson<ApiResponse<()>>, StatusCode> {
+) -> Result<ResponseJson<ApiResponse<()>>, DeploymentError> {
     tracing::info!("{:?}", task_attempt);
 
     // First, get the most recent execution process with executor action type = StandardCoding
+    let initial_execution_process = ExecutionProcess::find_latest_by_task_attempt_and_action_type(
+        &deployment.db().pool,
+        task_attempt.id,
+        &ExecutorActionKind::CodingAgentInitialRequest,
+    )
+    .await?
+    .ok_or(DeploymentError::Other(anyhow!(
+        "Couldn't find initial coding agent process, has it run yet?"
+    )))?;
+
+    // Get session_id
+    let session_id = ExecutorSession::find_by_execution_process_id(
+        &deployment.db().pool,
+        initial_execution_process.id,
+    )
+    .await?
+    .ok_or(DeploymentError::Other(anyhow!(
+        "Couldn't find related executor session for this execution process"
+    )))?
+    .session_id
+    .ok_or(DeploymentError::Other(anyhow!(
+        "This executor session doesn't have a session_id"
+    )))?;
+
+    let executor = match initial_execution_process.executor_actions() {
+        ExecutorActions::CodingAgentInitialRequest(request) => Ok(request.executor.clone()),
+        _ => Err(DeploymentError::Other(anyhow!("Couldn't find executor"))),
+    }?;
+
+    let follow_up_action =
+        ExecutorActions::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+            prompt: payload.prompt,
+            session_id,
+            executor,
+        });
+
+    deployment
+        .container()
+        .start_execution(
+            &task_attempt,
+            &follow_up_action,
+            &ExecutionProcessRunReason::CodingAgent,
+        )
+        .await?;
 
     Ok(ResponseJson(ApiResponse::success(())))
 }
