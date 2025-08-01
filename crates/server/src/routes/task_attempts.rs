@@ -588,7 +588,7 @@ pub async fn create_github_pr(
     match github_service.create_pr(&repo_info, &pr_request).await {
         Ok(pr_info) => {
             // Update the task attempt with PR information
-            if let Err(e) = TaskAttempt::update_pr_status(
+            if let Err(e) = TaskAttempt::create_pr(
                 pool,
                 task_attempt.id,
                 pr_info.url.clone(),

@@ -74,6 +74,15 @@ pub struct CreatePrParams<'a> {
     pub base_branch: Option<&'a str>,
 }
 
+pub struct PrEntry {
+    pub attempt_id: Uuid,
+    pub task_id: Uuid,
+    pub project_id: Uuid,
+    pub pr_number: i64,
+    pub pr_url: Option<String>,
+    pub git_repo_path: String,
+}
+
 #[derive(Debug, Deserialize, TS)]
 #[ts(export)]
 pub struct CreateFollowUpAttempt {
@@ -650,7 +659,7 @@ impl TaskAttempt {
     }
 
     /// Update PR status for a task attempt
-    pub async fn update_pr_status(
+    pub async fn create_pr(
         pool: &SqlitePool,
         attempt_id: Uuid,
         pr_url: String,
@@ -668,6 +677,57 @@ impl TaskAttempt {
         .await?;
 
         Ok(())
+    }
+
+    /// Update PR status and merge commit
+    pub async fn update_pr_status(
+        pool: &SqlitePool,
+        attempt_id: Uuid,
+        status: &str,
+        merged_at: Option<DateTime<Utc>>,
+        merge_commit_sha: Option<&str>,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE task_attempts SET pr_status = $1, pr_merged_at = $2, merge_commit = $3, updated_at = datetime('now') WHERE id = $4",
+            status,
+            merged_at,
+            merge_commit_sha,
+            attempt_id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn select_open_pr_entries(pool: &SqlitePool) -> Result<Vec<PrEntry>, sqlx::Error> {
+        let records = sqlx::query!(
+            r#"SELECT 
+                ta.id as "attempt_id!: Uuid",
+                ta.task_id as "task_id!: Uuid",
+                t.project_id as "project_id!: Uuid",
+                ta.pr_number as "pr_number!: i64",
+                ta.pr_url,
+                p.git_repo_path
+               FROM task_attempts ta
+               JOIN tasks t ON ta.task_id = t.id  
+               JOIN projects p ON t.project_id = p.id
+               WHERE ta.pr_status = 'open' AND ta.pr_number IS NOT NULL"#
+        )
+        .fetch_all(pool)
+        .await?;
+
+        Ok(records
+            .into_iter()
+            .map(|row| PrEntry {
+                attempt_id: row.attempt_id,
+                task_id: row.task_id,
+                project_id: row.project_id,
+                pr_number: row.pr_number,
+                pr_url: row.pr_url,
+                git_repo_path: row.git_repo_path,
+            })
+            .collect())
     }
 
     // /// Get the current execution state for a task attempt
