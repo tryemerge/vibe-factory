@@ -4,7 +4,7 @@ use anyhow::Error as AnyhowError;
 use axum::http::{HeaderName, header::ACCEPT};
 use octocrab::{
     OctocrabBuilder,
-    auth::{DeviceCodes, OAuth},
+    auth::{Continue, DeviceCodes, OAuth},
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,7 @@ pub enum AuthError {
     #[error("Device flow not started")]
     DeviceFlowNotStarted,
     #[error("Device flow pending")]
-    Pending,
+    Pending(Continue),
     #[error(transparent)]
     Other(#[from] AnyhowError),
 }
@@ -39,8 +39,8 @@ pub enum AuthError {
 pub struct DeviceFlowStartResponse {
     pub user_code: String,
     pub verification_uri: String,
-    pub expires_in: u64,
-    pub interval: u64,
+    pub expires_in: u32,
+    pub interval: u32,
 }
 
 pub struct UserInfo {
@@ -82,8 +82,8 @@ impl AuthService {
         Ok(DeviceFlowStartResponse {
             user_code: device_codes.user_code,
             verification_uri: device_codes.verification_uri,
-            expires_in: device_codes.expires_in,
-            interval: device_codes.interval,
+            expires_in: device_codes.expires_in as u32,
+            interval: device_codes.interval as u32,
         })
     }
 
@@ -104,10 +104,7 @@ impl AuthService {
             .await?;
         let access_token = poll_response.either(
             |OAuth { access_token, .. }| Ok(access_token),
-            |_| {
-                // Polling continues
-                Err(AuthError::Pending)
-            },
+            |c| Err(AuthError::Pending(c)),
         )?;
         let client = OctocrabBuilder::new()
             .add_header(
@@ -129,8 +126,7 @@ impl AuthService {
         })
     }
 
-    pub async fn check_token(&self, token: Option<&str>) -> Result<(), AuthError> {
-        let token = token.ok_or_else(|| AuthError::InvalidAccessToken)?;
+    pub async fn check_token(&self, token: String) -> Result<(), AuthError> {
         let client = OctocrabBuilder::new()
             .add_header(
                 HeaderName::try_from("User-Agent").unwrap(),
@@ -141,7 +137,8 @@ impl AuthService {
         let res = client.current().user().await;
         match res {
             Ok(_) => Ok(()),
-            Err(_) => Err(AuthError::InvalidAccessToken),
+            Err(octocrab::Error::GitHub { .. }) => Err(AuthError::InvalidAccessToken),
+            Err(e) => Err(AuthError::GitHubClient(e)),
         }
     }
 }

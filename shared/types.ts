@@ -44,6 +44,8 @@ export type Environment = { os_type: string, os_version: string, os_architecture
 
 export type CreateFollowUpAttempt = { prompt: string, };
 
+export type CreateGitHubPRRequest = { title: string, body: string | null, base_branch: string | null, };
+
 export type Config = { theme: ThemeMode, profile: string, disclaimer_acknowledged: boolean, onboarding_acknowledged: boolean, github_login_acknowledged: boolean, telemetry_acknowledged: boolean, notifications: NotificationConfig, editor: EditorConfig, github: GitHubConfig, analytics_enabled: boolean | null, environment: EnvironmentInfo, workspace_dir: string | null, };
 
 export type EnvironmentInfo = { os_type: string, os_version: string, architecture: string, bitness: string, };
@@ -61,6 +63,12 @@ export type GitHubConfig = { pat: string | null, oauth_token: string | null, use
 export enum SoundFile { ABSTRACT_SOUND1 = "ABSTRACT_SOUND1", ABSTRACT_SOUND2 = "ABSTRACT_SOUND2", ABSTRACT_SOUND3 = "ABSTRACT_SOUND3", ABSTRACT_SOUND4 = "ABSTRACT_SOUND4", COW_MOOING = "COW_MOOING", PHONE_VIBRATION = "PHONE_VIBRATION", ROOSTER = "ROOSTER" }
 
 export type SoundConstants = { sound_files: Array<SoundFile>, sound_labels: Array<string>, };
+
+export type DeviceFlowStartResponse = { user_code: string, verification_uri: string, expires_in: number, interval: number, };
+
+export enum DevicePollStatus { SLOWDOWN = "SLOWDOWN", AUTHORIZATIONPENDING = "AUTHORIZATIONPENDING", SUCCESS = "SUCCESS" }
+
+export enum CheckTokenResponse { Valid = "Valid", Invalid = "Invalid" }
 
 export type GitBranch = { name: string, is_current: boolean, is_remote: boolean, last_commit_date: Date, };
 
@@ -109,6 +117,8 @@ export type CodingAgentInitialRequest = { prompt: string, profile: string, };
 export type CodingAgentFollowUpRequest = { prompt: string, session_id: string, profile: string, };
 
 export type CreateTaskAttemptBody = { task_id: string, profile: string | null, base_branch: string, };
+
+export type RebaseTaskAttemptRequest = { new_base_branch: string | null, };
 
 export type TaskAttempt = { id: string, task_id: string, container_ref: string | null, branch: string | null, base_branch: string, merge_commit: string | null, base_coding_agent: string, pr_url: string | null, pr_number: bigint | null, pr_status: string | null, pr_merged_at: string | null, worktree_deleted: boolean, setup_completed_at: string | null, created_at: string, updated_at: string, };
 

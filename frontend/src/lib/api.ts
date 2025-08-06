@@ -1,15 +1,17 @@
 // Import all necessary types from shared types
-import {
-  DeviceStartResponse,
-} from 'shared/old_frozen_types';
 
 import {
   ApiResponse,
   BranchStatus,
+  CheckTokenResponse,
   Config,
+  CreateFollowUpAttempt,
+  CreateGitHubPRRequest,
   CreateTask,
   CreateTaskAttemptBody,
   CreateTaskTemplate,
+  DeviceFlowStartResponse,
+  DevicePollStatus,
   DirectoryListResponse,
   EditorType,
   ExecutionProcess,
@@ -17,6 +19,7 @@ import {
   GitBranch,
   Project,
   CreateProject,
+  RebaseTaskAttemptRequest,
   RepositoryInfo,
   SearchResult,
   Task,
@@ -29,7 +32,6 @@ import {
   UpdateTaskTemplate,
   UserSystemInfo,
   WorktreeDiff,
-  CreateFollowUpAttempt
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -349,21 +351,14 @@ export const attemptsApi = {
   },
 
   rebase: async (
-    projectId: string,
-    taskId: string,
     attemptId: string,
-    newBaseBranch?: string
+    data: RebaseTaskAttemptRequest
   ): Promise<void> => {
     const response = await makeRequest(
-      `/api/projects/${projectId}/tasks/${taskId}/attempts/${attemptId}/rebase`,
+      `/api/task-attempts/${attemptId}/rebase`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          new_base_branch: newBaseBranch || null,
-        }),
+        body: JSON.stringify(data),
       }
     );
     return handleApiResponse<void>(response);
@@ -371,11 +366,7 @@ export const attemptsApi = {
 
   createPR: async (
     attemptId: string,
-    data: {
-      title: string;
-      body: string | null;
-      base_branch: string | null;
-    }
+    data: CreateGitHubPRRequest
   ): Promise<string> => {
     const response = await makeRequest(
       `/api/task-attempts/${attemptId}/pr`,
@@ -470,32 +461,22 @@ export const configApi = {
 
 // GitHub Device Auth APIs
 export const githubAuthApi = {
-  checkGithubToken: async (): Promise<boolean | undefined> => {
-    try {
-      const response = await makeRequest('/api/auth/github/check');
-      const result: ApiResponse<null> = await response.json();
-      if (!result.success && result.message === 'github_token_invalid') {
-        return false;
-      }
-      return result.success;
-    } catch (err) {
-      // On network/server error, return undefined (unknown)
-      return undefined;
-    }
+  checkGithubToken: async (): Promise<CheckTokenResponse> => {
+    const response = await makeRequest('/api/auth/github/check');
+    return handleApiResponse<CheckTokenResponse>(response);
   },
-  start: async (): Promise<DeviceStartResponse> => {
+  start: async (): Promise<DeviceFlowStartResponse> => {
     const response = await makeRequest('/api/auth/github/device/start', {
       method: 'POST',
     });
-    return handleApiResponse<DeviceStartResponse>(response);
+    return handleApiResponse<DeviceFlowStartResponse>(response);
   },
-  poll: async (device_code: string): Promise<string> => {
+  poll: async (): Promise<DevicePollStatus> => {
     const response = await makeRequest('/api/auth/github/device/poll', {
       method: 'POST',
-      body: JSON.stringify({ device_code }),
       headers: { 'Content-Type': 'application/json' },
     });
-    return handleApiResponse<string>(response);
+    return handleApiResponse<DevicePollStatus>(response);
   },
 };
 
