@@ -24,8 +24,6 @@ pub enum AuthError {
     GitHubClient(#[from] octocrab::Error),
     #[error(transparent)]
     Parse(#[from] serde_json::Error),
-    #[error("Invalid access token!")]
-    InvalidAccessToken,
     #[error("Device flow not started")]
     DeviceFlowNotStarted,
     #[error("Device flow pending")]
@@ -124,21 +122,5 @@ impl AuthService {
             primary_email,
             token: access_token.expose_secret().to_string(),
         })
-    }
-
-    pub async fn check_token(&self, token: String) -> Result<(), AuthError> {
-        let client = OctocrabBuilder::new()
-            .add_header(
-                HeaderName::try_from("User-Agent").unwrap(),
-                "vibe-kanban-app".to_string(),
-            )
-            .personal_token(token.to_string())
-            .build()?;
-        let res = client.current().user().await;
-        match res {
-            Ok(_) => Ok(()),
-            Err(octocrab::Error::GitHub { .. }) => Err(AuthError::InvalidAccessToken),
-            Err(e) => Err(AuthError::GitHubClient(e)),
-        }
     }
 }
