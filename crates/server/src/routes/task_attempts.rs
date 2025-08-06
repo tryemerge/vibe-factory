@@ -35,12 +35,14 @@ use uuid::Uuid;
 
 use crate::{error::ApiError, middleware::load_task_attempt_middleware, DeploymentImpl};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, TS)]
+#[ts(export)]
 pub struct RebaseTaskAttemptRequest {
     pub new_base_branch: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, TS)]
+#[ts(export)]
 pub struct CreateGitHubPRRequest {
     pub title: String,
     pub body: Option<String>,

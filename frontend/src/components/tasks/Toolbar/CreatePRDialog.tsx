@@ -8,15 +8,9 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@radix-ui/react-label';
 import { Textarea } from '@/components/ui/textarea.tsx';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@radix-ui/react-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import {
   TaskDetailsContext,
