@@ -9,7 +9,10 @@ use axum::{
 use deployment::{Deployment, DeploymentError};
 use octocrab::auth::Continue;
 use serde::{Deserialize, Serialize};
-use services::services::auth::{AuthError, DeviceFlowStartResponse};
+use services::services::{
+    auth::{AuthError, DeviceFlowStartResponse},
+    github_service::{GitHubService, GitHubServiceError},
+};
 use utils::response::ApiResponse;
 
 use crate::{error::ApiError, DeploymentImpl};
@@ -104,11 +107,12 @@ async fn github_check_token(
             CheckTokenResponse::Invalid,
         )));
     };
-    match deployment.auth().check_token(token).await {
+    let gh = GitHubService::new(&token)?;
+    match gh.check_token().await {
         Ok(()) => Ok(ResponseJson(ApiResponse::success(
             CheckTokenResponse::Valid,
         ))),
-        Err(AuthError::InvalidAccessToken) => Ok(ResponseJson(ApiResponse::success(
+        Err(GitHubServiceError::TokenInvalid) => Ok(ResponseJson(ApiResponse::success(
             CheckTokenResponse::Invalid,
         ))),
         Err(e) => Err(e.into()),

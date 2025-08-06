@@ -21,6 +21,8 @@ pub enum GitHubServiceError {
     Branch(String),
     #[error("GitHub token is invalid or expired.")]
     TokenInvalid,
+    #[error("Insufficient permissions")]
+    InsufficientPermissions,
 }
 
 impl From<octocrab::Error> for GitHubServiceError {
@@ -29,12 +31,11 @@ impl From<octocrab::Error> for GitHubServiceError {
             octocrab::Error::GitHub { source, .. } => {
                 let status = source.status_code.as_u16();
                 let msg = source.message.to_ascii_lowercase();
-                if status == 401
-                    || status == 403
-                    || msg.contains("bad credentials")
-                    || msg.contains("token expired")
+                if status == 401 || msg.contains("bad credentials") || msg.contains("token expired")
                 {
                     GitHubServiceError::TokenInvalid
+                } else if status == 403 {
+                    GitHubServiceError::InsufficientPermissions
                 } else {
                     GitHubServiceError::Client(err)
                 }
@@ -92,12 +93,14 @@ impl GitHubService {
     pub fn new(github_token: &str) -> Result<Self, GitHubServiceError> {
         let client = OctocrabBuilder::new()
             .personal_token(github_token.to_string())
-            .build()
-            .map_err(|e| {
-                GitHubServiceError::Auth(format!("Failed to create GitHub client: {}", e))
-            })?;
+            .build()?;
 
         Ok(Self { client })
+    }
+
+    pub async fn check_token(&self) -> Result<(), GitHubServiceError> {
+        self.client.current().user().await?;
+        Ok(())
     }
 
     /// Create a pull request on GitHub

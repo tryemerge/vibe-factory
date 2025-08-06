@@ -471,6 +471,47 @@ pub async fn merge_task_attempt(
     Ok(ResponseJson(ApiResponse::success(())))
 }
 
+#[derive(strum_macros::Display, Debug, Deserialize, TS)]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+#[ts(use_ts_enum)]
+pub enum GitHubMagicErrorStrings {
+    GithubTokenInvalid,
+    GithubRepoNotFoundOrNoAccess,
+    InsufficientGithubPermissions,
+}
+
+impl GitHubMagicErrorStrings {
+    pub fn from_git_service_error(error: &GitServiceError) -> Option<Self> {
+        if let GitServiceError::Git(err) = error {
+            if err
+                .message()
+                .contains("too many redirects or authentication replays")
+            {
+                Some(GitHubMagicErrorStrings::GithubTokenInvalid)
+            } else if err.message().contains("status code: 403") {
+                Some(GitHubMagicErrorStrings::InsufficientGithubPermissions)
+            } else if err.message().contains("status code: 404") {
+                Some(GitHubMagicErrorStrings::GithubRepoNotFoundOrNoAccess)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+    pub fn from_github_service_error(error: &GitHubServiceError) -> Option<Self> {
+        match error {
+            GitHubServiceError::TokenInvalid => Some(GitHubMagicErrorStrings::GithubTokenInvalid),
+            GitHubServiceError::InsufficientPermissions => {
+                Some(GitHubMagicErrorStrings::InsufficientGithubPermissions)
+            }
+            _ => None,
+        }
+    }
+}
+
 pub async fn create_github_pr(
     Extension(task_attempt): Extension<TaskAttempt>,
     State(deployment): State<DeploymentImpl>,
@@ -479,10 +520,18 @@ pub async fn create_github_pr(
     let github_config = deployment.config().read().await.github.clone();
     let Some(github_token) = github_config.token() else {
         return Ok(ResponseJson(ApiResponse::error(
-            "GitHub authentication not configured. Please sign in with GitHub.",
+            &GitHubMagicErrorStrings::GithubTokenInvalid.to_string(),
         )));
     };
-
+    // Create GitHub service instance
+    let github_service = GitHubService::new(&github_token)?;
+    if let Err(e) = github_service.check_token().await {
+        if let Some(error) = GitHubMagicErrorStrings::from_github_service_error(&e) {
+            return Ok(ResponseJson(ApiResponse::error(&error.to_string())));
+        } else {
+            return Err(ApiError::GitHubService(e));
+        }
+    }
     // Get the task attempt to access the stored base branch
     let base_branch = request.base_branch.unwrap_or_else(|| {
         // Use the stored base branch from the task attempt as the default
@@ -511,17 +560,6 @@ pub async fn create_github_pr(
         .await?;
     let worktree_path = std::path::Path::new(&container_ref);
 
-    // Create GitHub service instance
-    let github_service = match GitHubService::new(&github_token) {
-        Ok(service) => service,
-        Err(GitHubServiceError::TokenInvalid) => {
-            return Ok(ResponseJson(ApiResponse::error("github_token_invalid")));
-        }
-        Err(e) => {
-            return Err(ApiError::GitHubService(e));
-        }
-    };
-
     // Use GitService to get the remote URL, then create GitHubRepoInfo
     let (owner, repo_name) = GitService::new().get_github_repo_info(&ctx.project.git_repo_path)?;
     let repo_info = GitHubRepoInfo { owner, repo_name };
@@ -536,23 +574,12 @@ pub async fn create_github_pr(
     // Push the branch to GitHub first
     if let Err(e) = GitService::new().push_to_github(&worktree_path, branch_name, &github_token) {
         tracing::error!("Failed to push branch to GitHub: {}", e);
-        let message = match &e {
-            GitServiceError::Git(err)
-                if err
-                    .message()
-                    .contains("too many redirects or authentication replays") =>
-            {
-                "insufficient_github_permissions"
-            }
-            GitServiceError::Git(err) if err.message().contains("status code: 403") => {
-                "insufficient_github_permissions"
-            }
-            GitServiceError::Git(err) if err.message().contains("status code: 404") => {
-                "github_repo_not_found_or_no_access"
-            }
-            _ => "Failed to push branch to GitHub",
+        let message = if let Some(msg) = GitHubMagicErrorStrings::from_git_service_error(&e) {
+            msg.to_string()
+        } else {
+            "Failed to push branch to GitHub".to_string()
         };
-        return Ok(ResponseJson(ApiResponse::error(message)));
+        return Ok(ResponseJson(ApiResponse::error(&message)));
     }
 
     // Create the PR using GitHub service
@@ -597,13 +624,13 @@ pub async fn create_github_pr(
                 task_attempt.id,
                 e
             );
-            let message = match &e {
-                services::services::github_service::GitHubServiceError::TokenInvalid => {
-                    "github_token_invalid"
-                }
-                _ => "Failed to create PR",
+            let message = if let Some(msg) = GitHubMagicErrorStrings::from_github_service_error(&e)
+            {
+                msg.to_string()
+            } else {
+                "Failed to create PR".to_string()
             };
-            Ok(ResponseJson(ApiResponse::error(message)))
+            Ok(ResponseJson(ApiResponse::error(&message)))
         }
     }
 }

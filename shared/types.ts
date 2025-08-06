@@ -46,6 +46,8 @@ export type CreateFollowUpAttempt = { prompt: string, };
 
 export type CreateGitHubPRRequest = { title: string, body: string | null, base_branch: string | null, };
 
+export enum GitHubMagicErrorStrings { github_token_invalid = "github_token_invalid", github_repo_not_found_or_no_access = "github_repo_not_found_or_no_access", insufficient_github_permissions = "insufficient_github_permissions" }
+
 export type Config = { theme: ThemeMode, profile: string, disclaimer_acknowledged: boolean, onboarding_acknowledged: boolean, github_login_acknowledged: boolean, telemetry_acknowledged: boolean, notifications: NotificationConfig, editor: EditorConfig, github: GitHubConfig, analytics_enabled: boolean | null, environment: EnvironmentInfo, workspace_dir: string | null, };
 
 export type EnvironmentInfo = { os_type: string, os_version: string, architecture: string, bitness: string, };
@@ -84,7 +86,7 @@ export type DiffChunkType = "Equal" | "Insert" | "Delete";
 
 export type RepositoryInfo = { id: bigint, name: string, full_name: string, owner: string, description: string | null, clone_url: string, ssh_url: string, default_branch: string, private: boolean, };
 
-export enum BaseCodingAgent { CLAUDE_CODE = "CLAUDE_CODE", AMP = "AMP", GEMINI = "GEMINI" }
+export enum BaseCodingAgent { CLAUDE_CODE = "CLAUDE_CODE", AMP = "AMP", GEMINI = "GEMINI", CODEX = "CODEX" }
 
 export type CommandBuilder = { 
 /**

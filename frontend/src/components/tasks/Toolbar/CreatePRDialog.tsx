@@ -19,7 +19,7 @@ import {
 import { ApiError, attemptsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
-import { GitBranch } from 'shared/types';
+import { GitBranch, GitHubMagicErrorStrings } from 'shared/types';
 
 type Props = {
   showCreatePRDialog: boolean;
@@ -85,16 +85,15 @@ function CreatePrDialog({
     } catch (err) {
       const error = err as ApiError;
       if (
-        error.message ===
-        'GitHub authentication not configured. Please sign in with GitHub.'
+        error.message.includes(GitHubMagicErrorStrings.github_token_invalid)
       ) {
         setShowCreatePRDialog(false);
         setShowGitHubLoginDialog(true);
-      } else if (error.message === 'insufficient_github_permissions') {
+      } else if (error.message.includes(GitHubMagicErrorStrings.insufficient_github_permissions)) {
         setShowCreatePRDialog(false);
         setPatDialogError(null);
         setShowPatDialog(true);
-      } else if (error.message === 'github_repo_not_found_or_no_access') {
+      } else if (error.message.includes(GitHubMagicErrorStrings.github_repo_not_found_or_no_access)) {
         setShowCreatePRDialog(false);
         setPatDialogError(
           'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.'
