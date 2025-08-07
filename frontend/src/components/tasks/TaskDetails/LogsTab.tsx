@@ -72,7 +72,7 @@ function LogsTab() {
           itemData={entries}
         >
           {({ index, style, data }: { index: number; style: React.CSSProperties; data: UnifiedLogEntry[] }) => {
-            let style_with_padding = { ...style };
+            const style_with_padding = { ...style };
             if (index === entries.length - 1) {
               style_with_padding.paddingBottom = "50px";
             }

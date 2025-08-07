@@ -57,7 +57,7 @@ export function GitHubLoginDialog({
     if (polling && deviceState) {
       const poll = async () => {
         try {
-          let poll_status = await githubAuthApi.poll();
+          const poll_status = await githubAuthApi.poll();
           switch (poll_status) {
             case DevicePollStatus.SUCCESS:
               setPolling(false);

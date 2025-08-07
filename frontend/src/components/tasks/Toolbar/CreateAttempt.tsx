@@ -70,17 +70,13 @@ function CreateAttempt({
         throw new Error('Base branch is required to create an attempt');
       }
 
-      try {
-        await attemptsApi.create({
-          task_id: task.id,
-          profile: profile,
-          base_branch: effectiveBaseBranch,
-        });
-        fetchTaskAttempts();
-      } catch (error) {
-        // Optionally handle error
-        throw error;
-      }
+
+      await attemptsApi.create({
+        task_id: task.id,
+        profile: profile,
+        base_branch: effectiveBaseBranch,
+      });
+      fetchTaskAttempts();
     },
     [task.id, selectedProfile, selectedBranch, fetchTaskAttempts]
   );
