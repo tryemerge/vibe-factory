@@ -16,7 +16,7 @@ import {
   TaskDetailsContext,
   TaskSelectedAttemptContext,
 } from '@/components/context/taskDetailsContext.ts';
-import { ApiError, attemptsApi } from '@/lib/api.ts';
+import { attemptsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
 import { GitBranch, CreateGitHubPRErrorData } from 'shared/types';
@@ -69,25 +69,25 @@ function CreatePrDialog({
 
     setCreatingPR(true);
 
-    try {
-      const prUrl = await attemptsApi.createPR(selectedAttempt.id, {
-        title: prTitle,
-        body: prBody || null,
-        base_branch: prBaseBranch || null,
-      });
-      // Open the PR URL in a new tab
-      window.open(prUrl, '_blank');
+    const result = await attemptsApi.createPR(selectedAttempt.id, {
+      title: prTitle,
+      body: prBody || null,
+      base_branch: prBaseBranch || null,
+    });
+
+    if (result.success) {
+      // result.data is string (PR URL)
+      window.open(result.data, '_blank');
       setShowCreatePRDialog(false);
       // Reset form
       setPrTitle('');
       setPrBody('');
       setPrBaseBranch(selectedAttempt?.base_branch || 'main');
-    } catch (err) {
-      // We know createPR only throws ApiError<CreateGitHubPRErrorData>
-      const error = err as ApiError<CreateGitHubPRErrorData>;
-      if (error.error_data) {
+    } else {
+      // result.error is CreateGitHubPRErrorData | undefined
+      if (result.error) {
         setShowCreatePRDialog(false);
-        switch (error.error_data) {
+        switch (result.error) {
           case CreateGitHubPRErrorData.github_token_invalid:
             setShowGitHubLoginDialog(true);
             break;
@@ -102,14 +102,14 @@ function CreatePrDialog({
             setShowPatDialog(true);
             break;
         }
-      } else if (error.message) {
-        setError(error.message || 'Failed to create GitHub PR');
+      } else if (result.message) {
+        setError(result.message);
       } else {
         setError('Failed to create GitHub PR');
       }
-    } finally {
-      setCreatingPR(false);
     }
+    
+    setCreatingPR(false);
   }, [
     projectId,
     selectedAttempt,

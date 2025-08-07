@@ -73,6 +73,48 @@ export interface FollowUpResponse {
   created_new_attempt: boolean;
 }
 
+// Result type for endpoints that need typed errors
+export type Result<T, E> =
+  | { success: true; data: T }
+  | { success: false; error: E | undefined; message?: string };
+
+// Special handler for Result-returning endpoints
+const handleApiResponseAsResult = async <T, E>(
+  response: Response
+): Promise<Result<T, E>> => {
+  if (!response.ok) {
+    // HTTP error - no structured error data
+    let errorMessage = `Request failed with status ${response.status}`;
+
+    try {
+      const errorData = await response.json();
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch {
+      errorMessage = response.statusText || errorMessage;
+    }
+
+    return {
+      success: false,
+      error: undefined,
+      message: errorMessage
+    };
+  }
+
+  const result: ApiResponse<T, E> = await response.json();
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error_data || undefined,
+      message: result.message || undefined
+    };
+  }
+
+  return { success: true, data: result.data as T };
+};
+
 const handleApiResponse = async <T, E = T>(response: Response): Promise<T> => {
   if (!response.ok) {
     let errorMessage = `Request failed with status ${response.status}`;
@@ -390,7 +432,7 @@ export const attemptsApi = {
   createPR: async (
     attemptId: string,
     data: CreateGitHubPRRequest
-  ): Promise<string> => {
+  ): Promise<Result<string, CreateGitHubPRErrorData>> => {
     const response = await makeRequest(
       `/api/task-attempts/${attemptId}/pr`,
       {
@@ -398,7 +440,7 @@ export const attemptsApi = {
         body: JSON.stringify(data),
       }
     );
-    return handleApiResponse<string, CreateGitHubPRErrorData>(response);
+    return handleApiResponseAsResult<string, CreateGitHubPRErrorData>(response);
   },
 
   startDevServer: async (
