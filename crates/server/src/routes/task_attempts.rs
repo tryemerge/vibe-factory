@@ -475,9 +475,8 @@ pub async fn merge_task_attempt(
     Ok(ResponseJson(ApiResponse::success(())))
 }
 
-#[derive(strum_macros::Display, Debug, Serialize, Deserialize, TS)]
-#[strum(serialize_all = "snake_case")]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[ts(export)]
 #[ts(use_ts_enum)]
 pub enum CreateGitHubPRErrorData {
