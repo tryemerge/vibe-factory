@@ -36,7 +36,7 @@ export type CreateTask = { project_id: string, title: string, description: strin
 
 export type UpdateTask = { title: string | null, description: string | null, status: TaskStatus | null, parent_task_attempt: string | null, };
 
-export type ApiResponse<T> = { success: boolean, data: T | null, message: string | null, };
+export type ApiResponse<T, E = T> = { success: boolean, data: T | null, error_data: E | null, message: string | null, };
 
 export type UserSystemInfo = { config: Config, environment: Environment, profiles: Array<AgentProfile>, };
 
@@ -47,7 +47,7 @@ export type CreateFollowUpAttempt = { prompt: string, };
 export type Config = { config_schema: string, theme: ThemeMode, profile: string, disclaimer_acknowledged: boolean, onboarding_acknowledged: boolean, github_login_acknowledged: boolean, telemetry_acknowledged: boolean, notifications: NotificationConfig, editor: EditorConfig, github: GitHubConfig, analytics_enabled: boolean | null, workspace_dir: string | null, };
 export type CreateGitHubPRRequest = { title: string, body: string | null, base_branch: string | null, };
 
-export enum GitHubMagicErrorStrings { github_token_invalid = "github_token_invalid", github_repo_not_found_or_no_access = "github_repo_not_found_or_no_access", insufficient_github_permissions = "insufficient_github_permissions" }
+export enum CreateGitHubPRErrorData { github_token_invalid = "github_token_invalid", github_repo_not_found_or_no_access = "github_repo_not_found_or_no_access", insufficient_github_permissions = "insufficient_github_permissions" }
 
 export type Config = { theme: ThemeMode, profile: string, disclaimer_acknowledged: boolean, onboarding_acknowledged: boolean, github_login_acknowledged: boolean, telemetry_acknowledged: boolean, notifications: NotificationConfig, editor: EditorConfig, github: GitHubConfig, analytics_enabled: boolean | null, environment: EnvironmentInfo, workspace_dir: string | null, };
 

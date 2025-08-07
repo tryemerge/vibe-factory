@@ -32,22 +32,26 @@ import {
   UpdateTaskTemplate,
   UserSystemInfo,
   WorktreeDiff,
+  CreateGitHubPRErrorData,
 } from 'shared/types';
 
 // Re-export types for convenience
 export type { RepositoryInfo } from 'shared/types';
 
-export class ApiError extends Error {
+export class ApiError<E = unknown> extends Error {
   public status?: number;
+  public error_data?: E;
 
   constructor(
     message: string,
     public statusCode?: number,
-    public response?: Response
+    public response?: Response,
+    error_data?: E
   ) {
     super(message);
     this.name = 'ApiError';
     this.status = statusCode;
+    this.error_data = error_data;
   }
 }
 
@@ -69,7 +73,7 @@ export interface FollowUpResponse {
   created_new_attempt: boolean;
 }
 
-const handleApiResponse = async <T>(response: Response): Promise<T> => {
+const handleApiResponse = async <T, E = T>(response: Response): Promise<T> => {
   if (!response.ok) {
     let errorMessage = `Request failed with status ${response.status}`;
 
@@ -90,12 +94,31 @@ const handleApiResponse = async <T>(response: Response): Promise<T> => {
       endpoint: response.url,
       timestamp: new Date().toISOString(),
     });
-    throw new ApiError(errorMessage, response.status, response);
+    throw new ApiError<E>(errorMessage, response.status, response);
   }
 
-  const result: ApiResponse<T> = await response.json();
+  const result: ApiResponse<T, E> = await response.json();
 
   if (!result.success) {
+    // Check for error_data first (structured errors), then fall back to message
+    if (result.error_data) {
+      console.error('[API Error with data]', {
+        error_data: result.error_data,
+        message: result.message,
+        status: response.status,
+        response,
+        endpoint: response.url,
+        timestamp: new Date().toISOString(),
+      });
+      // Throw a properly typed error with the error data
+      throw new ApiError<E>(
+        result.message || 'API request failed',
+        response.status,
+        response,
+        result.error_data
+      );
+    }
+
     console.error('[API Error]', {
       message: result.message || 'API request failed',
       status: response.status,
@@ -103,7 +126,7 @@ const handleApiResponse = async <T>(response: Response): Promise<T> => {
       endpoint: response.url,
       timestamp: new Date().toISOString(),
     });
-    throw new ApiError(result.message || 'API request failed');
+    throw new ApiError<E>(result.message || 'API request failed', response.status, response);
   }
 
   return result.data as T;
@@ -375,7 +398,7 @@ export const attemptsApi = {
         body: JSON.stringify(data),
       }
     );
-    return handleApiResponse<string>(response);
+    return handleApiResponse<string, CreateGitHubPRErrorData>(response);
   },
 
   startDevServer: async (

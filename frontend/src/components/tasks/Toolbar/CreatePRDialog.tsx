@@ -19,7 +19,7 @@ import {
 import { ApiError, attemptsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
-import { GitBranch, GitHubMagicErrorStrings } from 'shared/types';
+import { GitBranch, CreateGitHubPRErrorData } from 'shared/types';
 
 type Props = {
   showCreatePRDialog: boolean;
@@ -83,34 +83,29 @@ function CreatePrDialog({
       setPrBody('');
       setPrBaseBranch(selectedAttempt?.base_branch || 'main');
     } catch (err) {
-      const error = err as ApiError;
-      if (
-        error.message.includes(GitHubMagicErrorStrings.github_token_invalid)
-      ) {
+      // We know createPR only throws ApiError<CreateGitHubPRErrorData>
+      const error = err as ApiError<CreateGitHubPRErrorData>;
+      if (error.error_data) {
         setShowCreatePRDialog(false);
-        setShowGitHubLoginDialog(true);
-      } else if (error.message.includes(GitHubMagicErrorStrings.insufficient_github_permissions)) {
-        setShowCreatePRDialog(false);
-        setPatDialogError(null);
-        setShowPatDialog(true);
-      } else if (error.message.includes(GitHubMagicErrorStrings.github_repo_not_found_or_no_access)) {
-        setShowCreatePRDialog(false);
-        setPatDialogError(
-          'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.'
-        );
-        setShowPatDialog(true);
-      } else if (error.status === 403) {
-        setShowCreatePRDialog(false);
-        setPatDialogError(null);
-        setShowPatDialog(true);
-      } else if (error.status === 404) {
-        setShowCreatePRDialog(false);
-        setPatDialogError(
-          'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.'
-        );
-        setShowPatDialog(true);
-      } else {
+        switch (error.error_data) {
+          case CreateGitHubPRErrorData.github_token_invalid:
+            setShowGitHubLoginDialog(true);
+            break;
+          case CreateGitHubPRErrorData.insufficient_github_permissions:
+            setPatDialogError(null);
+            setShowPatDialog(true);
+            break;
+          case CreateGitHubPRErrorData.github_repo_not_found_or_no_access:
+            setPatDialogError(
+              'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.'
+            );
+            setShowPatDialog(true);
+            break;
+        }
+      } else if (error.message) {
         setError(error.message || 'Failed to create GitHub PR');
+      } else {
+        setError('Failed to create GitHub PR');
       }
     } finally {
       setCreatingPR(false);
