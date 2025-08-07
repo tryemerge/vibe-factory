@@ -65,10 +65,10 @@ export function GitHubLoginDialog({
               setError(null);
               onOpenChange(false);
               break;
-            case DevicePollStatus.AUTHORIZATIONPENDING:
+            case DevicePollStatus.AUTHORIZATION_PENDING:
               timer = setTimeout(poll, deviceState.interval * 1000);
               break;
-            case DevicePollStatus.SLOWDOWN:
+            case DevicePollStatus.SLOW_DOWN:
               timer = setTimeout(poll, (deviceState.interval + 5) * 1000);
           }
         }

@@ -88,14 +88,14 @@ function CreatePrDialog({
       if (result.error) {
         setShowCreatePRDialog(false);
         switch (result.error) {
-          case CreateGitHubPRErrorData.github_token_invalid:
+          case CreateGitHubPRErrorData.GITHUB_TOKEN_INVALID:
             setShowGitHubLoginDialog(true);
             break;
-          case CreateGitHubPRErrorData.insufficient_github_permissions:
+          case CreateGitHubPRErrorData.INSUFFICIENT_GITHUB_PERMISSIONS:
             setPatDialogError(null);
             setShowPatDialog(true);
             break;
-          case CreateGitHubPRErrorData.github_repo_not_found_or_no_access:
+          case CreateGitHubPRErrorData.GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS:
             setPatDialogError(
               'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.'
             );
@@ -108,7 +108,7 @@ function CreatePrDialog({
         setError('Failed to create GitHub PR');
       }
     }
-    
+
     setCreatingPR(false);
   }, [
     projectId,
