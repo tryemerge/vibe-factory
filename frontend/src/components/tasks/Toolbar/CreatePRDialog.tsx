@@ -19,7 +19,7 @@ import {
 import { attemptsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
-import { GitBranch, CreateGitHubPRErrorData } from 'shared/types';
+import { GitBranch, GitHubServiceError } from 'shared/types';
 
 type Props = {
   showCreatePRDialog: boolean;
@@ -88,14 +88,14 @@ function CreatePrDialog({
       if (result.error) {
         setShowCreatePRDialog(false);
         switch (result.error) {
-          case CreateGitHubPRErrorData.GITHUB_TOKEN_INVALID:
+          case GitHubServiceError.TOKEN_INVALID:
             setShowGitHubLoginDialog(true);
             break;
-          case CreateGitHubPRErrorData.INSUFFICIENT_GITHUB_PERMISSIONS:
+          case GitHubServiceError.INSUFFICIENT_PERMISSIONS:
             setPatDialogError(null);
             setShowPatDialog(true);
             break;
-          case CreateGitHubPRErrorData.GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS:
+          case GitHubServiceError.GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS:
             setPatDialogError(
               'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.'
             );

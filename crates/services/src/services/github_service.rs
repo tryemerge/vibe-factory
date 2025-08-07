@@ -7,22 +7,39 @@ use thiserror::Error;
 use tracing::info;
 use ts_rs::TS;
 
-#[derive(Debug, Error)]
+use crate::services::git::GitServiceError;
+
+#[derive(Debug, Error, Serialize, Deserialize, TS)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[ts(export)]
+#[ts(use_ts_enum)]
 pub enum GitHubServiceError {
+    #[ts(skip)]
+    #[serde(skip)]
     #[error(transparent)]
     Client(octocrab::Error),
+    #[ts(skip)]
     #[error("Authentication error: {0}")]
     Auth(String),
+    #[ts(skip)]
     #[error("Repository error: {0}")]
     Repository(String),
+    #[ts(skip)]
     #[error("Pull request error: {0}")]
     PullRequest(String),
+    #[ts(skip)]
     #[error("Branch error: {0}")]
     Branch(String),
     #[error("GitHub token is invalid or expired.")]
     TokenInvalid,
     #[error("Insufficient permissions")]
     InsufficientPermissions,
+    #[error("GitHub repository not found or no access")]
+    GithubRepoNotFoundOrNoAccess,
+    #[ts(skip)]
+    #[serde(skip)]
+    #[error(transparent)]
+    GitService(GitServiceError),
 }
 
 impl From<octocrab::Error> for GitHubServiceError {
@@ -42,6 +59,37 @@ impl From<octocrab::Error> for GitHubServiceError {
             }
             _ => GitHubServiceError::Client(err),
         }
+    }
+}
+impl From<GitServiceError> for GitHubServiceError {
+    fn from(error: GitServiceError) -> Self {
+        if let GitServiceError::Git(err) = error {
+            if err
+                .message()
+                .contains("too many redirects or authentication replays")
+            {
+                Self::TokenInvalid
+            } else if err.message().contains("status code: 403") {
+                Self::InsufficientPermissions
+            } else if err.message().contains("status code: 404") {
+                Self::GithubRepoNotFoundOrNoAccess
+            } else {
+                Self::GitService(GitServiceError::Git(err))
+            }
+        } else {
+            Self::GitService(error)
+        }
+    }
+}
+
+impl GitHubServiceError {
+    pub fn is_api_data(&self) -> bool {
+        matches!(
+            self,
+            GitHubServiceError::TokenInvalid
+                | GitHubServiceError::InsufficientPermissions
+                | GitHubServiceError::GithubRepoNotFoundOrNoAccess
+        )
     }
 }
 
