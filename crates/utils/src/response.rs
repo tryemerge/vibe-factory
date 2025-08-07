@@ -31,7 +31,7 @@ mod response {
                 error_data: None,
             }
         }
-        /// Creates an error response, with `message` and no data.
+        /// Creates an error response, with no `data`, no `message`, but with arbitrary `error_data`.
         pub fn error_with_data(data: E) -> Self {
             ApiResponse {
                 success: false,

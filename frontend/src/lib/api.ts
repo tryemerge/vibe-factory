@@ -6,7 +6,7 @@ import {
   CheckTokenResponse,
   Config,
   CreateFollowUpAttempt,
-  CreateGitHubPRRequest,
+  CreateGitHubPrRequest,
   CreateTask,
   CreateTaskAttemptBody,
   CreateTaskTemplate,
@@ -430,7 +430,7 @@ export const attemptsApi = {
 
   createPR: async (
     attemptId: string,
-    data: CreateGitHubPRRequest
+    data: CreateGitHubPrRequest
   ): Promise<Result<string, GitHubServiceError>> => {
     const response = await makeRequest(
       `/api/task-attempts/${attemptId}/pr`,

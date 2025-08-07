@@ -25,7 +25,7 @@ use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use services::services::{
     container::{ContainerRef, ContainerService},
-    git::{BranchStatus, GitService, GitServiceError},
+    git::{BranchStatus, GitService},
     github_service::{CreatePrRequest, GitHubRepoInfo, GitHubService, GitHubServiceError},
 };
 use sqlx::Error as SqlxError;
@@ -43,7 +43,7 @@ pub struct RebaseTaskAttemptRequest {
 
 #[derive(Debug, Deserialize, Serialize, TS)]
 #[ts(export)]
-pub struct CreateGitHubPRRequest {
+pub struct CreateGitHubPrRequest {
     pub title: String,
     pub body: Option<String>,
     pub base_branch: Option<String>,
@@ -474,7 +474,7 @@ pub async fn merge_task_attempt(
 pub async fn create_github_pr(
     Extension(task_attempt): Extension<TaskAttempt>,
     State(deployment): State<DeploymentImpl>,
-    Json(request): Json<CreateGitHubPRRequest>,
+    Json(request): Json<CreateGitHubPrRequest>,
 ) -> Result<ResponseJson<ApiResponse<String, GitHubServiceError>>, ApiError> {
     let github_config = deployment.config().read().await.github.clone();
     let Some(github_token) = github_config.token() else {
