@@ -256,11 +256,10 @@ export const tasksApi = {
   },
 
   createAndStart: async (
-    projectId: string,
     data: CreateTask
   ): Promise<TaskWithAttemptStatus> => {
     const response = await makeRequest(
-      `/api/projects/${projectId}/tasks/create-and-start`,
+      `/api/tasks/create-and-start`,
       {
         method: 'POST',
         body: JSON.stringify(data),
