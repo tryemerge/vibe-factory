@@ -152,7 +152,7 @@ pub struct AgentProfiles {
 
 impl AgentProfiles {
     pub fn get_cached() -> &'static AgentProfiles {
-        PROFILES_CACHE.get_or_init(|| Self::load())
+        PROFILES_CACHE.get_or_init(Self::load)
     }
 
     fn load() -> Self {
@@ -188,7 +188,7 @@ impl AgentProfiles {
         if !profiles_path.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Profiles file not found at {:?}", profiles_path),
+                format!("Profiles file not found at {profiles_path:?}"),
             ));
         }
 
@@ -197,7 +197,7 @@ impl AgentProfiles {
         let user_profiles: Self = serde_json::from_str(&content).map_err(|e| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
-                format!("Failed to parse profiles.json: {}", e),
+                format!("Failed to parse profiles.json: {e}"),
             )
         })?;
 

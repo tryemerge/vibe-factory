@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use executors::actions::{ExecutorAction, ExecutorActionKind};
-use serde::{Deserialize, Serialize, de::Error};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{FromRow, SqlitePool, Type};
 use ts_rs::TS;
@@ -317,11 +317,10 @@ impl ExecutionProcess {
         .await
     }
     pub async fn was_killed(pool: &SqlitePool, id: Uuid) -> bool {
-        if let Ok(exp_process) = Self::find_by_id(pool, id).await {
-            if exp_process.is_some_and(|ep| ep.status == ExecutionProcessStatus::Killed) {
+        if let Ok(exp_process) = Self::find_by_id(pool, id).await
+            && exp_process.is_some_and(|ep| ep.status == ExecutionProcessStatus::Killed) {
                 return true;
             }
-        }
         false
     }
 

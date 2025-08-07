@@ -6,7 +6,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use deployment::{Deployment, DeploymentError};
+use deployment::Deployment;
 use octocrab::auth::Continue;
 use serde::{Deserialize, Serialize};
 use services::services::{

@@ -34,6 +34,12 @@ pub struct DirectoryEntry {
     pub last_modified: Option<u64>,
 }
 
+impl Default for FilesystemService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FilesystemService {
     pub fn new() -> Self {
         FilesystemService {}
@@ -72,7 +78,7 @@ impl FilesystemService {
                     path: entry.path().to_string_lossy().to_string(),
                     is_directory: true,
                     is_git_repo: true,
-                    last_modified: last_modified,
+                    last_modified,
                 })
             })
             .collect();

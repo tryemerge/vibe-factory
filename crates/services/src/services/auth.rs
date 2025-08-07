@@ -52,6 +52,12 @@ pub struct GitHubEmailEntry {
     pub primary: bool,
 }
 
+impl Default for AuthService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AuthService {
     pub fn new() -> Self {
         let client_id_str = option_env!("GITHUB_CLIENT_ID").unwrap_or("Ov23li9bxz3kKfPOIsGm");

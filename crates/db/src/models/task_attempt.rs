@@ -32,11 +32,11 @@ impl PrInfo {
         let repo_name = caps.name("repo").unwrap().as_str().to_string();
 
         Ok(Self {
-            attempt_id: attempt_id,
-            task_id: task_id,
-            pr_number: pr_number,
+            attempt_id,
+            task_id,
+            pr_number,
             repo_owner: owner,
-            repo_name: repo_name,
+            repo_name,
         })
     }
 }

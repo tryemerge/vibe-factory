@@ -249,7 +249,7 @@ impl GitHubService {
                         ))
                     }
                 }
-                _ => GitHubServiceError::PullRequest(format!("Failed to create PR: {}", e)),
+                _ => GitHubServiceError::PullRequest(format!("Failed to create PR: {e}")),
             })?;
 
         let pr_info = PullRequestInfo {
@@ -305,7 +305,7 @@ impl GitHubService {
             .get(pr_number as u64)
             .await
             .map_err(|e| {
-                GitHubServiceError::PullRequest(format!("Failed to get PR #{}: {}", pr_number, e))
+                GitHubServiceError::PullRequest(format!("Failed to get PR #{pr_number}: {e}"))
             })?;
 
         let status = match pr.state {
