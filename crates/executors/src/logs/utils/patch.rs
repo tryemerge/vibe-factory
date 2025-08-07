@@ -7,7 +7,6 @@ use utils::diff::FileDiff;
 use crate::logs::NormalizedEntry;
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, TS)]
-#[ts(export)]
 #[serde(rename_all = "lowercase")]
 enum PatchOperation {
     Add,

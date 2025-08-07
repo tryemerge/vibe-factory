@@ -105,7 +105,6 @@ impl SessionHandler {
 
 /// An executor that uses Codex CLI to process tasks
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 pub struct Codex {
     command_builder: CommandBuilder,
 }

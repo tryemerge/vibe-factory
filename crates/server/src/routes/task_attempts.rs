@@ -36,13 +36,11 @@ use uuid::Uuid;
 use crate::{error::ApiError, middleware::load_task_attempt_middleware, DeploymentImpl};
 
 #[derive(Debug, Deserialize, Serialize, TS)]
-#[ts(export)]
 pub struct RebaseTaskAttemptRequest {
     pub new_base_branch: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, TS)]
-#[ts(export)]
 pub struct CreateGitHubPrRequest {
     pub title: String,
     pub body: Option<String>,
@@ -56,8 +54,7 @@ pub struct FollowUpResponse {
     pub created_new_attempt: bool,
 }
 // #[derive(Debug, Serialize, TS)]
-// #[ts(export)]
-// pub struct ProcessLogsResponse {
+// // pub struct ProcessLogsResponse {
 //     pub id: Uuid,
 //     pub process_type: ExecutionProcessType,
 //     pub command: String,
@@ -242,7 +239,6 @@ pub async fn get_task_attempt(
 }
 
 #[derive(Debug, Deserialize, ts_rs::TS)]
-#[ts(export)]
 pub struct CreateTaskAttemptBody {
     pub task_id: Uuid,
     pub profile: Option<String>,
@@ -300,7 +296,6 @@ pub async fn create_task_attempt(
 }
 
 #[derive(Debug, Deserialize, TS)]
-#[ts(export)]
 pub struct CreateFollowUpAttempt {
     pub prompt: String,
 }

@@ -20,14 +20,12 @@ pub enum FilesystemError {
     Io(#[from] std::io::Error),
 }
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 pub struct DirectoryListResponse {
     pub entries: Vec<DirectoryEntry>,
     pub current_path: String,
 }
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 pub struct DirectoryEntry {
     pub name: String,
     pub path: String,

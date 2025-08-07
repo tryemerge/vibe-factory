@@ -33,7 +33,6 @@ pub enum AuthError {
 }
 
 #[derive(Serialize, Deserialize, TS)]
-#[ts(export)]
 pub struct DeviceFlowStartResponse {
     pub user_code: String,
     pub verification_uri: String,

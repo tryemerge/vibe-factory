@@ -11,7 +11,6 @@ use crate::services::git::GitServiceError;
 
 #[derive(Debug, Error, Serialize, Deserialize, TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[ts(export)]
 #[ts(use_ts_enum)]
 pub enum GitHubServiceError {
     #[ts(skip)]
@@ -118,7 +117,6 @@ pub struct PullRequestInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
 pub struct RepositoryInfo {
     pub id: i64,
     pub name: String,

@@ -12,7 +12,6 @@ use crate::executors::BaseCodingAgent;
 static PROFILES_CACHE: OnceLock<AgentProfiles> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 pub struct CommandBuilder {
     /// Base executable command (e.g., "npx -y @anthropic-ai/claude-code@latest")
     pub base: String,
@@ -56,7 +55,6 @@ impl CommandBuilder {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 pub struct AgentProfile {
     /// Unique identifier for this profile (e.g., "MyClaudeCode", "FastAmp")
     pub label: String,
@@ -148,7 +146,6 @@ impl AgentProfile {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 pub struct AgentProfiles {
     pub profiles: Vec<AgentProfile>,
 }

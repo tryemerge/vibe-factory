@@ -11,7 +11,6 @@ use super::{task::Task, task_attempt::TaskAttempt};
 #[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, TS)]
 #[sqlx(type_name = "execution_process_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
-#[ts(export)]
 pub enum ExecutionProcessStatus {
     Running,
     Completed,
@@ -22,7 +21,6 @@ pub enum ExecutionProcessStatus {
 #[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, TS)]
 #[sqlx(type_name = "execution_process_run_reason", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
-#[ts(export)]
 pub enum ExecutionProcessRunReason {
     SetupScript,
     CleanupScript,
@@ -46,7 +44,6 @@ pub struct ExecutionProcess {
 }
 
 #[derive(Debug, Deserialize, TS)]
-#[ts(export)]
 pub struct CreateExecutionProcess {
     pub task_attempt_id: Uuid,
     pub executor_action: ExecutorAction,
@@ -54,7 +51,6 @@ pub struct CreateExecutionProcess {
 }
 
 #[derive(Debug, Deserialize, TS)]
-#[ts(export)]
 #[allow(dead_code)]
 pub struct UpdateExecutionProcess {
     pub status: Option<ExecutionProcessStatus>,
@@ -63,7 +59,6 @@ pub struct UpdateExecutionProcess {
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
-#[ts(export)]
 pub struct ExecutionProcessSummary {
     pub id: Uuid,
     pub task_attempt_id: Uuid,

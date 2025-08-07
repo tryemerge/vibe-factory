@@ -28,7 +28,6 @@ pub fn router() -> Router<DeploymentImpl> {
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
-#[ts(export)]
 pub struct Environment {
     pub os_type: String,
     pub os_version: String,

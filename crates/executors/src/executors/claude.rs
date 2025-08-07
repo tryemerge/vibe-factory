@@ -22,7 +22,6 @@ use crate::{
 
 /// An executor that uses Claude CLI to process tasks
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 pub struct ClaudeCode {
     executor_type: String,
     command_builder: CommandBuilder,

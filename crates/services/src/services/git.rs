@@ -44,7 +44,6 @@ pub enum GitServiceError {
 pub struct GitService {}
 
 #[derive(Debug, Serialize, TS)]
-#[ts(export)]
 pub struct GitBranch {
     pub name: String,
     pub is_current: bool,
@@ -54,7 +53,6 @@ pub struct GitBranch {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
 pub struct BranchStatus {
     pub is_behind: bool,
     pub commits_behind: usize,

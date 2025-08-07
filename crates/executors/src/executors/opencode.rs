@@ -23,7 +23,6 @@ use crate::{
 
 /// An executor that uses OpenCode to process tasks
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 pub struct Opencode {
     command_builder: CommandBuilder,
 }
@@ -355,7 +354,6 @@ pub enum Tool {
 
 /// TODO information structure
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 pub struct TodoInfo {
     pub content: String,
     pub status: String,
@@ -365,7 +363,6 @@ pub struct TodoInfo {
 
 /// Web fetch format options
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
-#[ts(export)]
 #[serde(rename_all = "lowercase")]
 pub enum WebFetchFormat {
     Text,
