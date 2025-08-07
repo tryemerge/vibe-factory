@@ -46,7 +46,7 @@ export type CreateFollowUpAttempt = { prompt: string, };
 
 export type CreateGitHubPRRequest = { title: string, body: string | null, base_branch: string | null, };
 
-export enum CreateGitHubPRErrorData { GITHUB_TOKEN_INVALID = "GITHUB_TOKEN_INVALID", GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS = "GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS", INSUFFICIENT_GITHUB_PERMISSIONS = "INSUFFICIENT_GITHUB_PERMISSIONS" }
+export enum GitHubServiceError { TOKEN_INVALID = "TOKEN_INVALID", INSUFFICIENT_PERMISSIONS = "INSUFFICIENT_PERMISSIONS", GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS = "GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS" }
 
 export type Config = { theme: ThemeMode, profile: string, disclaimer_acknowledged: boolean, onboarding_acknowledged: boolean, github_login_acknowledged: boolean, telemetry_acknowledged: boolean, notifications: NotificationConfig, editor: EditorConfig, github: GitHubConfig, analytics_enabled: boolean | null, environment: EnvironmentInfo, workspace_dir: string | null, };
 

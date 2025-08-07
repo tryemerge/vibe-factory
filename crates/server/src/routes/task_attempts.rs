@@ -471,62 +471,22 @@ pub async fn merge_task_attempt(
     Ok(ResponseJson(ApiResponse::success(())))
 }
 
-#[derive(Debug, Serialize, Deserialize, TS)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[ts(export)]
-#[ts(use_ts_enum)]
-pub enum CreateGitHubPRErrorData {
-    GithubTokenInvalid,
-    GithubRepoNotFoundOrNoAccess,
-    InsufficientGithubPermissions,
-}
-
-impl CreateGitHubPRErrorData {
-    pub fn from_git_service_error(error: &GitServiceError) -> Option<Self> {
-        if let GitServiceError::Git(err) = error {
-            if err
-                .message()
-                .contains("too many redirects or authentication replays")
-            {
-                Some(Self::GithubTokenInvalid)
-            } else if err.message().contains("status code: 403") {
-                Some(Self::InsufficientGithubPermissions)
-            } else if err.message().contains("status code: 404") {
-                Some(Self::GithubRepoNotFoundOrNoAccess)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-    pub fn from_github_service_error(error: &GitHubServiceError) -> Option<Self> {
-        match error {
-            GitHubServiceError::TokenInvalid => Some(Self::GithubTokenInvalid),
-            GitHubServiceError::InsufficientPermissions => {
-                Some(Self::InsufficientGithubPermissions)
-            }
-            _ => None,
-        }
-    }
-}
-
 pub async fn create_github_pr(
     Extension(task_attempt): Extension<TaskAttempt>,
     State(deployment): State<DeploymentImpl>,
     Json(request): Json<CreateGitHubPRRequest>,
-) -> Result<ResponseJson<ApiResponse<String, CreateGitHubPRErrorData>>, ApiError> {
+) -> Result<ResponseJson<ApiResponse<String, GitHubServiceError>>, ApiError> {
     let github_config = deployment.config().read().await.github.clone();
     let Some(github_token) = github_config.token() else {
         return Ok(ResponseJson(ApiResponse::error_with_data(
-            CreateGitHubPRErrorData::GithubTokenInvalid,
+            GitHubServiceError::TokenInvalid,
         )));
     };
     // Create GitHub service instance
     let github_service = GitHubService::new(&github_token)?;
     if let Err(e) = github_service.check_token().await {
-        if let Some(error_data) = CreateGitHubPRErrorData::from_github_service_error(&e) {
-            return Ok(ResponseJson(ApiResponse::error_with_data(error_data)));
+        if e.is_api_data() {
+            return Ok(ResponseJson(ApiResponse::error_with_data(e)));
         } else {
             return Err(ApiError::GitHubService(e));
         }
@@ -573,8 +533,9 @@ pub async fn create_github_pr(
     // Push the branch to GitHub first
     if let Err(e) = GitService::new().push_to_github(&worktree_path, branch_name, &github_token) {
         tracing::error!("Failed to push branch to GitHub: {}", e);
-        if let Some(msg) = CreateGitHubPRErrorData::from_git_service_error(&e) {
-            return Ok(ResponseJson(ApiResponse::error_with_data(msg)));
+        let gh_e = GitHubServiceError::from(e);
+        if gh_e.is_api_data() {
+            return Ok(ResponseJson(ApiResponse::error_with_data(gh_e)));
         } else {
             return Ok(ResponseJson(ApiResponse::error(
                 "Failed to push branch to GitHub",
@@ -623,8 +584,8 @@ pub async fn create_github_pr(
                 task_attempt.id,
                 e
             );
-            if let Some(error_data) = CreateGitHubPRErrorData::from_github_service_error(&e) {
-                Ok(ResponseJson(ApiResponse::error_with_data(error_data)))
+            if e.is_api_data() {
+                return Ok(ResponseJson(ApiResponse::error_with_data(e)));
             } else {
                 Ok(ResponseJson(ApiResponse::error("Failed to create PR")))
             }

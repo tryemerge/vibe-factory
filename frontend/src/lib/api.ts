@@ -32,7 +32,7 @@ import {
   UpdateTaskTemplate,
   UserSystemInfo,
   WorktreeDiff,
-  CreateGitHubPRErrorData,
+  GitHubServiceError
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -431,7 +431,7 @@ export const attemptsApi = {
   createPR: async (
     attemptId: string,
     data: CreateGitHubPRRequest
-  ): Promise<Result<string, CreateGitHubPRErrorData>> => {
+  ): Promise<Result<string, GitHubServiceError>> => {
     const response = await makeRequest(
       `/api/task-attempts/${attemptId}/pr`,
       {
@@ -439,7 +439,7 @@ export const attemptsApi = {
         body: JSON.stringify(data),
       }
     );
-    return handleApiResponseAsResult<string, CreateGitHubPRErrorData>(response);
+    return handleApiResponseAsResult<string, GitHubServiceError>(response);
   },
 
   startDevServer: async (

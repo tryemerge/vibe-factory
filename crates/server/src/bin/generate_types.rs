@@ -30,7 +30,7 @@ fn generate_types_content() -> String {
         server::routes::config::Environment::decl(),
         server::routes::task_attempts::CreateFollowUpAttempt::decl(),
         server::routes::task_attempts::CreateGitHubPRRequest::decl(),
-        server::routes::task_attempts::CreateGitHubPRErrorData::decl(),
+        services::services::github_service::GitHubServiceError::decl(),
         services::services::config::Config::decl(),
         services::services::config::EnvironmentInfo::decl(),
         services::services::config::NotificationConfig::decl(),
