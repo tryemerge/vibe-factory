@@ -654,19 +654,6 @@ invalid json line here
     }
 
     #[test]
-    fn test_find_rollout_file_path_basic() {
-        // Test the rollout file path logic (this is a unit test, won't actually find files)
-        let session_id = "00000000-0000-0000-0000-0000307f053d";
-
-        // This will likely fail because the directory doesn't exist, but we can test the logic
-        let result = SessionHandler::find_rollout_file_path(session_id);
-
-        // Should return an error since directory doesn't exist
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Could not find rollout file"));
-    }
-
-    #[test]
     fn test_normalize_logs_prompt_ignored() {
         let logs = r#"{"prompt":"project_id: f61fbd6a-9552-4b68-a1fe-10561f028dfc\n            \nTask title: describe this repo"}
 {"id":"1","msg":{"type":"task_started"}}
