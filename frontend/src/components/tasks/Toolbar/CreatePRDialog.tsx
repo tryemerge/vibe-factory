@@ -76,7 +76,6 @@ function CreatePrDialog({
     });
 
     if (result.success) {
-      // result.data is string (PR URL)
       window.open(result.data, '_blank');
       setShowCreatePRDialog(false);
       // Reset form
@@ -84,7 +83,6 @@ function CreatePrDialog({
       setPrBody('');
       setPrBaseBranch(selectedAttempt?.base_branch || 'main');
     } else {
-      // result.error is CreateGitHubPRErrorData | undefined
       if (result.error) {
         setShowCreatePRDialog(false);
         switch (result.error) {
@@ -95,7 +93,7 @@ function CreatePrDialog({
             setPatDialogError(null);
             setShowPatDialog(true);
             break;
-          case GitHubServiceError.GITHUB_REPO_NOT_FOUND_OR_NO_ACCESS:
+          case GitHubServiceError.REPO_NOT_FOUND_OR_NO_ACCESS:
             setPatDialogError(
               'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.'
             );

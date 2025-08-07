@@ -35,7 +35,7 @@ pub enum GitHubServiceError {
     #[error("Insufficient permissions")]
     InsufficientPermissions,
     #[error("GitHub repository not found or no access")]
-    GithubRepoNotFoundOrNoAccess,
+    RepoNotFoundOrNoAccess,
     #[ts(skip)]
     #[serde(skip)]
     #[error(transparent)]
@@ -72,7 +72,7 @@ impl From<GitServiceError> for GitHubServiceError {
             } else if err.message().contains("status code: 403") {
                 Self::InsufficientPermissions
             } else if err.message().contains("status code: 404") {
-                Self::GithubRepoNotFoundOrNoAccess
+                Self::RepoNotFoundOrNoAccess
             } else {
                 Self::GitService(GitServiceError::Git(err))
             }
@@ -88,7 +88,7 @@ impl GitHubServiceError {
             self,
             GitHubServiceError::TokenInvalid
                 | GitHubServiceError::InsufficientPermissions
-                | GitHubServiceError::GithubRepoNotFoundOrNoAccess
+                | GitHubServiceError::RepoNotFoundOrNoAccess
         )
     }
 }
