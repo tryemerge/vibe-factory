@@ -70,7 +70,6 @@ function CreateAttempt({
         throw new Error('Base branch is required to create an attempt');
       }
 
-
       await attemptsApi.create({
         task_id: task.id,
         profile: profile,
@@ -183,7 +182,7 @@ function CreateAttempt({
                 Profile
               </label>
             </div>
-            {availableProfiles &&
+            {availableProfiles && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -214,7 +213,7 @@ function CreateAttempt({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            }
+            )}
           </div>
 
           {/* Step 3: Start Attempt */}
@@ -222,12 +221,10 @@ function CreateAttempt({
             <Button
               onClick={handleCreateAttempt}
               disabled={
-                !selectedProfile ||
-                !createAttemptBranch ||
-                isAttemptRunning
+                !selectedProfile || !createAttemptBranch || isAttemptRunning
               }
               size="sm"
-              className={"w-full text-xs gap-2"}
+              className={'w-full text-xs gap-2'}
               title={
                 !createAttemptBranch
                   ? 'Base branch is required'
