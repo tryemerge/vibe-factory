@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react';
 import type { ExecutionProcess, ExecutionProcessSummary } from 'shared/types';
-import type { EditorType, TaskAttempt, TaskAttemptState, TaskWithAttemptStatus } from 'shared/types';
+import type { EditorType, TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 import { attemptsApi, executionProcessesApi } from '@/lib/api.ts';
 import {
   TaskAttemptDataContext,
@@ -17,7 +17,6 @@ import {
   TaskAttemptStoppingContext,
   TaskDeletingFilesContext,
   TaskDetailsContext,
-  TaskExecutionStateContext,
   TaskSelectedAttemptContext,
 } from './taskDetailsContext.ts';
 import type { AttemptData } from '@/lib/types.ts';
@@ -43,34 +42,10 @@ const TaskDetailsProvider: FC<{
     const [deletingFiles, setDeletingFiles] = useState<Set<string>>(new Set());
     const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
-    const [executionState, setExecutionState] = useState<TaskAttemptState | null>(
-      null
-    );
-
     const [attemptData, setAttemptData] = useState<AttemptData>({
       processes: [],
       runningProcessDetails: {},
     });
-
-    const fetchExecutionState = useCallback(
-      async (attemptId: string) => {
-        if (!task) return;
-
-        try {
-          const result = await attemptsApi.getState(attemptId);
-
-          if (result !== undefined) {
-            setExecutionState((prev) => {
-              if (JSON.stringify(prev) === JSON.stringify(result)) return prev;
-              return result;
-            });
-          }
-        } catch (err) {
-          console.error('Failed to fetch execution state:', err);
-        }
-      },
-      [task, projectId]
-    );
 
     const handleOpenInEditor = useCallback(
       async (editorType?: EditorType) => {
@@ -151,9 +126,8 @@ const TaskDetailsProvider: FC<{
     useEffect(() => {
       if (selectedAttempt && task) {
         fetchAttemptData(selectedAttempt.id);
-        fetchExecutionState(selectedAttempt.id);
       }
-    }, [selectedAttempt, task, fetchAttemptData, fetchExecutionState]);
+    }, [selectedAttempt, task, fetchAttemptData]);
 
     const isAttemptRunning = useMemo(() => {
       if (!selectedAttempt || isStopping) {
@@ -175,7 +149,6 @@ const TaskDetailsProvider: FC<{
       const interval = setInterval(() => {
         if (selectedAttempt) {
           fetchAttemptData(selectedAttempt.id);
-          fetchExecutionState(selectedAttempt.id);
         }
       }, 5000);
 
@@ -185,7 +158,6 @@ const TaskDetailsProvider: FC<{
       task,
       selectedAttempt,
       fetchAttemptData,
-      fetchExecutionState,
     ]);
 
     const value = useMemo(
@@ -233,14 +205,6 @@ const TaskDetailsProvider: FC<{
       [attemptData, fetchAttemptData, isAttemptRunning]
     );
 
-    const executionStateValue = useMemo(
-      () => ({
-        executionState,
-        fetchExecutionState,
-      }),
-      [executionState, fetchExecutionState]
-    );
-
     return (
       <TaskDetailsContext.Provider value={value}>
         <TaskAttemptLoadingContext.Provider value={taskAttemptLoadingValue}>
@@ -248,11 +212,7 @@ const TaskDetailsProvider: FC<{
             <TaskAttemptStoppingContext.Provider value={attemptStoppingValue}>
               <TaskDeletingFilesContext.Provider value={deletingFilesValue}>
                 <TaskAttemptDataContext.Provider value={attemptDataValue}>
-                  <TaskExecutionStateContext.Provider
-                    value={executionStateValue}
-                  >
-                    {children}
-                  </TaskExecutionStateContext.Provider>
+                  {children}
                 </TaskAttemptDataContext.Provider>
               </TaskDeletingFilesContext.Provider>
             </TaskAttemptStoppingContext.Provider>

@@ -1,5 +1,5 @@
 import { createContext, Dispatch, SetStateAction } from 'react';
-import type { EditorType, TaskAttempt, TaskAttemptState, TaskWithAttemptStatus } from 'shared/types';
+import type { EditorType, TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 import { AttemptData } from '@/lib/types.ts';
 
 export interface TaskDetailsContextValue {
@@ -72,17 +72,4 @@ interface TaskBackgroundRefreshContextValue {
 export const TaskBackgroundRefreshContext =
   createContext<TaskBackgroundRefreshContextValue>(
     {} as TaskBackgroundRefreshContextValue
-  );
-
-interface TaskExecutionStateContextValue {
-  executionState: TaskAttemptState | null;
-  fetchExecutionState: (
-    attemptId: string,
-    taskId: string
-  ) => Promise<void> | void;
-}
-
-export const TaskExecutionStateContext =
-  createContext<TaskExecutionStateContextValue>(
-    {} as TaskExecutionStateContextValue
   );
