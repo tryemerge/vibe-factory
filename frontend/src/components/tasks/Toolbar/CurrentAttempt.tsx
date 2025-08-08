@@ -573,7 +573,9 @@ function CurrentAttempt({
                         {new Date(attempt.created_at).toLocaleTimeString()}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {attempt.profile_label || attempt.base_coding_agent || 'Base Agent'}
+                        {attempt.profile_label ||
+                          attempt.base_coding_agent ||
+                          'Base Agent'}
                       </span>
                     </div>
                   </DropdownMenuItem>
