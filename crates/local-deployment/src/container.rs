@@ -29,6 +29,7 @@ use executors::{
     logs::utils::ConversationPatch,
 };
 use futures::{StreamExt, TryStreamExt, stream::select};
+use notify_debouncer_full::DebouncedEvent;
 use serde_json::json;
 use services::services::{
     analytics::AnalyticsContext,
@@ -493,7 +494,8 @@ impl LocalContainerService {
     ) -> Result<futures::stream::BoxStream<'static, Result<Event, std::io::Error>>, ContainerError>
     {
         // Get initial snapshot
-        let initial_diffs = self.git().get_diffs(
+        let git_service = self.git().clone();
+        let initial_diffs = git_service.get_diffs(
             DiffTarget::Worktree {
                 worktree_path,
                 branch_name: task_branch,
@@ -507,68 +509,59 @@ impl LocalContainerService {
             let patch = ConversationPatch::add_diff(entry_index, diff);
             let event = LogMsg::JsonPatch(patch).to_sse_event();
             Ok::<_, std::io::Error>(event)
-        }));
+        }))
+        .boxed();
 
         // Create live update stream
-        let live_stream = self.create_file_watcher_stream(
-            project_repo_path.to_path_buf(),
-            worktree_path.to_path_buf(),
-            task_branch.to_string(),
-            base_branch.to_string(),
-        );
+        let project_repo_path = project_repo_path.to_path_buf();
+        let worktree_path = worktree_path.to_path_buf();
+        let task_branch = task_branch.to_string();
+        let base_branch = base_branch.to_string();
+
+        let live_stream = {
+            let git_service = git_service.clone();
+            try_stream! {
+                let (_debouncer, mut rx, canonical_worktree_path) =
+                    filesystem_watcher::async_watcher(worktree_path.clone())
+                        .map_err(|e| io::Error::other(e.to_string()))?;
+
+                while let Some(result) = rx.next().await {
+                    match result {
+                        Ok(events) => {
+                            let changed_paths = Self::extract_changed_paths(&events, &canonical_worktree_path, &worktree_path);
+
+                            if !changed_paths.is_empty() {
+                                for event in Self::process_file_changes(
+                                    &git_service,
+                                    &project_repo_path,
+                                    &worktree_path,
+                                    &task_branch,
+                                    &base_branch,
+                                    &changed_paths,
+                                ).map_err(|e| io::Error::other(e.to_string()))? {
+                                    yield event;
+                                }
+                            }
+                        }
+                        Err(errors) => {
+                            let error_msg = errors.iter()
+                                .map(|e| e.to_string())
+                                .collect::<Vec<_>>()
+                                .join("; ");
+                            Err(io::Error::other(error_msg))?;
+                        }
+                    }
+                }
+            }
+        }.boxed();
 
         let combined_stream = select(initial_stream, live_stream);
         Ok(combined_stream.boxed())
     }
 
-    /// Create a stream that watches for file changes and emits diff updates
-    fn create_file_watcher_stream(
-        &self,
-        project_repo_path: PathBuf,
-        worktree_path: PathBuf,
-        task_branch: String,
-        base_branch: String,
-    ) -> impl futures::Stream<Item = Result<Event, std::io::Error>> {
-        let git_service = self.git().clone();
-
-        try_stream! {
-            let (_debouncer, mut rx, canonical_worktree_path) =
-                filesystem_watcher::async_watcher(worktree_path.clone())
-                    .map_err(|e| io::Error::other(e.to_string()))?;
-
-            while let Some(result) = rx.next().await {
-                match result {
-                    Ok(events) => {
-                        let changed_paths = Self::extract_changed_paths(&events, &canonical_worktree_path, &worktree_path);
-
-                        if !changed_paths.is_empty() {
-                            for event in Self::process_file_changes(
-                                &git_service,
-                                &project_repo_path,
-                                &worktree_path,
-                                &task_branch,
-                                &base_branch,
-                                &changed_paths,
-                            ).map_err(|e| io::Error::other(e.to_string()))? {
-                                yield event;
-                            }
-                        }
-                    }
-                    Err(errors) => {
-                        let error_msg = errors.iter()
-                            .map(|e| e.to_string())
-                            .collect::<Vec<_>>()
-                            .join("; ");
-                        Err(io::Error::other(error_msg))?;
-                    }
-                }
-            }
-        }
-    }
-
     /// Extract changed file paths from filesystem events
     fn extract_changed_paths(
-        events: &[notify::Event],
+        events: &[DebouncedEvent],
         canonical_worktree_path: &Path,
         worktree_path: &Path,
     ) -> Vec<String> {
