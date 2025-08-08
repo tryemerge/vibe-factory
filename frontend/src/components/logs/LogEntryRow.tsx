@@ -10,17 +10,17 @@ interface LogEntryRowProps {
   entry: UnifiedLogEntry;
   index: number;
   style?: React.CSSProperties;
-  setRowHeight?: (index: number, height: number) => void;
+  setRowHeight: (index: number, height: number) => void;
 }
 
 function LogEntryRow({ entry, index, style, setRowHeight }: LogEntryRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (rowRef.current && setRowHeight) {
+    if (rowRef.current) {
       setRowHeight(index, rowRef.current.clientHeight);
     }
-  }, [rowRef, setRowHeight, index]);
+  }, [rowRef]);
 
   const content = (
     <div className="" ref={rowRef}>
