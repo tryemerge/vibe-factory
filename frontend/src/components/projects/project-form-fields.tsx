@@ -28,6 +28,8 @@ interface ProjectFormFieldsProps {
   setDevScript: (script: string) => void;
   cleanupScript: string;
   setCleanupScript: (script: string) => void;
+  copyFiles: string;
+  setCopyFiles: (files: string) => void;
   error: string;
 }
 
@@ -50,6 +52,8 @@ export function ProjectFormFields({
   setDevScript,
   cleanupScript,
   setCleanupScript,
+  copyFiles,
+  setCopyFiles,
   error,
 }: ProjectFormFieldsProps) {
   const { system } = useUserSystem();
@@ -243,6 +247,23 @@ export function ProjectFormFields({
           This script will run after coding agent execution is complete. Use it
           for quality assurance tasks like running linters, formatters, tests,
           or other validation steps.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="copy-files">Copy Files (Optional)</Label>
+        <textarea
+          id="copy-files"
+          value={copyFiles}
+          onChange={(e) => setCopyFiles(e.target.value)}
+          placeholder=".env,config.local.json,.local/settings.yml"
+          rows={3}
+          className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md resize-vertical focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <p className="text-sm text-muted-foreground">
+          Comma-separated list of files to copy from the original project directory to the worktree.
+          These files will be copied after the worktree is created but before the setup script runs.
+          Useful for environment-specific files like .env, configuration files, and local settings.
         </p>
       </div>
 
