@@ -229,6 +229,7 @@ export function ProjectForm({
                   copyFiles={copyFiles}
                   setCopyFiles={setCopyFiles}
                   error={error}
+                  projectId={(project as any)?.id}
                 />
                 <DialogFooter>
                   <Button
@@ -339,6 +340,7 @@ export function ProjectForm({
               copyFiles={copyFiles}
               setCopyFiles={setCopyFiles}
               error={error}
+              projectId={(project as any)?.id}
             />
             {/* )} */}
             <DialogFooter>

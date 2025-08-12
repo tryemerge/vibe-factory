@@ -8,6 +8,7 @@ import {
   ScriptPlaceholderContext,
 } from '@/utils/script-placeholders';
 import { useUserSystem } from '@/components/config-provider';
+import { CopyFilesField } from './copy-files-field';
 
 interface ProjectFormFieldsProps {
   isEditing: boolean;
@@ -31,6 +32,7 @@ interface ProjectFormFieldsProps {
   copyFiles: string;
   setCopyFiles: (files: string) => void;
   error: string;
+  projectId?: string;
 }
 
 export function ProjectFormFields({
@@ -55,20 +57,21 @@ export function ProjectFormFields({
   copyFiles,
   setCopyFiles,
   error,
+  projectId,
 }: ProjectFormFieldsProps) {
   const { system } = useUserSystem();
 
   // Create strategy-based placeholders
   const placeholders = system.environment
     ? new ScriptPlaceholderContext(
-        createScriptPlaceholderStrategy(system.environment.os_type)
-      ).getPlaceholders()
+      createScriptPlaceholderStrategy(system.environment.os_type)
+    ).getPlaceholders()
     : {
-        setup: '#!/bin/bash\nnpm install\n# Add any setup commands here...',
-        dev: '#!/bin/bash\nnpm run dev\n# Add dev server start command here...',
-        cleanup:
-          '#!/bin/bash\n# Add cleanup commands here...\n# This runs after coding agent execution',
-      };
+      setup: '#!/bin/bash\nnpm install\n# Add any setup commands here...',
+      dev: '#!/bin/bash\nnpm run dev\n# Add dev server start command here...',
+      cleanup:
+        '#!/bin/bash\n# Add cleanup commands here...\n# This runs after coding agent execution',
+    };
 
   return (
     <>
@@ -252,18 +255,16 @@ export function ProjectFormFields({
 
       <div className="space-y-2">
         <Label htmlFor="copy-files">Copy Files (Optional)</Label>
-        <textarea
-          id="copy-files"
+        <CopyFilesField
           value={copyFiles}
-          onChange={(e) => setCopyFiles(e.target.value)}
-          placeholder=".env,config.local.json,.local/settings.yml"
-          rows={3}
-          className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md resize-vertical focus:outline-none focus:ring-2 focus:ring-ring"
+          onChange={setCopyFiles}
+          projectId={projectId}
         />
         <p className="text-sm text-muted-foreground">
           Comma-separated list of files to copy from the original project directory to the worktree.
           These files will be copied after the worktree is created but before the setup script runs.
           Useful for environment-specific files like .env, configuration files, and local settings.
+          Make sure these are gitignored or they could get committed!
         </p>
       </div>
 

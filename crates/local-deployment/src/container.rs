@@ -675,7 +675,10 @@ impl ContainerService for LocalContainerService {
         if let Some(copy_files) = &project.copy_files {
             if !copy_files.trim().is_empty() {
                 self.copy_project_files(&project.git_repo_path, &worktree_path, copy_files)
-                    .await?;
+                    .await
+                    .unwrap_or_else(|e| {
+                        tracing::warn!("Failed to copy project files: {}", e);
+                    });
             }
         }
 
