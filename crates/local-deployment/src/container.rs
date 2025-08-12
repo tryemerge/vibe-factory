@@ -672,14 +672,14 @@ impl ContainerService for LocalContainerService {
         .await?;
 
         // Copy files specified in the project's copy_files field
-        if let Some(copy_files) = &project.copy_files {
-            if !copy_files.trim().is_empty() {
-                self.copy_project_files(&project.git_repo_path, &worktree_path, copy_files)
-                    .await
-                    .unwrap_or_else(|e| {
-                        tracing::warn!("Failed to copy project files: {}", e);
-                    });
-            }
+        if let Some(copy_files) = &project.copy_files
+            && !copy_files.trim().is_empty()
+        {
+            self.copy_project_files(&project.git_repo_path, &worktree_path, copy_files)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to copy project files: {}", e);
+                });
         }
 
         // Update both container_ref and branch in the database
@@ -963,16 +963,12 @@ impl ContainerService for LocalContainerService {
             let target_file = target_dir.join(file_path);
 
             // Create parent directories if needed
-            if let Some(parent) = target_file.parent() {
-                if !parent.exists() {
-                    std::fs::create_dir_all(parent).map_err(|e| {
-                        ContainerError::Other(anyhow!(
-                            "Failed to create directory {:?}: {}",
-                            parent,
-                            e
-                        ))
-                    })?;
-                }
+            if let Some(parent) = target_file.parent()
+                && !parent.exists()
+            {
+                std::fs::create_dir_all(parent).map_err(|e| {
+                    ContainerError::Other(anyhow!("Failed to create directory {:?}: {}", parent, e))
+                })?;
             }
 
             // Copy the file
