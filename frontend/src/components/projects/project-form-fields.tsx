@@ -64,14 +64,14 @@ export function ProjectFormFields({
   // Create strategy-based placeholders
   const placeholders = system.environment
     ? new ScriptPlaceholderContext(
-      createScriptPlaceholderStrategy(system.environment.os_type)
-    ).getPlaceholders()
+        createScriptPlaceholderStrategy(system.environment.os_type)
+      ).getPlaceholders()
     : {
-      setup: '#!/bin/bash\nnpm install\n# Add any setup commands here...',
-      dev: '#!/bin/bash\nnpm run dev\n# Add dev server start command here...',
-      cleanup:
-        '#!/bin/bash\n# Add cleanup commands here...\n# This runs after coding agent execution',
-    };
+        setup: '#!/bin/bash\nnpm install\n# Add any setup commands here...',
+        dev: '#!/bin/bash\nnpm run dev\n# Add dev server start command here...',
+        cleanup:
+          '#!/bin/bash\n# Add cleanup commands here...\n# This runs after coding agent execution',
+      };
 
   return (
     <>
@@ -261,10 +261,11 @@ export function ProjectFormFields({
           projectId={projectId}
         />
         <p className="text-sm text-muted-foreground">
-          Comma-separated list of files to copy from the original project directory to the worktree.
-          These files will be copied after the worktree is created but before the setup script runs.
-          Useful for environment-specific files like .env, configuration files, and local settings.
-          Make sure these are gitignored or they could get committed!
+          Comma-separated list of files to copy from the original project
+          directory to the worktree. These files will be copied after the
+          worktree is created but before the setup script runs. Useful for
+          environment-specific files like .env, configuration files, and local
+          settings. Make sure these are gitignored or they could get committed!
         </p>
       </div>
 

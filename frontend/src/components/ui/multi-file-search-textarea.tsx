@@ -125,12 +125,17 @@ export function MultiFileSearchTextarea({
 
     // Find the next separator after cursor
     const nextSeparatorIndex = Math.min(
-      textAfter.indexOf(',') === -1 ? Infinity : textAfter.indexOf(',') + cursorPosition,
-      textAfter.indexOf('\n') === -1 ? Infinity : textAfter.indexOf('\n') + cursorPosition
+      textAfter.indexOf(',') === -1
+        ? Infinity
+        : textAfter.indexOf(',') + cursorPosition,
+      textAfter.indexOf('\n') === -1
+        ? Infinity
+        : textAfter.indexOf('\n') + cursorPosition
     );
 
     const tokenStart = lastSeparatorIndex + 1;
-    const tokenEnd = nextSeparatorIndex === Infinity ? text.length : nextSeparatorIndex;
+    const tokenEnd =
+      nextSeparatorIndex === Infinity ? text.length : nextSeparatorIndex;
     const token = text.slice(tokenStart, tokenEnd).trim();
 
     return {
@@ -208,7 +213,8 @@ export function MultiFileSearchTextarea({
     // Smart comma handling - add ", " if not at end and next char isn't comma/newline
     let insertion = file.path;
     const trimmedAfter = after.trimStart();
-    const needsComma = trimmedAfter.length > 0 &&
+    const needsComma =
+      trimmedAfter.length > 0 &&
       !trimmedAfter.startsWith(',') &&
       !trimmedAfter.startsWith('\n');
 
@@ -216,7 +222,8 @@ export function MultiFileSearchTextarea({
       insertion += ', ';
     }
 
-    const newValue = before.trimEnd() + (before.trimEnd() ? ' ' : '') + insertion + after;
+    const newValue =
+      before.trimEnd() + (before.trimEnd() ? ' ' : '') + insertion + after;
     onChange(newValue);
 
     setShowDropdown(false);
@@ -225,7 +232,8 @@ export function MultiFileSearchTextarea({
     // Focus back to textarea and position cursor after insertion
     setTimeout(() => {
       if (textareaRef.current) {
-        const newCursorPos = currentTokenStart + (before.trimEnd() ? 1 : 0) + insertion.length;
+        const newCursorPos =
+          currentTokenStart + (before.trimEnd() ? 1 : 0) + insertion.length;
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
       }
@@ -299,7 +307,9 @@ export function MultiFileSearchTextarea({
   const dropdownPosition = getDropdownPosition();
 
   return (
-    <div className={`relative ${className?.includes('flex-1') ? 'flex-1' : ''}`}>
+    <div
+      className={`relative ${className?.includes('flex-1') ? 'flex-1' : ''}`}
+    >
       <AutoExpandingTextarea
         ref={textareaRef}
         value={value}
@@ -337,10 +347,11 @@ export function MultiFileSearchTextarea({
                 {searchResults.map((file, index) => (
                   <div
                     key={file.path}
-                    className={`px-3 py-2 cursor-pointer text-sm ${index === selectedIndex
-                      ? 'bg-blue-50 text-blue-900'
-                      : 'hover:bg-muted'
-                      }`}
+                    className={`px-3 py-2 cursor-pointer text-sm ${
+                      index === selectedIndex
+                        ? 'bg-blue-50 text-blue-900'
+                        : 'hover:bg-muted'
+                    }`}
                     onClick={() => selectFile(file)}
                   >
                     <div className="font-medium truncate">{file.name}</div>
