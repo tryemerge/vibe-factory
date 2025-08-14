@@ -53,6 +53,8 @@ pub struct BranchStatus {
     pub merged: bool,
     pub has_uncommitted_changes: bool,
     pub base_branch_name: String,
+    pub has_unpushed_commits: bool,
+    pub unpushed_commits_count: usize,
 }
 
 /// Target for diff generation
@@ -553,15 +555,21 @@ impl GitService {
             .or_else(|_| repo.find_reference(branch_name))?;
         let branch_oid = branch_ref.target().unwrap();
 
-        // 1. prefer the branch’s configured upstream, if any
-        if let Ok(local_branch) = repo.find_branch(branch_name, BranchType::Local)
-            && let Ok(upstream) = local_branch.upstream()
-            && let Some(_name) = upstream.name()?
-            && let Some(base_oid) = upstream.get().target()
+        // Check for unpushed commits by comparing with origin/branch_name
+        let (has_unpushed_commits, unpushed_commits_count) = if let Ok(remote_ref) =
+            repo.find_reference(&format!("refs/remotes/origin/{branch_name}"))
         {
-            let (_ahead, _behind) = repo.graph_ahead_behind(branch_oid, base_oid)?;
-            // Ignore upstream since we use stored base branch
-        }
+            if let Some(remote_oid) = remote_ref.target() {
+                let (ahead, _behind) = repo.graph_ahead_behind(branch_oid, remote_oid)?;
+                (ahead > 0, ahead)
+            } else {
+                (false, 0)
+            }
+        } else {
+            // No remote branch - shouldn't happen with an open PR
+            (false, 0)
+        };
+
         // Calculate ahead/behind counts using the stored base branch
         let (commits_ahead, commits_behind) =
             if let Ok(base_branch) = repo.find_branch(base_branch_name, BranchType::Local) {
@@ -594,6 +602,8 @@ impl GitService {
             merged: is_merged,
             has_uncommitted_changes,
             base_branch_name: base_branch_name.to_string(),
+            has_unpushed_commits,
+            unpushed_commits_count,
         })
     }
 
@@ -1027,6 +1037,12 @@ impl GitService {
 
         // Check push result
         push_result?;
+
+        // After successful push, set upstream tracking for future operations
+        // This is equivalent to git push -u origin branch_name
+        if let Ok(mut branch) = repo.find_branch(branch_name, BranchType::Local) {
+            let _ = branch.set_upstream(Some(&format!("origin/{}", branch_name)));
+        }
 
         Ok(())
     }
