@@ -942,7 +942,58 @@ impl ContainerService for LocalContainerService {
             message
         );
 
-        Ok(self.git().commit(Path::new(container_ref), &message)?)
+        // Commit the changes
+        self.git().commit(Path::new(container_ref), &message)?;
+
+        // If a PR exists for this task attempt, automatically push the changes
+        if let Some(pr_url) = &ctx.task_attempt.pr_url {
+            if let Some(branch_name) = &ctx.task_attempt.branch {
+                tracing::info!("Auto-syncing changes to GitHub for PR: {}", pr_url);
+                
+                // Get GitHub token from config
+                let github_config = {
+                    let config = self.config.read().await;
+                    config.github.clone()
+                };
+
+                if let Some(github_token) = &github_config.token() {
+                    match self.git().push_to_github(
+                        Path::new(container_ref), 
+                        branch_name, 
+                        github_token
+                    ) {
+                        Ok(_) => {
+                            tracing::info!(
+                                "Successfully auto-synced changes for task attempt {} to branch '{}'", 
+                                ctx.task_attempt.id, 
+                                branch_name
+                            );
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to auto-sync changes for task attempt {} to branch '{}': {}. Changes are committed locally.", 
+                                ctx.task_attempt.id, 
+                                branch_name, 
+                                e
+                            );
+                            // Don't fail the commit if push fails - changes are still saved locally
+                        }
+                    }
+                } else {
+                    tracing::debug!(
+                        "No GitHub token configured, skipping auto-sync for task attempt {}",
+                        ctx.task_attempt.id
+                    );
+                }
+            } else {
+                tracing::warn!(
+                    "Task attempt {} has PR but no branch name, skipping auto-sync",
+                    ctx.task_attempt.id
+                );
+            }
+        }
+
+        Ok(())
     }
 
     /// Copy files from the original project directory to the worktree

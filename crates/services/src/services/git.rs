@@ -926,6 +926,40 @@ impl GitService {
         Ok(commit_id.to_string())
     }
 
+    /// Set the upstream remote for a branch
+    pub fn set_branch_upstream(
+        &self,
+        repo_path: &Path,
+        branch_name: &str,
+        remote: &str,
+    ) -> Result<(), GitServiceError> {
+        let repo = self.open_repo(repo_path)?;
+        
+        // Check if the branch already has the correct upstream configured
+        if let Ok(branch) = repo.find_branch(branch_name, BranchType::Local) {
+            if let Ok(upstream_branch) = branch.upstream() {
+                if let Some(upstream_name) = upstream_branch.name()? {
+                    let expected_upstream = format!("{}/{}", remote, branch_name);
+                    if upstream_name == expected_upstream {
+                        tracing::debug!("Branch {} already has correct upstream: {}", branch_name, expected_upstream);
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
+        // Set upstream using direct config editing (more reliable than Branch::set_upstream)
+        let mut config = repo.config()?;
+        config.set_str(&format!("branch.{}.remote", branch_name), remote)?;
+        config.set_str(
+            &format!("branch.{}.merge", branch_name),
+            &format!("refs/heads/{}", branch_name),
+        )?;
+
+        tracing::info!("Set upstream for branch '{}' to '{}/{}'", branch_name, remote, branch_name);
+        Ok(())
+    }
+
     /// Get the default branch name for the repository
     pub fn get_default_branch_name(&self, repo_path: &PathBuf) -> Result<String, GitServiceError> {
         let repo = self.open_repo(repo_path)?;

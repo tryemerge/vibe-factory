@@ -527,7 +527,8 @@ pub async fn create_github_pr(
     })?;
 
     // Push the branch to GitHub first
-    if let Err(e) = GitService::new().push_to_github(worktree_path, branch_name, &github_token) {
+    let git_service = GitService::new();
+    if let Err(e) = git_service.push_to_github(worktree_path, branch_name, &github_token) {
         tracing::error!("Failed to push branch to GitHub: {}", e);
         let gh_e = GitHubServiceError::from(e);
         if gh_e.is_api_data() {
@@ -537,6 +538,12 @@ pub async fn create_github_pr(
                 "Failed to push branch to GitHub",
             )));
         }
+    }
+
+    // Set the remote branch as upstream for easier subsequent pushes
+    if let Err(e) = git_service.set_branch_upstream(worktree_path, branch_name, "origin") {
+        tracing::warn!("Failed to set upstream for branch '{}': {}", branch_name, e);
+        // Don't fail the PR creation if upstream setting fails
     }
     // Create the PR using GitHub service
     let pr_request = CreatePrRequest {
