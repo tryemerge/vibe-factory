@@ -949,7 +949,7 @@ impl ContainerService for LocalContainerService {
         if let Some(pr_url) = &ctx.task_attempt.pr_url {
             if let Some(branch_name) = &ctx.task_attempt.branch {
                 tracing::info!("Auto-syncing changes to GitHub for PR: {}", pr_url);
-                
+
                 // Get GitHub token from config
                 let github_config = {
                     let config = self.config.read().await;
@@ -958,22 +958,22 @@ impl ContainerService for LocalContainerService {
 
                 if let Some(github_token) = &github_config.token() {
                     match self.git().push_to_github(
-                        Path::new(container_ref), 
-                        branch_name, 
-                        github_token
+                        Path::new(container_ref),
+                        branch_name,
+                        github_token,
                     ) {
                         Ok(_) => {
                             tracing::info!(
-                                "Successfully auto-synced changes for task attempt {} to branch '{}'", 
-                                ctx.task_attempt.id, 
+                                "Successfully auto-synced changes for task attempt {} to branch '{}'",
+                                ctx.task_attempt.id,
                                 branch_name
                             );
                         }
                         Err(e) => {
                             tracing::warn!(
-                                "Failed to auto-sync changes for task attempt {} to branch '{}': {}. Changes are committed locally.", 
-                                ctx.task_attempt.id, 
-                                branch_name, 
+                                "Failed to auto-sync changes for task attempt {} to branch '{}': {}. Changes are committed locally.",
+                                ctx.task_attempt.id,
+                                branch_name,
                                 e
                             );
                             // Don't fail the commit if push fails - changes are still saved locally
