@@ -799,7 +799,7 @@ impl GitService {
 
         // Handle remote branches by fetching them first and creating/updating local tracking branches
         let local_branch_name = if base_branch_name.starts_with("origin/") {
-            let github_token = github_token.ok_or_else(|| GitServiceError::TokenUnavailable)?;
+            let github_token = github_token.ok_or(GitServiceError::TokenUnavailable)?;
             // This is a remote branch, fetch it and create/update local tracking branch
             let remote_branch_name = base_branch_name.strip_prefix("origin/").unwrap();
 
@@ -1052,8 +1052,6 @@ impl GitService {
         repo: &Repository,
         github_token: &str,
     ) -> Result<(), GitServiceError> {
-        tracing::warn!("Fetching from remote repository...");
-
         // Get the remote
         let remote = repo.find_remote("origin")?;
         let remote_url = remote.url().ok_or_else(|| {
@@ -1081,15 +1079,18 @@ impl GitService {
         fetch_opts.remote_callbacks(callbacks);
 
         // Fetch from the temporary remote
-        let fetch_result = temp_remote.fetch(&[] as &[&str], Some(&mut fetch_opts), None);
 
+        let fetch_result = temp_remote.fetch(
+            &["+refs/heads/*:refs/remotes/origin/*"],
+            Some(&mut fetch_opts),
+            None,
+        );
         // Clean up the temporary remote
         let _ = repo.remote_delete(temp_remote_name);
 
         // Check fetch result
         fetch_result.map_err(GitServiceError::Git)?;
 
-        tracing::warn!("Finished fetching from remote repository");
         Ok(())
     }
 
