@@ -28,7 +28,7 @@ use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use services::services::{
     container::ContainerService,
-    git::{BranchStatus, GitService},
+    git::BranchStatus,
     github_service::{CreatePrRequest, GitHubRepoInfo, GitHubService, GitHubServiceError},
 };
 use sqlx::Error as SqlxError;
@@ -456,7 +456,7 @@ pub async fn merge_task_attempt(
         ))
     })?;
 
-    let merge_commit_id = GitService::new().merge_changes(
+    let merge_commit_id = deployment.git().merge_changes(
         &ctx.project.git_repo_path,
         worktree_path,
         branch_name,
@@ -512,7 +512,9 @@ pub async fn push_task_attempt_branch(
         ))
     })?;
 
-    GitService::new().push_to_github(worktree_path, branch_name, &github_token)?;
+    deployment
+        .git()
+        .push_to_github(worktree_path, branch_name, &github_token)?;
     Ok(ResponseJson(ApiResponse::success(())))
 }
 
@@ -565,7 +567,9 @@ pub async fn create_github_pr(
     let worktree_path = std::path::Path::new(&container_ref);
 
     // Use GitService to get the remote URL, then create GitHubRepoInfo
-    let (owner, repo_name) = GitService::new().get_github_repo_info(&ctx.project.git_repo_path)?;
+    let (owner, repo_name) = deployment
+        .git()
+        .get_github_repo_info(&ctx.project.git_repo_path)?;
     let repo_info = GitHubRepoInfo { owner, repo_name };
 
     // Get branch name from task attempt
@@ -576,7 +580,10 @@ pub async fn create_github_pr(
     })?;
 
     // Push the branch to GitHub first
-    if let Err(e) = GitService::new().push_to_github(worktree_path, branch_name, &github_token) {
+    if let Err(e) = deployment
+        .git()
+        .push_to_github(worktree_path, branch_name, &github_token)
+    {
         tracing::error!("Failed to push branch to GitHub: {}", e);
         let gh_e = GitHubServiceError::from(e);
         if gh_e.is_api_data() {
@@ -708,7 +715,8 @@ pub async fn get_task_attempt_branch_status(
         .ok_or(ApiError::TaskAttempt(TaskAttemptError::TaskNotFound))?;
     let ctx = TaskAttempt::load_context(pool, task_attempt.id, task.id, task.project_id).await?;
 
-    let branch_status = GitService::new()
+    let branch_status = deployment
+        .git()
         .get_branch_status(
             &ctx.project.git_repo_path,
             ctx.task_attempt.branch.as_ref().ok_or_else(|| {
@@ -758,7 +766,7 @@ pub async fn rebase_task_attempt(
         .await?;
     let worktree_path = std::path::Path::new(&container_ref);
 
-    let _new_base_commit = GitService::new().rebase_branch(
+    let _new_base_commit = deployment.git().rebase_branch(
         &ctx.project.git_repo_path,
         worktree_path,
         effective_base_branch.clone().as_deref(),
@@ -799,7 +807,8 @@ pub async fn delete_task_attempt_file(
     let worktree_path = std::path::Path::new(&container_ref);
 
     // Use GitService to delete file and commit
-    let _commit_id = GitService::new()
+    let _commit_id = deployment
+        .git()
         .delete_file_and_commit(worktree_path, &query.file_path)
         .map_err(|e| {
             tracing::error!(
