@@ -24,3 +24,35 @@ This file demonstrates a fancy text file format.
 ═══════════════════════════════════════
         ⭐ End of Fancy Test ⭐
 ═══════════════════════════════════════
+
+
+╔═══════════════════════════════════════╗
+║      🇩🇪 DEUTSCHE VERSION 🇩🇪         ║
+╚═══════════════════════════════════════╝
+
+✨ Schicke Testdatei ✨
+======================
+
+Dies ist eine schicke Testdatei mit besonderer Formatierung!
+
+🎨 Funktionen:
+--------------
+• Dekorative Überschriften
+• Unicode-Zeichen
+• Strukturierte Abschnitte
+• Auffälliges Design
+
+📝 Testinhalt:
+--------------
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Diese Datei demonstriert ein schickes Textdateiformat.
+
+🚀 Kurze Fakten:
+----------------
+→ Erstellt für Testzwecke
+→ Enthält verschiedene Formatierungselemente
+→ Zeigt kreative Textdateimöglichkeiten
+
+═══════════════════════════════════════
+      ⭐ Ende des schicken Tests ⭐
+═══════════════════════════════════════
