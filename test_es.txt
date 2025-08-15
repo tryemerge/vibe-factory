@@ -1,0 +1,34 @@
+✨ ARCHIVO DE PRUEBA ELEGANTE ✨
+═══════════════════════════════════════════════════════════════
+
+¡Bienvenido a este archivo de prueba extraordinariamente elegante!
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  "Las pruebas son el proceso de evaluar un sistema o sus   │
+│   componentes con la intención de encontrar si satisface   │
+│   los requisitos especificados o no."                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+📊 Categorías de Pruebas:
+  ▸ Pruebas Unitarias
+  ▸ Pruebas de Integración
+  ▸ Pruebas de Extremo a Extremo
+  ▸ Pruebas de Rendimiento
+  ▸ Pruebas de Seguridad
+
+🎯 Objetivos de Cobertura de Pruebas:
+  ◆ Declaraciones: > 80%
+  ◆ Ramas: > 75%
+  ◆ Funciones: > 90%
+  ◆ Líneas: > 85%
+
+🚀 Comandos Rápidos de Prueba:
+  • npm test         → Ejecutar todas las pruebas
+  • npm test:watch   → Modo observador
+  • npm test:coverage → Informe de cobertura
+
+═══════════════════════════════════════════════════════════════
+              [ FIN DEL ARCHIVO DE PRUEBA ELEGANTE ]
+═══════════════════════════════════════════════════════════════
