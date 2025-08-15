@@ -48,16 +48,15 @@ pub struct GitBranch {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct BranchStatus {
-    pub is_behind: bool,
-    pub commits_behind: usize,
-    pub commits_ahead: usize,
-    pub up_to_date: bool,
+    pub commits_behind: Option<usize>,
+    pub commits_ahead: Option<usize>,
+    pub up_to_date: Option<bool>,
     pub merged: bool,
     pub has_uncommitted_changes: bool,
     pub base_branch_name: String,
-    pub remote_commits_behind: usize,
-    pub remote_commits_ahead: usize,
-    pub remote_up_to_date: bool,
+    pub remote_commits_behind: Option<usize>,
+    pub remote_commits_ahead: Option<usize>,
+    pub remote_up_to_date: Option<bool>,
 }
 
 /// Target for diff generation
@@ -560,26 +559,29 @@ impl GitService {
         let branch_oid = branch_ref.target().unwrap();
 
         // Check for unpushed commits by comparing with origin/branch_name
-        let (remote_commits_ahead, remote_commits_behind) = if let Some(token) = github_token
+        let (remote_commits_ahead, remote_commits_behind, remote_up_to_date) = if let Some(token) =
+            github_token
             && self.fetch_from_remote(&repo, &token).is_ok()
             && let Ok(remote_ref) =
                 repo.find_reference(&format!("refs/remotes/origin/{branch_name}"))
             && let Some(remote_oid) = remote_ref.target()
         {
-            repo.graph_ahead_behind(branch_oid, remote_oid)?
+            let (a, b) = repo.graph_ahead_behind(branch_oid, remote_oid)?;
+            (Some(a), Some(b), Some(a == 0 && b == 0))
         } else {
-            (0, 0)
+            (None, None, None)
         };
 
         // Calculate ahead/behind counts using the stored base branch
-        let (commits_ahead, commits_behind) = if let Ok(base_branch) =
+        let (commits_ahead, commits_behind, up_to_date) = if let Ok(base_branch) =
             repo.find_branch(base_branch_name, BranchType::Local)
             && let Some(base_oid) = base_branch.get().target()
         {
-            repo.graph_ahead_behind(branch_oid, base_oid)?
+            let (a, b) = repo.graph_ahead_behind(branch_oid, base_oid)?;
+            (Some(a), Some(b), Some(a == 0 && b == 0))
         } else {
             // Base branch doesn't exist, assume no relationship
-            (0, 0)
+            (None, None, None)
         };
 
         let mut status_opts = StatusOptions::new();
@@ -594,16 +596,15 @@ impl GitService {
             .any(|e| e.status() != Status::CURRENT);
 
         Ok(BranchStatus {
-            is_behind: commits_behind > 0,
             commits_behind,
             commits_ahead,
-            up_to_date: commits_behind == 0 && commits_ahead == 0,
+            up_to_date,
             merged: is_merged,
             has_uncommitted_changes,
             base_branch_name: base_branch_name.to_string(),
             remote_commits_behind,
             remote_commits_ahead,
-            remote_up_to_date: remote_commits_behind == 0 && remote_commits_ahead == 0,
+            remote_up_to_date,
         })
     }
 

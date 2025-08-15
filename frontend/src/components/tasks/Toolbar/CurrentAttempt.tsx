@@ -599,20 +599,23 @@ function CurrentAttempt({
           {/* Git Operations */}
           {selectedAttempt && branchStatus && (
             <>
-              {branchStatus.is_behind && !branchStatus.merged && (
-                <Button
-                  onClick={handleRebaseClick}
-                  disabled={rebasing || branchStatusLoading || isAttemptRunning}
-                  variant="outline"
-                  size="sm"
-                  className="border-orange-300 text-orange-700 hover:bg-orange-50 gap-1"
-                >
-                  <RefreshCw
-                    className={`h-3 w-3 ${rebasing ? 'animate-spin' : ''}`}
-                  />
-                  {rebasing ? 'Rebasing...' : `Rebase`}
-                </Button>
-              )}
+              {(branchStatus.commits_behind ?? 0) > 0 &&
+                !branchStatus.merged && (
+                  <Button
+                    onClick={handleRebaseClick}
+                    disabled={
+                      rebasing || branchStatusLoading || isAttemptRunning
+                    }
+                    variant="outline"
+                    size="sm"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50 gap-1"
+                  >
+                    <RefreshCw
+                      className={`h-3 w-3 ${rebasing ? 'animate-spin' : ''}`}
+                    />
+                    {rebasing ? 'Rebasing...' : `Rebase`}
+                  </Button>
+                )}
               {
                 // Normal merge and PR buttons for regular tasks
                 !branchStatus.merged && (
@@ -621,7 +624,7 @@ function CurrentAttempt({
                       onClick={handlePRButtonClick}
                       disabled={
                         creatingPR ||
-                        Boolean(branchStatus.is_behind) ||
+                        Boolean((branchStatus.commits_behind ?? 0) > 0) ||
                         isAttemptRunning
                       }
                       variant="outline"
@@ -645,9 +648,9 @@ function CurrentAttempt({
                         selectedAttempt.pr_status === 'open'
                           ? pushing ||
                             isAttemptRunning ||
-                            branchStatus.remote_up_to_date
+                            (branchStatus.remote_up_to_date ?? true)
                           : merging ||
-                            Boolean(branchStatus.is_behind) ||
+                            Boolean((branchStatus.commits_behind ?? 0) > 0) ||
                             isAttemptRunning
                       }
                       size="sm"
@@ -656,14 +659,15 @@ function CurrentAttempt({
                       {selectedAttempt.pr_status === 'open' ? (
                         <>
                           <Upload className="h-3 w-3" />
-                          {console.log(branchStatus)}
                           {pushing
                             ? 'Pushing...'
-                            : !branchStatus.remote_up_to_date
-                              ? branchStatus.remote_commits_behind > 1
-                                ? `Push ${branchStatus.remote_commits_behind} commits`
-                                : 'Push 1 commit'
-                              : 'Push changes'}
+                            : branchStatus.remote_commits_behind === null
+                              ? 'Disconnected'
+                              : branchStatus.remote_commits_behind === 0
+                                ? 'Push to remote'
+                                : branchStatus.remote_commits_behind === 1
+                                  ? 'Push 1 commit'
+                                  : `Push ${branchStatus.remote_commits_behind} commits`}
                         </>
                       ) : (
                         <>
