@@ -644,9 +644,8 @@ function CurrentAttempt({
                       disabled={
                         selectedAttempt.pr_status === 'open'
                           ? pushing ||
-                            Boolean(branchStatus.is_behind) ||
                             isAttemptRunning ||
-                            !branchStatus.has_unpushed_commits
+                            branchStatus.remote_up_to_date
                           : merging ||
                             Boolean(branchStatus.is_behind) ||
                             isAttemptRunning
@@ -657,11 +656,12 @@ function CurrentAttempt({
                       {selectedAttempt.pr_status === 'open' ? (
                         <>
                           <Upload className="h-3 w-3" />
+                          {console.log(branchStatus)}
                           {pushing
                             ? 'Pushing...'
-                            : branchStatus.has_unpushed_commits
-                              ? branchStatus.unpushed_commits_count > 1
-                                ? `Push ${branchStatus.unpushed_commits_count} commits`
+                            : !branchStatus.remote_up_to_date
+                              ? branchStatus.remote_commits_behind > 1
+                                ? `Push ${branchStatus.remote_commits_behind} commits`
                                 : 'Push 1 commit'
                               : 'Push changes'}
                         </>
