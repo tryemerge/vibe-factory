@@ -31,3 +31,42 @@ Section 3: Numbers & Symbols
 
 ═══════════════════
 End of Test File ✨
+
+╔═══════════════════════════╗
+║  DEUTSCHE VERSION 🇩🇪      ║
+╚═══════════════════════════╝
+
+✨ Schicke Testdatei ✨
+═══════════════════════
+
+Dies ist eine schicke Testdatei mit interessantem Inhalt!
+
+Funktionen:
+• Unicode-Dekorationen
+• Mehrere Abschnitte
+• ASCII-Kunst-Rahmen
+
+┌─────────────────────────┐
+│  Willkommen zur         │
+│  Testdatei              │
+│  Nur für Testzwecke     │
+└─────────────────────────┘
+
+Abschnitt 1: Lorem Ipsum
+━━━━━━━━━━━━━━━━━━━━━━━
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+Abschnitt 2: Der schnelle braune Fuchs
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Der schnelle braune Fuchs springt über den faulen Hund.
+Franz jagt im komplett verwahrlosten Taxi quer durch Bayern.
+
+Abschnitt 3: Zahlen & Symbole
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1234567890
+!@#$%^&*()_+-=[]{}|;':",./<>?
+äöüÄÖÜß
+
+═══════════════════════
+Ende der Testdatei ✨
