@@ -714,6 +714,7 @@ pub async fn get_task_attempt_branch_status(
         .await?
         .ok_or(ApiError::TaskAttempt(TaskAttemptError::TaskNotFound))?;
     let ctx = TaskAttempt::load_context(pool, task_attempt.id, task.id, task.project_id).await?;
+    let github_config = deployment.config().read().await.github.clone();
 
     let branch_status = deployment
         .git()
@@ -726,6 +727,7 @@ pub async fn get_task_attempt_branch_status(
             })?,
             &ctx.task_attempt.base_branch,
             ctx.task_attempt.merge_commit.is_some(),
+            github_config.token(),
         )
         .map_err(|e| {
             tracing::error!(
@@ -747,6 +749,8 @@ pub async fn rebase_task_attempt(
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
     // Extract new base branch from request body if provided
     let new_base_branch = request_body.and_then(|body| body.new_base_branch.clone());
+
+    let github_config = deployment.config().read().await.github.clone();
 
     let pool = &deployment.db().pool;
 
@@ -771,6 +775,7 @@ pub async fn rebase_task_attempt(
         worktree_path,
         effective_base_branch.clone().as_deref(),
         &ctx.task_attempt.base_branch.clone(),
+        github_config.token(),
     )?;
 
     if let Some(new_base_branch) = &effective_base_branch {
