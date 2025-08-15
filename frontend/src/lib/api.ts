@@ -380,12 +380,9 @@ export const attemptsApi = {
   },
 
   push: async (attemptId: string): Promise<void> => {
-    const response = await makeRequest(
-      `/api/task-attempts/${attemptId}/push`,
-      {
-        method: 'POST',
-      }
-    );
+    const response = await makeRequest(`/api/task-attempts/${attemptId}/push`, {
+      method: 'POST',
+    });
     return handleApiResponse<void>(response);
   },
 

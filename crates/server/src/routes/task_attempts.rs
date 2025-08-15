@@ -484,22 +484,14 @@ pub async fn merge_task_attempt(
 pub async fn push_task_attempt_branch(
     Extension(task_attempt): Extension<TaskAttempt>,
     State(deployment): State<DeploymentImpl>,
-) -> Result<ResponseJson<ApiResponse<(), GitHubServiceError>>, ApiError> {
+) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
     let github_config = deployment.config().read().await.github.clone();
     let Some(github_token) = github_config.token() else {
-        return Ok(ResponseJson(ApiResponse::error_with_data(
-            GitHubServiceError::TokenInvalid,
-        )));
+        return Err(GitHubServiceError::TokenInvalid.into());
     };
 
     let github_service = GitHubService::new(&github_token)?;
-    if let Err(e) = github_service.check_token().await {
-        if e.is_api_data() {
-            return Ok(ResponseJson(ApiResponse::error_with_data(e)));
-        } else {
-            return Err(ApiError::GitHubService(e));
-        }
-    }
+    github_service.check_token().await?;
 
     let pool = &deployment.db().pool;
     let task = task_attempt
@@ -520,19 +512,8 @@ pub async fn push_task_attempt_branch(
         ))
     })?;
 
-    if let Err(e) = GitService::new().push_to_github(worktree_path, branch_name, &github_token) {
-        tracing::error!("Failed to push branch to GitHub: {}", e);
-        let gh_e = GitHubServiceError::from(e);
-        if gh_e.is_api_data() {
-            Ok(ResponseJson(ApiResponse::error_with_data(gh_e)))
-        } else {
-            Ok(ResponseJson(ApiResponse::error(
-                "Failed to push branch to GitHub",
-            )))
-        }
-    } else {
-        Ok(ResponseJson(ApiResponse::success(())))
-    }
+    GitService::new().push_to_github(worktree_path, branch_name, &github_token)?;
+    Ok(ResponseJson(ApiResponse::success(())))
 }
 
 pub async fn create_github_pr(
