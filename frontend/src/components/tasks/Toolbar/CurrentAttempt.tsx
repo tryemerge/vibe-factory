@@ -3,7 +3,6 @@ import {
   GitBranch as GitBranchIcon,
   GitPullRequest,
   History,
-  Upload,
   Play,
   Plus,
   RefreshCw,
@@ -44,7 +43,7 @@ import {
   useState,
 } from 'react';
 import type { ExecutionProcess } from 'shared/types';
-import type { BranchStatus, GitBranch, TaskAttempt } from 'shared/types';
+import type { BranchStatusResponse, GitBranch, TaskAttempt } from 'shared/types';
 import {
   TaskAttemptDataContext,
   TaskAttemptStoppingContext,
@@ -115,7 +114,7 @@ function CurrentAttempt({
   const [devServerDetails, setDevServerDetails] =
     useState<ExecutionProcess | null>(null);
   const [isHoveringDevServer, setIsHoveringDevServer] = useState(false);
-  const [branchStatus, setBranchStatus] = useState<BranchStatus | null>(null);
+  const [branchStatus, setBranchStatus] = useState<BranchStatusResponse | null>(null);
   const [branchStatusLoading, setBranchStatusLoading] = useState(false);
   const [showRebaseDialog, setShowRebaseDialog] = useState(false);
   const [selectedRebaseBranch, setSelectedRebaseBranch] = useState<string>('');
@@ -296,6 +295,17 @@ function CurrentAttempt({
     }
   }, [selectedAttempt, fetchBranchStatus]);
 
+  // Add periodic polling for branch status
+  useEffect(() => {
+    if (!selectedAttempt) return;
+
+    const interval = setInterval(() => {
+      fetchBranchStatus();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [selectedAttempt, fetchBranchStatus]);
+
   const performMerge = async () => {
     if (!projectId || !selectedAttempt?.id || !selectedAttempt?.task_id) return;
 
@@ -360,9 +370,9 @@ function CurrentAttempt({
   const handlePRButtonClick = async () => {
     if (!projectId || !selectedAttempt?.id || !selectedAttempt?.task_id) return;
 
-    // If PR already exists, view it in a new tab
-    if (mergeInfo.hasOpenPR && mergeInfo.openPR && mergeInfo.openPR.type === 'pr') {
-      window.open(mergeInfo.openPR.pr_info.url, '_blank');
+    // If PR already exists, push to it
+    if (mergeInfo.hasOpenPR) {
+      await handlePushClick();
       return;
     }
 
@@ -485,23 +495,28 @@ function CurrentAttempt({
           <div className="flex items-center gap-1.5">
             {mergeInfo.hasOpenPR && mergeInfo.openPR && mergeInfo.openPR.type === 'pr' ? (
               <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 bg-yellow-500 rounded-full" />
-                <span className="text-sm font-medium text-yellow-700">
-                  PR #{mergeInfo.openPR.pr_info.number.toString()}
-                </span>
+                <div className="h-2 w-2 bg-blue-500 rounded-full" />
+                <button
+                  onClick={() => mergeInfo.openPR && mergeInfo.openPR.type === 'pr' && window.open(mergeInfo.openPR.pr_info.url, '_blank')}
+                  className="text-sm font-medium text-blue-700 hover:underline cursor-pointer"
+                >
+                  PR #{mergeInfo.openPR && mergeInfo.openPR.type === 'pr' ? mergeInfo.openPR.pr_info.number.toString() : ''}
+                </button>
               </div>
-            ) : mergeInfo.hasMerged ? (
+            ) : (branchStatus?.commits_behind ?? 0) > 0 && (branchStatus?.commits_ahead ?? 0) > 0 ? (
               <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 bg-green-500 rounded-full" />
-                <span className="text-sm font-medium text-green-700 truncate">
-                  Merged
+                <div className="h-2 w-2 bg-orange-500 rounded-full" />
+                <span className="text-sm font-medium text-orange-700">
+                  Rebase needed
                 </span>
               </div>
             ) : (branchStatus?.commits_ahead ?? 0) > 0 ? (
               <div className="flex items-center gap-1.5">
                 <div className="h-2 w-2 bg-yellow-500 rounded-full" />
                 <span className="text-sm font-medium text-yellow-700">
-                  Not merged
+                  {branchStatus?.commits_ahead === 1
+                    ? '1 commit ahead'
+                    : `${branchStatus?.commits_ahead} commits ahead`}
                 </span>
               </div>
             ) : (
@@ -664,8 +679,10 @@ function CurrentAttempt({
                       onClick={handlePRButtonClick}
                       disabled={
                         creatingPR ||
+                        pushing ||
                         Boolean((branchStatus.commits_behind ?? 0) > 0) ||
-                        isAttemptRunning
+                        isAttemptRunning ||
+                        (mergeInfo.hasOpenPR && branchStatus.remote_commits_ahead === 0)
                       }
                       variant="outline"
                       size="xs"
@@ -673,44 +690,30 @@ function CurrentAttempt({
                     >
                       <GitPullRequest className="h-3 w-3" />
                       {mergeInfo.hasOpenPR
-                        ? 'View PR'
+                        ? pushing
+                          ? 'Pushing...'
+                          : branchStatus.remote_commits_ahead === 0
+                            ? 'Push to PR'
+                            : branchStatus.remote_commits_ahead === 1
+                              ? 'Push 1 commit'
+                              : `Push ${branchStatus.remote_commits_ahead || 0} commits`
                         : creatingPR
                           ? 'Creating...'
                           : 'Create PR'}
                     </Button>
                     <Button
-                      onClick={mergeInfo.hasOpenPR ? handlePushClick : handleMergeClick}
+                      onClick={handleMergeClick}
                       disabled={
-                        mergeInfo.hasOpenPR
-                          ? pushing ||
-                          isAttemptRunning ||
-                          (branchStatus.remote_up_to_date ?? true)
-                          : merging ||
-                          Boolean((branchStatus.commits_behind ?? 0) > 0) ||
-                          isAttemptRunning
+                        mergeInfo.hasOpenPR ||
+                        merging ||
+                        Boolean((branchStatus.commits_behind ?? 0) > 0) ||
+                        isAttemptRunning
                       }
                       size="xs"
                       className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 gap-1"
                     >
-                      {mergeInfo.hasOpenPR ? (
-                        <>
-                          <Upload className="h-3 w-3" />
-                          {pushing
-                            ? 'Pushing...'
-                            : branchStatus.remote_commits_behind === null
-                              ? 'Disconnected'
-                              : branchStatus.remote_commits_behind === 0
-                                ? 'Push to remote'
-                                : branchStatus.remote_commits_behind === 1
-                                  ? 'Push 1 commit'
-                                  : `Push ${branchStatus.remote_commits_behind} commits`}
-                        </>
-                      ) : (
-                        <>
-                          <GitBranchIcon className="h-3 w-3" />
-                          {merging ? 'Merging...' : 'Merge'}
-                        </>
-                      )}
+                      <GitBranchIcon className="h-3 w-3" />
+                      {merging ? 'Merging...' : 'Merge'}
                     </Button>
                   </>
                 )

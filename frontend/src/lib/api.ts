@@ -2,7 +2,7 @@
 
 import {
   ApiResponse,
-  BranchStatus,
+  BranchStatusResponse,
   CheckTokenResponse,
   Config,
   CreateFollowUpAttempt,
@@ -363,11 +363,11 @@ export const attemptsApi = {
     return handleApiResponse<void>(response);
   },
 
-  getBranchStatus: async (attemptId: string): Promise<BranchStatus> => {
+  getBranchStatus: async (attemptId: string): Promise<BranchStatusResponse> => {
     const response = await makeRequest(
       `/api/task-attempts/${attemptId}/branch-status`
     );
-    return handleApiResponse<BranchStatus>(response);
+    return handleApiResponse<BranchStatusResponse>(response);
   },
 
   merge: async (attemptId: string): Promise<void> => {
