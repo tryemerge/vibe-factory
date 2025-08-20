@@ -14,7 +14,6 @@ use utils::diff::{Diff, FileDiffDetails};
 // Import for file ranking functionality
 use super::file_ranker::FileStat;
 use crate::services::github_service::GitHubRepoInfo;
-use db::models::merge::Merge;
 
 #[derive(Debug, Error)]
 pub enum GitServiceError {
@@ -57,16 +56,11 @@ pub struct HeadInfo {
     pub oid: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BranchStatus {
-    pub commits_behind: Option<usize>,
-    pub commits_ahead: Option<usize>,
-    pub up_to_date: Option<bool>,
-    pub base_branch_name: String,
-    pub remote_commits_behind: Option<usize>,
-    pub remote_commits_ahead: Option<usize>,
-    pub remote_up_to_date: Option<bool>,
-    pub merges: Vec<Merge>,
+    pub commits_behind: usize,
+    pub commits_ahead: usize,
+    pub up_to_date: bool,
 }
 
 /// Target for diff generation
@@ -571,12 +565,39 @@ impl GitService {
         Ok(squash_commit_id.to_string())
     }
 
-    pub fn get_branch_status(
+    pub fn get_local_branch_status(
         &self,
         repo_path: &Path,
         branch_name: &str,
         base_branch_name: &str,
-        github_token: Option<String>,
+    ) -> Result<BranchStatus, GitServiceError> {
+        let repo = Repository::open(repo_path)?;
+        let branch_ref = repo
+            // try "refs/heads/<name>" first, then raw name
+            .find_reference(&format!("refs/heads/{branch_name}"))
+            .or_else(|_| repo.find_reference(branch_name))?;
+        let branch_oid = branch_ref.target().unwrap();
+        // Calculate ahead/behind counts using the stored base branch
+        let base_oid = repo
+            .find_branch(base_branch_name, BranchType::Local)?
+            .get()
+            .target()
+            .ok_or(GitServiceError::BranchNotFound(format!(
+                "refs/heads/{base_branch_name}"
+            )))?;
+        let (a, b) = repo.graph_ahead_behind(branch_oid, base_oid)?;
+        Ok(BranchStatus {
+            commits_ahead: a,
+            commits_behind: b,
+            up_to_date: (a == 0 && b == 0),
+        })
+    }
+
+    pub fn get_remote_branch_status(
+        &self,
+        repo_path: &Path,
+        branch_name: &str,
+        github_token: String,
     ) -> Result<BranchStatus, GitServiceError> {
         let repo = Repository::open(repo_path)?;
 
@@ -585,42 +606,20 @@ impl GitService {
             .find_reference(&format!("refs/heads/{branch_name}"))
             .or_else(|_| repo.find_reference(branch_name))?;
         let branch_oid = branch_ref.target().unwrap();
-
         // Check for unpushed commits by comparing with origin/branch_name
-        let (remote_commits_ahead, remote_commits_behind, remote_up_to_date) = if let Some(token) =
-            github_token
-            && self.fetch_from_remote(&repo, &token).is_ok()
-            && let Ok(remote_ref) =
-                repo.find_reference(&format!("refs/remotes/origin/{branch_name}"))
-            && let Some(remote_oid) = remote_ref.target()
-        {
-            let (a, b) = repo.graph_ahead_behind(branch_oid, remote_oid)?;
-            (Some(a), Some(b), Some(a == 0 && b == 0))
-        } else {
-            (None, None, None)
-        };
-
-        // Calculate ahead/behind counts using the stored base branch
-        let (commits_ahead, commits_behind, up_to_date) = if let Ok(base_branch) =
-            repo.find_branch(base_branch_name, BranchType::Local)
-            && let Some(base_oid) = base_branch.get().target()
-        {
-            let (a, b) = repo.graph_ahead_behind(branch_oid, base_oid)?;
-            (Some(a), Some(b), Some(a == 0 && b == 0))
-        } else {
-            // Base branch doesn't exist, assume no relationship
-            (None, None, None)
-        };
-
+        self.fetch_from_remote(&repo, &github_token)?;
+        let remote_oid = repo
+            .find_reference(&format!("refs/remotes/origin/{branch_name}"))?
+            .target()
+            .ok_or(GitServiceError::BranchNotFound(format!(
+                "origin/{branch_name}"
+            )))?;
+        // Calculate ahead/behind counts
+        let (a, b) = repo.graph_ahead_behind(branch_oid, remote_oid)?;
         Ok(BranchStatus {
-            commits_behind,
-            commits_ahead,
-            up_to_date,
-            base_branch_name: base_branch_name.to_string(),
-            remote_commits_behind,
-            remote_commits_ahead,
-            remote_up_to_date,
-            merges: Vec::new(), // Will be populated by the calling endpoint
+            commits_ahead: a,
+            commits_behind: b,
+            up_to_date: (a == 0 && b == 0),
         })
     }
 

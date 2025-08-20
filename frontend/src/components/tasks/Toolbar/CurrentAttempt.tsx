@@ -44,7 +44,7 @@ import {
   useState,
 } from 'react';
 import type { ExecutionProcess } from 'shared/types';
-import type { BranchStatus, GitBranch, TaskAttempt } from 'shared/types';
+import type { BranchStatusResponse, GitBranch, TaskAttempt } from 'shared/types';
 import {
   TaskAttemptDataContext,
   TaskAttemptStoppingContext,
@@ -115,7 +115,7 @@ function CurrentAttempt({
   const [devServerDetails, setDevServerDetails] =
     useState<ExecutionProcess | null>(null);
   const [isHoveringDevServer, setIsHoveringDevServer] = useState(false);
-  const [branchStatus, setBranchStatus] = useState<BranchStatus | null>(null);
+  const [branchStatus, setBranchStatus] = useState<BranchStatusResponse | null>(null);
   const [branchStatusLoading, setBranchStatusLoading] = useState(false);
   const [showRebaseDialog, setShowRebaseDialog] = useState(false);
   const [selectedRebaseBranch, setSelectedRebaseBranch] = useState<string>('');
@@ -294,6 +294,17 @@ function CurrentAttempt({
     if (selectedAttempt) {
       fetchBranchStatus();
     }
+  }, [selectedAttempt, fetchBranchStatus]);
+
+  // Add periodic polling for branch status
+  useEffect(() => {
+    if (!selectedAttempt) return;
+
+    const interval = setInterval(() => {
+      fetchBranchStatus();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [selectedAttempt, fetchBranchStatus]);
 
   const performMerge = async () => {
