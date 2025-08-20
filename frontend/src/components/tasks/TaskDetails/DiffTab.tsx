@@ -1,9 +1,9 @@
 import { generateDiffFile } from '@git-diff-view/file';
 import { useDiffEntries } from '@/hooks/useDiffEntries';
 import { useMemo, useContext, useCallback, useState, useEffect } from 'react';
-import { 
+import {
   TaskSelectedAttemptContext,
-  TaskAttemptDataContext 
+  TaskAttemptDataContext,
 } from '@/components/context/taskDetailsContext.ts';
 import { Diff } from 'shared/types';
 import { getHighLightLanguageFromPath } from '@/utils/extToLanguage';
