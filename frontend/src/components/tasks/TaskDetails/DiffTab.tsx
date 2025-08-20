@@ -81,7 +81,6 @@ function DiffTab() {
         <div className="text-center text-muted-foreground">
           <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p className="text-sm font-medium">No file changes</p>
-          <p className="text-xs mt-1">This attempt didn't modify any files</p>
         </div>
       </div>
     );
