@@ -3,7 +3,6 @@ import {
   GitBranch as GitBranchIcon,
   GitPullRequest,
   History,
-  Upload,
   Play,
   Plus,
   RefreshCw,
@@ -371,9 +370,9 @@ function CurrentAttempt({
   const handlePRButtonClick = async () => {
     if (!projectId || !selectedAttempt?.id || !selectedAttempt?.task_id) return;
 
-    // If PR already exists, view it in a new tab
-    if (mergeInfo.hasOpenPR && mergeInfo.openPR && mergeInfo.openPR.type === 'pr') {
-      window.open(mergeInfo.openPR.pr_info.url, '_blank');
+    // If PR already exists, push to it
+    if (mergeInfo.hasOpenPR) {
+      await handlePushClick();
       return;
     }
 
@@ -497,9 +496,12 @@ function CurrentAttempt({
             {mergeInfo.hasOpenPR && mergeInfo.openPR && mergeInfo.openPR.type === 'pr' ? (
               <div className="flex items-center gap-1.5">
                 <div className="h-2 w-2 bg-yellow-500 rounded-full" />
-                <span className="text-sm font-medium text-yellow-700">
-                  PR #{mergeInfo.openPR.pr_info.number.toString()}
-                </span>
+                <button
+                  onClick={() => mergeInfo.openPR && mergeInfo.openPR.type === 'pr' && window.open(mergeInfo.openPR.pr_info.url, '_blank')}
+                  className="text-sm font-medium text-yellow-700 hover:underline cursor-pointer"
+                >
+                  PR #{mergeInfo.openPR && mergeInfo.openPR.type === 'pr' ? mergeInfo.openPR.pr_info.number.toString() : ''}
+                </button>
               </div>
             ) : mergeInfo.hasMerged ? (
               <div className="flex items-center gap-1.5">
@@ -675,6 +677,7 @@ function CurrentAttempt({
                       onClick={handlePRButtonClick}
                       disabled={
                         creatingPR ||
+                        pushing ||
                         Boolean((branchStatus.commits_behind ?? 0) > 0) ||
                         isAttemptRunning
                       }
@@ -684,44 +687,32 @@ function CurrentAttempt({
                     >
                       <GitPullRequest className="h-3 w-3" />
                       {mergeInfo.hasOpenPR
-                        ? 'View PR'
+                        ? pushing
+                          ? 'Pushing...'
+                          : branchStatus.remote_commits_behind === null
+                            ? 'Disconnected'
+                            : branchStatus.remote_commits_behind === 0
+                              ? 'Push to PR'
+                              : branchStatus.remote_commits_behind === 1
+                                ? 'Push 1 commit'
+                                : `Push ${branchStatus.remote_commits_behind} commits`
                         : creatingPR
                           ? 'Creating...'
                           : 'Create PR'}
                     </Button>
                     <Button
-                      onClick={mergeInfo.hasOpenPR ? handlePushClick : handleMergeClick}
+                      onClick={handleMergeClick}
                       disabled={
-                        mergeInfo.hasOpenPR
-                          ? pushing ||
-                          isAttemptRunning ||
-                          (branchStatus.remote_up_to_date ?? true)
-                          : merging ||
-                          Boolean((branchStatus.commits_behind ?? 0) > 0) ||
-                          isAttemptRunning
+                        mergeInfo.hasOpenPR ||
+                        merging ||
+                        Boolean((branchStatus.commits_behind ?? 0) > 0) ||
+                        isAttemptRunning
                       }
                       size="xs"
                       className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 gap-1"
                     >
-                      {mergeInfo.hasOpenPR ? (
-                        <>
-                          <Upload className="h-3 w-3" />
-                          {pushing
-                            ? 'Pushing...'
-                            : branchStatus.remote_commits_behind === null
-                              ? 'Disconnected'
-                              : branchStatus.remote_commits_behind === 0
-                                ? 'Push to remote'
-                                : branchStatus.remote_commits_behind === 1
-                                  ? 'Push 1 commit'
-                                  : `Push ${branchStatus.remote_commits_behind} commits`}
-                        </>
-                      ) : (
-                        <>
-                          <GitBranchIcon className="h-3 w-3" />
-                          {merging ? 'Merging...' : 'Merge'}
-                        </>
-                      )}
+                      <GitBranchIcon className="h-3 w-3" />
+                      {merging ? 'Merging...' : 'Merge'}
                     </Button>
                   </>
                 )
