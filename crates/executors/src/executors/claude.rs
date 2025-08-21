@@ -1,4 +1,4 @@
-use std::{path::PathBuf, process::Stdio, sync::Arc};
+use std::{path::PathBuf, process::Stdio, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
 use command_group::{AsyncCommandGroup, AsyncGroupChild};
@@ -39,6 +39,10 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         current_dir: &PathBuf,
         prompt: &str,
     ) -> Result<AsyncGroupChild, ExecutorError> {
+        let spawn_start = Instant::now();
+        tracing::debug!("🚀 Starting Claude Code spawn in dir: {}", current_dir.display());
+        
+        let command_build_start = Instant::now();
         let (shell_cmd, shell_arg) = get_shell_command();
         let claude_command = if self.plan {
             let base_command = self.command.build_initial();
@@ -46,9 +50,11 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         } else {
             self.command.build_initial()
         };
+        tracing::debug!("⚡ Command build time: {:?}, command: {}", command_build_start.elapsed(), claude_command);
 
         let combined_prompt = utils::text::combine_prompt(&self.append_prompt, prompt);
 
+        let command_setup_start = Instant::now();
         let mut command = Command::new(shell_cmd);
         command
             .kill_on_drop(true)
@@ -58,15 +64,21 @@ impl StandardCodingAgentExecutor for ClaudeCode {
             .current_dir(current_dir)
             .arg(shell_arg)
             .arg(&claude_command);
+        tracing::debug!("⚙️  Command setup time: {:?}", command_setup_start.elapsed());
 
+        let spawn_process_start = Instant::now();
         let mut child = command.group_spawn()?;
+        tracing::debug!("🔥 Process spawn time (NPX overhead): {:?}", spawn_process_start.elapsed());
 
         // Feed the prompt in, then close the pipe so Claude sees EOF
+        let stdin_start = Instant::now();
         if let Some(mut stdin) = child.inner().stdin.take() {
             stdin.write_all(combined_prompt.as_bytes()).await?;
             stdin.shutdown().await?;
         }
+        tracing::debug!("📝 Stdin operations time: {:?}", stdin_start.elapsed());
 
+        tracing::debug!("✅ Total Claude Code spawn time: {:?}", spawn_start.elapsed());
         Ok(child)
     }
 
@@ -76,6 +88,10 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         prompt: &str,
         session_id: &str,
     ) -> Result<AsyncGroupChild, ExecutorError> {
+        let spawn_start = Instant::now();
+        tracing::debug!("🔄 Starting Claude Code follow-up spawn with session: {}", session_id);
+        
+        let command_build_start = Instant::now();
         let (shell_cmd, shell_arg) = get_shell_command();
         // Build follow-up command with --resume {session_id}
         let claude_command = if self.plan {
@@ -87,9 +103,11 @@ impl StandardCodingAgentExecutor for ClaudeCode {
             self.command
                 .build_follow_up(&["--resume".to_string(), session_id.to_string()])
         };
+        tracing::debug!("⚡ Follow-up command build time: {:?}, command: {}", command_build_start.elapsed(), claude_command);
 
         let combined_prompt = utils::text::combine_prompt(&self.append_prompt, prompt);
 
+        let command_setup_start = Instant::now();
         let mut command = Command::new(shell_cmd);
         command
             .kill_on_drop(true)
@@ -99,15 +117,21 @@ impl StandardCodingAgentExecutor for ClaudeCode {
             .current_dir(current_dir)
             .arg(shell_arg)
             .arg(&claude_command);
+        tracing::debug!("⚙️  Follow-up command setup time: {:?}", command_setup_start.elapsed());
 
+        let spawn_process_start = Instant::now();
         let mut child = command.group_spawn()?;
+        tracing::debug!("🔥 Follow-up process spawn time (NPX overhead): {:?}", spawn_process_start.elapsed());
 
         // Feed the followup prompt in, then close the pipe
+        let stdin_start = Instant::now();
         if let Some(mut stdin) = child.inner().stdin.take() {
             stdin.write_all(combined_prompt.as_bytes()).await?;
             stdin.shutdown().await?;
         }
+        tracing::debug!("📝 Follow-up stdin operations time: {:?}", stdin_start.elapsed());
 
+        tracing::debug!("✅ Total Claude Code follow-up spawn time: {:?}", spawn_start.elapsed());
         Ok(child)
     }
 

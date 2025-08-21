@@ -5,6 +5,7 @@ use std::{
         Arc,
         atomic::{AtomicUsize, Ordering},
     },
+    time::Instant,
 };
 
 use anyhow::{Error as AnyhowError, anyhow};
@@ -552,7 +553,11 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        let start_execution_start = Instant::now();
+        tracing::debug!("🏁 Starting execution for task_attempt: {} with reason: {:?}", task_attempt.id, run_reason);
+        
         // Update task status to InProgress when starting an attempt
+        let db_ops_start = Instant::now();
         let task = task_attempt
             .parent_task(&self.db().pool)
             .await?
@@ -572,6 +577,7 @@ pub trait ContainerService {
         let execution_process =
             ExecutionProcess::create(&self.db().pool, &create_execution_process, Uuid::new_v4())
                 .await?;
+        tracing::debug!("💾 Initial database operations time: {:?}", db_ops_start.elapsed());
 
         if let Some(prompt) = match executor_action.typ() {
             ExecutorActionType::CodingAgentInitialRequest(coding_agent_request) => {
@@ -598,9 +604,11 @@ pub trait ContainerService {
             .await?;
         }
 
+        let execution_inner_start = Instant::now();
         let _ = self
             .start_execution_inner(task_attempt, &execution_process, executor_action)
             .await?;
+        tracing::debug!("⚡ start_execution_inner time: {:?}", execution_inner_start.elapsed());
 
         // Start processing normalised logs for executor requests and follow ups
         match executor_action.typ() {
@@ -662,6 +670,7 @@ pub trait ContainerService {
         };
 
         self.spawn_stream_raw_logs_to_db(&execution_process.id);
+        tracing::debug!("✅ Total start_execution time: {:?}", start_execution_start.elapsed());
         Ok(execution_process)
     }
 

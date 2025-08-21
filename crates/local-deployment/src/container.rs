@@ -3,7 +3,7 @@ use std::{
     io,
     path::{Path, PathBuf},
     sync::Arc,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyhow::anyhow;
@@ -834,6 +834,9 @@ impl ContainerService for LocalContainerService {
         execution_process: &ExecutionProcess,
         executor_action: &ExecutorAction,
     ) -> Result<(), ContainerError> {
+        let start_inner = Instant::now();
+        tracing::debug!("🔧 Starting execution inner for process: {}", execution_process.id);
+        
         // Get the worktree path
         let container_ref = task_attempt
             .container_ref
@@ -844,16 +847,25 @@ impl ContainerService for LocalContainerService {
         let current_dir = PathBuf::from(container_ref);
 
         // Create the child and stream, add to execution tracker
+        let spawn_start = Instant::now();
         let mut child = executor_action.spawn(&current_dir).await?;
+        tracing::debug!("🔥 executor_action.spawn() time: {:?}", spawn_start.elapsed());
 
+        let tracking_start = Instant::now();
         self.track_child_msgs_in_store(execution_process.id, &mut child)
             .await;
+        tracing::debug!("📝 Child message tracking setup time: {:?}", tracking_start.elapsed());
 
+        let store_start = Instant::now();
         self.add_child_to_store(execution_process.id, child).await;
+        tracing::debug!("📺 Child store add time: {:?}", store_start.elapsed());
 
         // Spawn exit monitor
+        let monitor_start = Instant::now();
         let _hn = self.spawn_exit_monitor(&execution_process.id);
+        tracing::debug!("🔍 Exit monitor spawn time: {:?}", monitor_start.elapsed());
 
+        tracing::debug!("✅ Total start_execution_inner time: {:?}", start_inner.elapsed());
         Ok(())
     }
 
@@ -861,12 +873,19 @@ impl ContainerService for LocalContainerService {
         &self,
         execution_process: &ExecutionProcess,
     ) -> Result<(), ContainerError> {
+        let stop_start = Instant::now();
+        tracing::debug!("⏹️ Starting stop execution for process: {}", execution_process.id);
+        
+        let get_child_start = Instant::now();
         let child = self
             .get_child_from_store(&execution_process.id)
             .await
             .ok_or_else(|| {
                 ContainerError::Other(anyhow!("Child process not found for execution"))
             })?;
+        tracing::debug!("📺 Get child from store time: {:?}", get_child_start.elapsed());
+        
+        let db_update_start = Instant::now();
         ExecutionProcess::update_completion(
             &self.db.pool,
             execution_process.id,
@@ -874,8 +893,10 @@ impl ContainerService for LocalContainerService {
             None,
         )
         .await?;
+        tracing::debug!("💾 DB status update time: {:?}", db_update_start.elapsed());
 
         // Kill the child process and remove from the store
+        let kill_start = Instant::now();
         {
             let mut child_guard = child.write().await;
             if let Err(e) = command::kill_process_group(&mut child_guard).await {
@@ -887,12 +908,16 @@ impl ContainerService for LocalContainerService {
                 return Err(e);
             }
         }
+        tracing::debug!("☠️ Process kill time: {:?}", kill_start.elapsed());
+        
+        let cleanup_start = Instant::now();
         self.remove_child_from_store(&execution_process.id).await;
 
         // Mark the process finished in the MsgStore
         if let Some(msg) = self.msg_stores.write().await.remove(&execution_process.id) {
             msg.push_finished();
         }
+        tracing::debug!("🧹 Store cleanup time: {:?}", cleanup_start.elapsed());
 
         // Update task status to InReview when execution is stopped
         if let Ok(ctx) = ExecutionProcess::load_context(&self.db.pool, execution_process.id).await
@@ -911,6 +936,7 @@ impl ContainerService for LocalContainerService {
             execution_process.id
         );
 
+        tracing::debug!("✅ Total stop_execution time: {:?}", stop_start.elapsed());
         Ok(())
     }
 
