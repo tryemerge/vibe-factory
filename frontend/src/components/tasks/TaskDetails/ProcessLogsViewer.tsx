@@ -3,23 +3,25 @@ import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { AlertCircle } from 'lucide-react';
 import { useLogStream } from '@/hooks/useLogStream';
 import RawLogText from '@/components/common/RawLogText';
-import type { PatchType } from 'shared/types';
+import type { PatchType, ExecutionProcess } from 'shared/types';
 
 type LogEntry = Extract<PatchType, { type: 'STDOUT' } | { type: 'STDERR' }>;
 
 interface ProcessLogsViewerProps {
   processId: string;
+  process?: ExecutionProcess;
 }
 
 export default function ProcessLogsViewer({
   processId,
+  process,
 }: ProcessLogsViewerProps) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const didInitScroll = useRef(false);
   const prevLenRef = useRef(0);
   const [atBottom, setAtBottom] = useState(true);
 
-  const { logs, error } = useLogStream(processId);
+  const { logs, error } = useLogStream(processId, process);
 
   // 1) Initial jump to bottom once data appears.
   useEffect(() => {

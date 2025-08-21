@@ -23,7 +23,7 @@ function ProcessCard({ process }: ProcessCardProps) {
   const isCodingAgent = process.run_reason === 'codingagent';
 
   // Use appropriate hook based on process type
-  const { logs, error: rawError } = useLogStream(process.id);
+  const { logs, error: rawError } = useLogStream(process.id, process);
   const {
     entries,
     isConnected: normalizedConnected,

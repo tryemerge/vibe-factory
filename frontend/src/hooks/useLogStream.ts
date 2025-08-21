@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import type { PatchType } from 'shared/types';
+import type { PatchType, ExecutionProcess } from 'shared/types';
 
 type LogEntry = Extract<PatchType, { type: 'STDOUT' } | { type: 'STDERR' }>;
 
@@ -8,11 +8,10 @@ interface UseLogStreamResult {
   error: string | null;
 }
 
-export const useLogStream = (processId: string): UseLogStreamResult => {
+export const useLogStream = (processId: string, executionProcess?: ExecutionProcess): UseLogStreamResult => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const streamStartTimeRef = useRef<number | null>(null);
   const firstLogReceivedRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -23,9 +22,12 @@ export const useLogStream = (processId: string): UseLogStreamResult => {
     // Clear logs when process changes
     setLogs([]);
     setError(null);
-    streamStartTimeRef.current = Date.now();
     firstLogReceivedRef.current = false;
-    console.log(`🏁 Frontend: Starting log stream for process ${processId} at ${new Date().toISOString()}`);
+    
+    if (executionProcess) {
+      const processCreatedTime = new Date(executionProcess.created_at).getTime();
+      console.log(`🏁 Frontend: Starting log stream for process ${processId} (process created at ${executionProcess.created_at})`);
+    }
 
     const eventSource = new EventSource(
       `/api/execution-processes/${processId}/raw-logs`
@@ -37,9 +39,10 @@ export const useLogStream = (processId: string): UseLogStreamResult => {
     };
 
     const addLogEntry = (entry: LogEntry) => {
-      if (!firstLogReceivedRef.current && streamStartTimeRef.current) {
-        const timeToFirstLog = Date.now() - streamStartTimeRef.current;
-        console.log(`🎉 Frontend: First log entry received after ${timeToFirstLog}ms (process: ${processId})`);
+      if (!firstLogReceivedRef.current && executionProcess) {
+        const processCreatedTime = new Date(executionProcess.created_at).getTime();
+        const timeToFirstLog = Date.now() - processCreatedTime;
+        console.log(`🎉 Frontend: First log entry received after ${timeToFirstLog}ms from process creation (process: ${processId})`);
         firstLogReceivedRef.current = true;
       }
       setLogs((prev) => [...prev, entry]);

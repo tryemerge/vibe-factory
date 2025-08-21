@@ -195,7 +195,7 @@ function ProcessesTab() {
           </div>
           <div className="flex-1">
             {selectedProcess ? (
-              <ProcessLogsViewer processId={selectedProcess.id} />
+              <ProcessLogsViewer processId={selectedProcess.id} process={selectedProcess} />
             ) : loadingProcessId === selectedProcessId ? (
               <div className="text-center text-muted-foreground">
                 <p>Loading process details...</p>
