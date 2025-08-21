@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     io,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, atomic::AtomicBool},
     time::{Duration, Instant},
 };
 
@@ -447,6 +447,8 @@ impl LocalContainerService {
 
     async fn track_child_msgs_in_store(&self, id: Uuid, child: &mut AsyncGroupChild) {
         let store = Arc::new(MsgStore::new());
+        let track_start = Instant::now();
+        tracing::debug!("🔍 Starting to track messages for process: {}", id);
 
         let out = child.inner().stdout.take().expect("no stdout");
         let err = child.inner().stderr.take().expect("no stderr");
@@ -463,7 +465,20 @@ impl LocalContainerService {
 
         // Merge and forward into the store
         let merged = select(out, err); // Stream<Item = Result<LogMsg, io::Error>>
-        store.clone().spawn_forwarder(merged);
+        
+        // Add timing wrapper to track first message arrival
+        let first_msg_received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let first_msg_received_clone = first_msg_received.clone();
+        
+        let timed_merged = merged.map(move |result| {
+            if !first_msg_received_clone.load(std::sync::atomic::Ordering::Relaxed) {
+                first_msg_received_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+                tracing::debug!("🎉 First message received from Claude Code after: {:?} (process: {})", track_start.elapsed(), id);
+            }
+            result
+        });
+        
+        store.clone().spawn_forwarder(timed_merged);
 
         let mut map = self.msg_stores().write().await;
         map.insert(id, store);
