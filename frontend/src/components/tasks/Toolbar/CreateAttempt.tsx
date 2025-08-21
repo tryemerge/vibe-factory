@@ -68,6 +68,9 @@ function CreateAttempt({
   // Create attempt logic
   const actuallyCreateAttempt = useCallback(
     async (profile: ProfileVariantLabel, baseBranch?: string) => {
+      const attemptStartTime = Date.now();
+      console.log(`🚀 Frontend: Starting task attempt creation at ${new Date().toISOString()} (task: ${task.title})`);
+      
       const effectiveBaseBranch = baseBranch || selectedBranch;
 
       if (!effectiveBaseBranch) {
@@ -79,6 +82,9 @@ function CreateAttempt({
         profile_variant_label: profile,
         base_branch: effectiveBaseBranch,
       });
+      const attemptCreated = Date.now();
+      console.log(`✅ Frontend: Task attempt created successfully after ${attemptCreated - attemptStartTime}ms`);
+      console.log(`🔍 Frontend: Now watching for logs from new attempt...`);
       fetchTaskAttempts();
     },
     [task.id, selectedProfile, selectedBranch, fetchTaskAttempts]

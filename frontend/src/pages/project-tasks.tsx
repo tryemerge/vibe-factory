@@ -200,11 +200,17 @@ export function ProjectTasks() {
           parent_task_attempt: null,
           image_ids: imageIds || null,
         };
+        const taskStartTime = Date.now();
+        console.log(`🚀 Frontend: Starting task execution at ${new Date().toISOString()}`);
         const result = await tasksApi.createAndStart(payload);
+        const taskStarted = Date.now();
+        console.log(`✅ Frontend: Task started successfully after ${taskStarted - taskStartTime}ms (task: ${result.title})`);
+        console.log(`🔍 Frontend: Now watching for logs from process...`);
         await fetchTasks();
         // Open the newly created task in the details panel
         handleViewTaskDetails(result);
       } catch (err) {
+        console.error('❌ Frontend: Task creation/start failed:', err);
         setError('Failed to create and start task');
       }
     },

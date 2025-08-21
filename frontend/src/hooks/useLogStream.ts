@@ -12,6 +12,8 @@ export const useLogStream = (processId: string): UseLogStreamResult => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const streamStartTimeRef = useRef<number | null>(null);
+  const firstLogReceivedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!processId) {
@@ -21,6 +23,9 @@ export const useLogStream = (processId: string): UseLogStreamResult => {
     // Clear logs when process changes
     setLogs([]);
     setError(null);
+    streamStartTimeRef.current = Date.now();
+    firstLogReceivedRef.current = false;
+    console.log(`🏁 Frontend: Starting log stream for process ${processId} at ${new Date().toISOString()}`);
 
     const eventSource = new EventSource(
       `/api/execution-processes/${processId}/raw-logs`
@@ -32,6 +37,11 @@ export const useLogStream = (processId: string): UseLogStreamResult => {
     };
 
     const addLogEntry = (entry: LogEntry) => {
+      if (!firstLogReceivedRef.current && streamStartTimeRef.current) {
+        const timeToFirstLog = Date.now() - streamStartTimeRef.current;
+        console.log(`🎉 Frontend: First log entry received after ${timeToFirstLog}ms (process: ${processId})`);
+        firstLogReceivedRef.current = true;
+      }
       setLogs((prev) => [...prev, entry]);
     };
 
