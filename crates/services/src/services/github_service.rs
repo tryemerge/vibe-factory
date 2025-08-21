@@ -86,7 +86,8 @@ impl GitHubServiceError {
     pub fn is_api_data(&self) -> bool {
         matches!(
             self,
-            GitHubServiceError::TokenInvalid
+            GitHubServiceError::PullRequest(_)
+                | GitHubServiceError::TokenInvalid
                 | GitHubServiceError::InsufficientPermissions
                 | GitHubServiceError::RepoNotFoundOrNoAccess
         )
