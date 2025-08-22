@@ -22,11 +22,17 @@ export function TaskAttemptActions({
   setShowCreatePRDialog,
   setError,
   onNewAttempt,
+  variant = 'header',
+  showStop = true,
+  showNewAttempt = true,
 }: {
   creatingPR: boolean;
   setShowCreatePRDialog: (open: boolean) => void;
   setError: (err: string | null) => void;
   onNewAttempt?: () => void;
+  variant?: 'header' | 'card';
+  showStop?: boolean;
+  showNewAttempt?: boolean;
 }) {
   const { task } = useContext(TaskDetailsContext);
   const { attemptData, isAttemptRunning, fetchAttemptData, branchStatus } =
@@ -185,8 +191,13 @@ export function TaskAttemptActions({
     }
   }, [selectedAttempt, isAttemptRunning, setIsStopping, fetchAttemptData]);
 
+  const containerClasses =
+    variant === 'header'
+      ? 'ml-auto flex items-center gap-2 py-2 pr-4'
+      : 'flex items-center justify-between gap-2 flex-wrap';
+
   return (
-    <div className="ml-auto flex items-center gap-2 py-2 pr-4">
+    <div className={containerClasses}>
       {/* Dev server actions */}
       <div className="flex items-center gap-2">
         <Button
@@ -214,7 +225,13 @@ export function TaskAttemptActions({
       </div>
 
       {/* PR / Merge + New Attempt */}
-      <div className="flex items-center gap-2 ml-4">
+      <div
+        className={
+          variant === 'header'
+            ? 'flex items-center gap-2 ml-4'
+            : 'flex items-center gap-2'
+        }
+      >
         <Button
           onClick={handlePRButtonClick}
           disabled={
@@ -275,7 +292,7 @@ export function TaskAttemptActions({
             {rebasing ? 'Rebasing...' : 'Rebase'}
           </Button>
         )}
-        {!isAttemptRunning && onNewAttempt && (
+        {showNewAttempt && !isAttemptRunning && onNewAttempt && (
           <Button
             variant="outline"
             size="xs"
@@ -289,13 +306,13 @@ export function TaskAttemptActions({
       </div>
 
       {/* Stop */}
-      {(isStopping || isAttemptRunning) && (
+      {showStop && (isStopping || isAttemptRunning) && (
         <Button
           variant="destructive"
           size="xs"
           onClick={stopAllExecutions}
           disabled={isStopping}
-          className="gap-2 ml-4"
+          className={variant === 'header' ? 'gap-2 ml-4' : 'gap-2'}
         >
           <StopCircle className="h-4 w-4" />
           {isStopping ? 'Stopping...' : 'Stop Attempt'}

@@ -233,18 +233,17 @@ export function TaskDetailsPanel({
               <DeleteFileConfirmationDialog />
             </ProcessSelectionProvider>
           </TabNavContext.Provider>
+          {/* PR Dialog mounted within provider so it has task context */}
+          <CreatePRDialog
+            creatingPR={creatingPR}
+            setShowCreatePRDialog={setShowCreatePRDialog}
+            showCreatePRDialog={showCreatePRDialog}
+            setCreatingPR={setCreatingPR}
+            setError={setPrError}
+            branches={branches}
+          />
         </TaskDetailsProvider>
       )}
-
-      {/* PR Dialog mounted at panel level so header actions can open it */}
-      <CreatePRDialog
-        creatingPR={creatingPR}
-        setShowCreatePRDialog={setShowCreatePRDialog}
-        showCreatePRDialog={showCreatePRDialog}
-        setCreatingPR={setCreatingPR}
-        setError={setPrError}
-        branches={branches}
-      />
     </>
   );
 }
