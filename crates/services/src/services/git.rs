@@ -27,6 +27,8 @@ pub enum GitServiceError {
     BranchNotFound(String),
     #[error("Merge conflicts: {0}")]
     MergeConflicts(String),
+    #[error("Branches diverged: {0}")]
+    BranchesDiverged(String),
     #[error("Invalid path: {0}")]
     InvalidPath(String),
     #[error("{0} has uncommitted changes: {1}")]
@@ -1146,7 +1148,14 @@ impl GitService {
         let _ = repo.remote_delete(temp_remote_name);
 
         // Check push result
-        push_result?;
+        push_result.map_err(|e| match e.code() {
+            git2::ErrorCode::NotFastForward => {
+                GitServiceError::BranchesDiverged(format!(
+                    "Push failed: branch '{branch_name}' has diverged and cannot be fast-forwarded. Either merge the changes or force push."
+                ))
+            }
+            _ => e.into(),
+        })?;
         self.fetch_from_remote(&repo, github_token, &remote)?;
         let mut branch = Self::find_branch(&repo, branch_name)?;
         if !branch.get().is_remote() {
