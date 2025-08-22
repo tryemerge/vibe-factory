@@ -70,7 +70,7 @@ function TaskDetailsHeader({
       <div className="p-4 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0 flex items-start gap-2">
-            {onToggleFullScreen && (
+            {onToggleFullScreen && !isFullScreen && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -101,16 +101,18 @@ function TaskDetailsHeader({
                 </Tooltip>
               </TooltipProvider>
             )}
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold mb-1 line-clamp-2">
-                {task.title}
-              </h2>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Chip dotColor={getTaskStatusDotColor(task.status)}>
-                  {statusLabels[task.status]}
-                </Chip>
+            {!isFullScreen && (
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold mb-1 line-clamp-2">
+                  {task.title}
+                </h2>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Chip dotColor={getTaskStatusDotColor(task.status)}>
+                    {statusLabels[task.status]}
+                  </Chip>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex items-center gap-1">
               {onEditTask && (
                 <TooltipProvider>
@@ -130,7 +132,7 @@ function TaskDetailsHeader({
                   </Tooltip>
                 </TooltipProvider>
               )}
-              {onDeleteTask && (
+              {onDeleteTask && !isFullScreen && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
