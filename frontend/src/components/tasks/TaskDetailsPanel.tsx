@@ -12,11 +12,17 @@ import DiffTab from '@/components/tasks/TaskDetails/DiffTab.tsx';
 import LogsTab from '@/components/tasks/TaskDetails/LogsTab.tsx';
 import ProcessesTab from '@/components/tasks/TaskDetails/ProcessesTab.tsx';
 import DeleteFileConfirmationDialog from '@/components/tasks/DeleteFileConfirmationDialog.tsx';
+import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog';
 import TabNavigation from '@/components/tasks/TaskDetails/TabNavigation.tsx';
+import { TaskAttemptActions } from '@/components/tasks/TaskAttemptActions';
 import TaskDetailsProvider from '../context/TaskDetailsContextProvider.tsx';
 import TaskDetailsToolbar from './TaskDetailsToolbar.tsx';
+import TodoPanel from '@/components/tasks/TodoPanel';
+import { Edit, Trash2 } from 'lucide-react';
 import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
+import { projectsApi } from '@/lib/api';
+import type { GitBranch } from 'shared/types';
 
 interface TaskDetailsPanelProps {
   task: TaskWithAttemptStatus | null;
@@ -29,6 +35,11 @@ interface TaskDetailsPanelProps {
   hideBackdrop?: boolean;
   className?: string;
   hideHeader?: boolean;
+  isFullScreen?: boolean;
+  onToggleFullScreen?: () => void;
+  forceCreateAttempt?: boolean;
+  onLeaveForceCreateAttempt?: () => void;
+  onNewAttempt?: () => void;
 }
 
 export function TaskDetailsPanel({
@@ -42,8 +53,17 @@ export function TaskDetailsPanel({
   hideBackdrop = false,
   className,
   hideHeader = false,
+  isFullScreen = false,
+  onToggleFullScreen,
+  forceCreateAttempt,
+  onLeaveForceCreateAttempt,
+  onNewAttempt,
 }: TaskDetailsPanelProps) {
   const [showEditorDialog, setShowEditorDialog] = useState(false);
+  const [showCreatePRDialog, setShowCreatePRDialog] = useState(false);
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [prError, setPrError] = useState<string | null>(null);
+  const [branches, setBranches] = useState<GitBranch[]>([]);
 
   // Tab and collapsible state
   const [activeTab, setActiveTab] = useState<TabType>('logs');
@@ -54,6 +74,19 @@ export function TaskDetailsPanel({
       setActiveTab('logs');
     }
   }, [task?.id]);
+
+  // Fetch branches for PR dialog usage when panel opens
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const result = await projectsApi.getBranches(projectId);
+        setBranches(result);
+      } catch (e) {
+        // noop
+      }
+    };
+    if (projectId) fetchBranches();
+  }, [projectId]);
 
   // Handle ESC key locally to prevent global navigation
   useEffect(() => {
@@ -97,28 +130,118 @@ export function TaskDetailsPanel({
                       onEditTask={onEditTask}
                       onDeleteTask={onDeleteTask}
                       hideCloseButton={hideBackdrop}
+                      isFullScreen={isFullScreen}
+                      onToggleFullScreen={onToggleFullScreen}
                     />
                   )}
 
-                  <TaskDetailsToolbar />
+                  {isFullScreen ? (
+                    <div className="flex-1 min-h-0 flex">
+                      {/* Sidebar */}
+                      <aside className="w-[28rem] shrink-0 border-r overflow-y-auto p-4 space-y-4">
+                        {/* Fullscreen sidebar shows description only (no title) above edit/delete */}
+                        <div className="space-y-2">
+                          {/* Description */}
+                          <div className="text-sm text-muted-foreground block">
+                            {task.description ? (
+                              <p className="whitespace-pre-wrap break-words">
+                                {task.description}
+                              </p>
+                            ) : (
+                              <p className="italic">No description provided</p>
+                            )}
+                          </div>
+                          {/* Edit/Delete actions under description */}
+                          <div className="block">
+                            {(onEditTask || onDeleteTask) && (
+                              <div className="flex items-center gap-1">
+                                {onEditTask && (
+                                  <button
+                                    className="inline-flex items-center h-8 w-8 justify-center rounded-md hover:bg-accent"
+                                    onClick={() => onEditTask(task)}
+                                    title="Edit task"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                )}
+                                {onDeleteTask && (
+                                  <button
+                                    className="inline-flex items-center h-8 w-8 justify-center rounded-md hover:bg-accent"
+                                    onClick={() => onDeleteTask(task.id)}
+                                    title="Delete task"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
 
-                  <TabNavigation
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                  />
+                        {/* Current Attempt / Actions */}
+                        <TaskDetailsToolbar
+                          variant="sidebar"
+                          forceCreateAttempt={forceCreateAttempt}
+                          onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
+                          // hide actions in sidebar; moved to header in fullscreen
+                        />
 
-                  {/* Tab Content */}
-                  <div className="flex-1 flex flex-col min-h-0">
-                    {activeTab === 'diffs' ? (
-                      <DiffTab />
-                    ) : activeTab === 'processes' ? (
-                      <ProcessesTab />
-                    ) : (
-                      <LogsTab />
-                    )}
-                  </div>
+                        {/* Actions: moved from header to sidebar in fullscreen */}
+                        <TaskAttemptActions
+                          creatingPR={creatingPR}
+                          setShowCreatePRDialog={setShowCreatePRDialog}
+                          setError={setPrError}
+                          onNewAttempt={onNewAttempt}
+                          variant="sidebar"
+                        />
 
-                  <TaskFollowUpSection />
+                        {/* Task Breakdown (TODOs) */}
+                        <TodoPanel />
+                      </aside>
+
+                      {/* Main content */}
+                      <main className="flex-1 min-h-0 flex flex-col">
+                        <TabNavigation
+                          activeTab={activeTab}
+                          setActiveTab={setActiveTab}
+                        />
+
+                        <div className="flex-1 flex flex-col min-h-0">
+                          {activeTab === 'diffs' ? (
+                            <DiffTab />
+                          ) : activeTab === 'processes' ? (
+                            <ProcessesTab />
+                          ) : (
+                            <LogsTab />
+                          )}
+                        </div>
+
+                        <TaskFollowUpSection />
+                      </main>
+                    </div>
+                  ) : (
+                    <>
+                      <TaskDetailsToolbar />
+
+                      <TabNavigation
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                      />
+
+                      {/* Tab Content */}
+                      <div className="flex-1 flex flex-col min-h-0">
+                        {activeTab === 'diffs' ? (
+                          <DiffTab />
+                        ) : activeTab === 'processes' ? (
+                          <ProcessesTab />
+                        ) : (
+                          <LogsTab />
+                        )}
+                      </div>
+
+                      <TaskFollowUpSection />
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -130,6 +253,15 @@ export function TaskDetailsPanel({
               <DeleteFileConfirmationDialog />
             </ProcessSelectionProvider>
           </TabNavContext.Provider>
+          {/* PR Dialog mounted within provider so it has task context */}
+          <CreatePRDialog
+            creatingPR={creatingPR}
+            setShowCreatePRDialog={setShowCreatePRDialog}
+            showCreatePRDialog={showCreatePRDialog}
+            setCreatingPR={setCreatingPR}
+            setError={setPrError}
+            branches={branches}
+          />
         </TaskDetailsProvider>
       )}
     </>
