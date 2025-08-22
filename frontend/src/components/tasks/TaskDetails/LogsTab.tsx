@@ -13,7 +13,6 @@ import {
   TaskSelectedAttemptContext,
 } from '@/components/context/taskDetailsContext.ts';
 import { useProcessesLogs } from '@/hooks/useProcessesLogs';
-import { usePinnedTodos } from '@/hooks/usePinnedTodos';
 import LogEntryRow from '@/components/logs/LogEntryRow';
 import {
   shouldShowInLogs,

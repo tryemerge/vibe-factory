@@ -62,7 +62,7 @@ export function TaskDetailsPanel({
   const [showEditorDialog, setShowEditorDialog] = useState(false);
   const [showCreatePRDialog, setShowCreatePRDialog] = useState(false);
   const [creatingPR, setCreatingPR] = useState(false);
-  const [prError, setPrError] = useState<string | null>(null);
+  const [, setPrError] = useState<string | null>(null);
   const [branches, setBranches] = useState<GitBranch[]>([]);
 
   // Tab and collapsible state

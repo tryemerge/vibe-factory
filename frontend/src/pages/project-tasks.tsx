@@ -10,7 +10,6 @@ import {
   LibraryBig,
   Globe2,
   Minimize2,
-  Trash2,
 } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 import { projectsApi, tasksApi, templatesApi } from '@/lib/api';
