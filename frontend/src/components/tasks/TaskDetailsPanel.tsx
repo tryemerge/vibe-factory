@@ -15,6 +15,7 @@ import DeleteFileConfirmationDialog from '@/components/tasks/DeleteFileConfirmat
 import TabNavigation from '@/components/tasks/TaskDetails/TabNavigation.tsx';
 import TaskDetailsProvider from '../context/TaskDetailsContextProvider.tsx';
 import TaskDetailsToolbar from './TaskDetailsToolbar.tsx';
+import { Edit } from 'lucide-react';
 import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
 
@@ -31,6 +32,8 @@ interface TaskDetailsPanelProps {
   hideHeader?: boolean;
   isFullScreen?: boolean;
   onToggleFullScreen?: () => void;
+  forceCreateAttempt?: boolean;
+  onLeaveForceCreateAttempt?: () => void;
 }
 
 export function TaskDetailsPanel({
@@ -46,6 +49,8 @@ export function TaskDetailsPanel({
   hideHeader = false,
   isFullScreen = false,
   onToggleFullScreen,
+  forceCreateAttempt,
+  onLeaveForceCreateAttempt,
 }: TaskDetailsPanelProps) {
   const [showEditorDialog, setShowEditorDialog] = useState(false);
 
@@ -106,25 +111,85 @@ export function TaskDetailsPanel({
                     />
                   )}
 
-                  <TaskDetailsToolbar />
+                  {isFullScreen ? (
+                    <div className="flex-1 min-h-0 flex">
+                      {/* Sidebar */}
+                      <aside className="w-96 shrink-0 border-r overflow-y-auto p-4 space-y-4">
+                        {/* Description + Edit */}
+                        <div className="space-y-2">
+                          <div className="text-sm text-muted-foreground">
+                            {task.description ? (
+                              <p className="whitespace-pre-wrap">
+                                {task.description}
+                              </p>
+                            ) : (
+                              <p className="italic">No description provided</p>
+                            )}
+                          </div>
+                          {onEditTask && (
+                            <div>
+                              <button
+                                className="inline-flex items-center h-8 w-8 justify-center rounded-md hover:bg-accent"
+                                onClick={() => onEditTask(task)}
+                                title="Edit task"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
 
-                  <TabNavigation
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                  />
+                        {/* Current Attempt / Actions */}
+                        <TaskDetailsToolbar
+                          variant="sidebar"
+                          forceCreateAttempt={forceCreateAttempt}
+                          onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
+                        />
+                      </aside>
 
-                  {/* Tab Content */}
-                  <div className="flex-1 flex flex-col min-h-0">
-                    {activeTab === 'diffs' ? (
-                      <DiffTab />
-                    ) : activeTab === 'processes' ? (
-                      <ProcessesTab />
-                    ) : (
-                      <LogsTab />
-                    )}
-                  </div>
+                      {/* Main content */}
+                      <main className="flex-1 min-h-0 flex flex-col">
+                        <TabNavigation
+                          activeTab={activeTab}
+                          setActiveTab={setActiveTab}
+                        />
 
-                  <TaskFollowUpSection />
+                        <div className="flex-1 flex flex-col min-h-0">
+                          {activeTab === 'diffs' ? (
+                            <DiffTab />
+                          ) : activeTab === 'processes' ? (
+                            <ProcessesTab />
+                          ) : (
+                            <LogsTab />
+                          )}
+                        </div>
+
+                        <TaskFollowUpSection />
+                      </main>
+                    </div>
+                  ) : (
+                    <>
+                      <TaskDetailsToolbar />
+
+                      <TabNavigation
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                      />
+
+                      {/* Tab Content */}
+                      <div className="flex-1 flex flex-col min-h-0">
+                        {activeTab === 'diffs' ? (
+                          <DiffTab />
+                        ) : activeTab === 'processes' ? (
+                          <ProcessesTab />
+                        ) : (
+                          <LogsTab />
+                        )}
+                      </div>
+
+                      <TaskFollowUpSection />
+                    </>
+                  )}
                 </div>
               </div>
 

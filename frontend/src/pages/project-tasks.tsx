@@ -79,6 +79,7 @@ export function ProjectTasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isPanelFullscreen, setIsPanelFullscreen] = useState(false);
+  const [forceCreateAttempt, setForceCreateAttempt] = useState(false);
   const { active, setActive, setContent } = useFullscreenHeader();
 
   // Map status to label and dot color (duplicated from TaskDetailsHeader)
@@ -133,6 +134,9 @@ export function ProjectTasks() {
             </Chip>
           </div>
           <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setForceCreateAttempt(true)}>
+              New Attempt
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -625,6 +629,8 @@ export function ProjectTasks() {
           className={panelClassName}
           isFullScreen={isPanelFullscreen}
           onToggleFullScreen={() => setIsPanelFullscreen((v) => !v)}
+          forceCreateAttempt={forceCreateAttempt}
+          onLeaveForceCreateAttempt={() => setForceCreateAttempt(false)}
         />
       )}
 

@@ -114,7 +114,7 @@ function TaskDetailsHeader({
               </div>
             )}
             <div className="flex items-center gap-1">
-              {onEditTask && (
+              {onEditTask && !isFullScreen && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -167,50 +167,52 @@ function TaskDetailsHeader({
             </div>
           </div>
 
-          {/* Description */}
-          <div className="mt-2">
-            <div className="p-2 bg-muted/20 rounded border-l-2 border-muted max-h-48 overflow-y-auto">
-              {task.description ? (
-                <div>
-                  <p
-                    className={`text-xs whitespace-pre-wrap text-muted-foreground ${
-                      !isDescriptionExpanded && task.description.length > 150
-                        ? 'line-clamp-3'
-                        : ''
-                    }`}
-                  >
-                    {task.description}
-                  </p>
-                  {task.description.length > 150 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setIsDescriptionExpanded(!isDescriptionExpanded)
-                      }
-                      className="mt-1 p-0 h-auto text-xs text-muted-foreground hover:text-foreground"
+          {/* Description hidden in fullscreen (moved to sidebar) */}
+          {!isFullScreen && (
+            <div className="mt-2">
+              <div className="p-2 bg-muted/20 rounded border-l-2 border-muted max-h-48 overflow-y-auto">
+                {task.description ? (
+                  <div>
+                    <p
+                      className={`text-xs whitespace-pre-wrap text-muted-foreground ${
+                        !isDescriptionExpanded && task.description.length > 150
+                          ? 'line-clamp-3'
+                          : ''
+                      }`}
                     >
-                      {isDescriptionExpanded ? (
-                        <>
-                          <ChevronUp className="h-3 w-3 mr-1" />
-                          Show less
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-3 w-3 mr-1" />
-                          Show more
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground italic">
-                  No description provided
-                </p>
-              )}
+                      {task.description}
+                    </p>
+                    {task.description.length > 150 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setIsDescriptionExpanded(!isDescriptionExpanded)
+                        }
+                        className="mt-1 p-0 h-auto text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        {isDescriptionExpanded ? (
+                          <>
+                            <ChevronUp className="h-3 w-3 mr-1" />
+                            Show less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3 w-3 mr-1" />
+                            Show more
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">
+                    No description provided
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
