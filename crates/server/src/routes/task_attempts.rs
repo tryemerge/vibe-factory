@@ -33,6 +33,7 @@ use git2::BranchType;
 use serde::{Deserialize, Serialize};
 use services::services::{
     container::ContainerService,
+    git::GitService,
     github_service::{CreatePrRequest, GitHubService, GitHubServiceError},
     image::ImageService,
 };
@@ -159,6 +160,48 @@ pub async fn follow_up(
         .container()
         .ensure_container_exists(&task_attempt)
         .await?;
+
+    // Check if this task attempt has an open PR and pull latest changes if so
+    let open_prs = Merge::find_by_task_attempt_id(&deployment.db().pool, task_attempt.id)
+        .await?
+        .into_iter()
+        .filter_map(|merge| match merge {
+            Merge::Pr(pr) if matches!(pr.pr_info.status, MergeStatus::Open) => Some(pr),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    if !open_prs.is_empty() {
+        // There's an open PR, so we need to pull latest changes
+        if let (Some(container_ref), Some(branch_name)) =
+            (&task_attempt.container_ref, &task_attempt.branch)
+        {
+            let worktree_path = PathBuf::from(container_ref);
+            let git_service = GitService::new();
+
+            // Try to get GitHub token from config
+            if let Some(github_token) = deployment.config().read().await.github.token() {
+                match git_service.pull_from_remote(&worktree_path, branch_name, &github_token) {
+                    Ok(_) => {
+                        tracing::info!(
+                            "Successfully pulled latest changes for task attempt {} branch {}",
+                            task_attempt.id,
+                            branch_name
+                        );
+                    }
+                    Err(e) => {
+                        return Err(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
+                            format!("Cannot follow up: Failed to pull latest changes from remote. Your PR branch may have conflicts or has diverged. Error: {}. Please resolve conflicts manually and try again.", e)
+                        )));
+                    }
+                }
+            } else {
+                tracing::warn!(
+                    "No GitHub token available for pulling changes, skipping pull operation"
+                );
+            }
+        }
+    }
 
     // Get session_id with simple query
     let session_id = ExecutionProcess::find_latest_session_id_by_task_attempt(

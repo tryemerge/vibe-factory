@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use chrono::{DateTime, Utc};
 use git2::{
-    Branch, BranchType, CherrypickOptions, Delta, DiffFindOptions, DiffOptions, Error as GitError,
+    BranchType, CherrypickOptions, Delta, DiffFindOptions, DiffOptions, Error as GitError,
     FetchOptions, Reference, Remote, Repository, Sort, build::CheckoutBuilder,
 };
 use regex;
@@ -1220,6 +1220,61 @@ impl GitService {
 
         // Check fetch result
         fetch_result.map_err(GitServiceError::Git)?;
+
+        Ok(())
+    }
+
+    /// Pull latest changes from remote for a specific branch in a worktree
+    /// This performs a fetch followed by a fast-forward merge
+    pub fn pull_from_remote(
+        &self,
+        worktree_path: &Path,
+        branch_name: &str,
+        github_token: &str,
+    ) -> Result<(), GitServiceError> {
+        let repo = self.open_repo(worktree_path)?;
+
+        // Get the current branch reference
+        let branch = Self::find_branch(&repo, branch_name)?;
+        let branch_ref = branch.into_reference();
+
+        // Get the remote for this branch
+        let remote = self.get_remote_from_branch_ref(&repo, &branch_ref)?;
+
+        // Fetch latest changes from remote
+        self.fetch_from_remote(&repo, github_token, &remote)?;
+
+        // Get the remote tracking branch
+        let remote_name = self.default_remote_name(&repo);
+        let remote_branch_name = format!("{}/{}", remote_name, branch_name);
+        let remote_branch = Self::find_branch(&repo, &remote_branch_name)
+            .map_err(|_| GitServiceError::BranchNotFound(remote_branch_name.clone()))?;
+
+        let local_commit = branch_ref.peel_to_commit()?;
+        let remote_commit = remote_branch.into_reference().peel_to_commit()?;
+
+        // Check if we can fast-forward
+        let merge_base = Self::get_merge_base(&repo, local_commit.id(), remote_commit.id())?;
+
+        if merge_base != local_commit.id() {
+            // Local branch has commits that remote doesn't have - branches have diverged
+            return Err(GitServiceError::BranchesDiverged(format!(
+                "Branch '{}' has diverged from remote. Local branch has commits not in remote.",
+                branch_name
+            )));
+        }
+
+        if local_commit.id() == remote_commit.id() {
+            // Already up to date
+            return Ok(());
+        }
+
+        // Perform fast-forward merge by updating the branch reference
+        let refname = format!("refs/heads/{}", branch_name);
+        repo.reference(&refname, remote_commit.id(), true, "Fast-forward pull")?;
+
+        // Update working directory to match the new HEAD
+        repo.checkout_head(Some(CheckoutBuilder::new().force()))?;
 
         Ok(())
     }
