@@ -134,9 +134,6 @@ export function ProjectTasks() {
             </Chip>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setForceCreateAttempt(true)}>
-              New Attempt
-            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -631,6 +628,7 @@ export function ProjectTasks() {
           onToggleFullScreen={() => setIsPanelFullscreen((v) => !v)}
           forceCreateAttempt={forceCreateAttempt}
           onLeaveForceCreateAttempt={() => setForceCreateAttempt(false)}
+          onNewAttempt={() => setForceCreateAttempt(true)}
         />
       )}
 

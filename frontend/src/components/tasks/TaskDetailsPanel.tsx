@@ -12,12 +12,16 @@ import DiffTab from '@/components/tasks/TaskDetails/DiffTab.tsx';
 import LogsTab from '@/components/tasks/TaskDetails/LogsTab.tsx';
 import ProcessesTab from '@/components/tasks/TaskDetails/ProcessesTab.tsx';
 import DeleteFileConfirmationDialog from '@/components/tasks/DeleteFileConfirmationDialog.tsx';
+import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog';
 import TabNavigation from '@/components/tasks/TaskDetails/TabNavigation.tsx';
+import { TaskAttemptActions } from '@/components/tasks/TaskAttemptActions';
 import TaskDetailsProvider from '../context/TaskDetailsContextProvider.tsx';
 import TaskDetailsToolbar from './TaskDetailsToolbar.tsx';
 import { Edit } from 'lucide-react';
 import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
+import { projectsApi } from '@/lib/api';
+import type { GitBranch } from 'shared/types';
 
 interface TaskDetailsPanelProps {
   task: TaskWithAttemptStatus | null;
@@ -34,6 +38,7 @@ interface TaskDetailsPanelProps {
   onToggleFullScreen?: () => void;
   forceCreateAttempt?: boolean;
   onLeaveForceCreateAttempt?: () => void;
+  onNewAttempt?: () => void;
 }
 
 export function TaskDetailsPanel({
@@ -51,8 +56,13 @@ export function TaskDetailsPanel({
   onToggleFullScreen,
   forceCreateAttempt,
   onLeaveForceCreateAttempt,
+  onNewAttempt,
 }: TaskDetailsPanelProps) {
   const [showEditorDialog, setShowEditorDialog] = useState(false);
+  const [showCreatePRDialog, setShowCreatePRDialog] = useState(false);
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [prError, setPrError] = useState<string | null>(null);
+  const [branches, setBranches] = useState<GitBranch[]>([]);
 
   // Tab and collapsible state
   const [activeTab, setActiveTab] = useState<TabType>('logs');
@@ -63,6 +73,19 @@ export function TaskDetailsPanel({
       setActiveTab('logs');
     }
   }, [task?.id]);
+
+  // Fetch branches for PR dialog usage when panel opens
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const result = await projectsApi.getBranches(projectId);
+        setBranches(result);
+      } catch (e) {
+        // noop
+      }
+    };
+    if (projectId) fetchBranches();
+  }, [projectId]);
 
   // Handle ESC key locally to prevent global navigation
   useEffect(() => {
@@ -144,6 +167,7 @@ export function TaskDetailsPanel({
                           variant="sidebar"
                           forceCreateAttempt={forceCreateAttempt}
                           onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
+                          // hide actions in sidebar; moved to header in fullscreen
                         />
                       </aside>
 
@@ -152,6 +176,14 @@ export function TaskDetailsPanel({
                         <TabNavigation
                           activeTab={activeTab}
                           setActiveTab={setActiveTab}
+                          rightContent={
+                            <TaskAttemptActions
+                              creatingPR={creatingPR}
+                              setShowCreatePRDialog={setShowCreatePRDialog}
+                              setError={setPrError}
+                              onNewAttempt={onNewAttempt}
+                            />
+                          }
                         />
 
                         <div className="flex-1 flex flex-col min-h-0">
@@ -203,6 +235,16 @@ export function TaskDetailsPanel({
           </TabNavContext.Provider>
         </TaskDetailsProvider>
       )}
+
+      {/* PR Dialog mounted at panel level so header actions can open it */}
+      <CreatePRDialog
+        creatingPR={creatingPR}
+        setShowCreatePRDialog={setShowCreatePRDialog}
+        showCreatePRDialog={showCreatePRDialog}
+        setCreatingPR={setCreatingPR}
+        setError={setPrError}
+        branches={branches}
+      />
     </>
   );
 }

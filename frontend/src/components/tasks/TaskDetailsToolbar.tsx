@@ -382,6 +382,7 @@ function TaskDetailsToolbar({
                   handleAttemptSelect={handleAttemptSelect}
                   branches={branches}
                   layout={variant === 'sidebar' ? 'sidebar' : 'default'}
+                  hideActions={variant === 'sidebar'}
                 />
               ) : (
                 <div className="text-center py-8">

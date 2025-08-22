@@ -86,6 +86,7 @@ type Props = {
   handleAttemptSelect: (attempt: TaskAttempt) => void;
   branches: GitBranch[];
   layout?: 'default' | 'sidebar';
+  hideActions?: boolean;
 };
 
 function CurrentAttempt({
@@ -99,6 +100,7 @@ function CurrentAttempt({
   handleAttemptSelect,
   branches,
   layout = 'default',
+  hideActions = false,
 }: Props) {
   const { task, projectId, handleOpenInEditor, projectHasDevScript } =
     useContext(TaskDetailsContext);
@@ -608,223 +610,231 @@ function CurrentAttempt({
         </div>
       </div>
 
-      <div className="col-span-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={!projectHasDevScript ? 'cursor-not-allowed' : ''}
-                  onMouseEnter={() => setIsHoveringDevServer(true)}
-                  onMouseLeave={() => setIsHoveringDevServer(false)}
-                >
-                  <Button
-                    variant={runningDevServer ? 'destructive' : 'outline'}
-                    size="xs"
-                    onClick={runningDevServer ? stopDevServer : startDevServer}
-                    disabled={isStartingDevServer || !projectHasDevScript}
-                    className="gap-1"
-                  >
-                    {runningDevServer ? (
-                      <>
-                        <StopCircle className="h-3 w-3" />
-                        Stop Dev
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-3 w-3" />
-                        Dev
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                className={runningDevServer ? 'max-w-2xl p-4' : ''}
-                side="top"
-                align="center"
-                avoidCollisions={true}
-              >
-                {!projectHasDevScript ? (
-                  <p>
-                    Add a dev server script in project settings to enable this
-                    feature
-                  </p>
-                ) : runningDevServer && devServerDetails ? (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">
-                      Dev Server Logs (Last 10 lines):
-                    </p>
-                    <pre className="text-xs bg-muted p-2 rounded max-h-64 overflow-y-auto whitespace-pre-wrap">
-                      {processedDevServerLogs}
-                    </pre>
-                  </div>
-                ) : runningDevServer ? (
-                  <p>Stop the running dev server</p>
-                ) : (
-                  <p>Start the dev server</p>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* View Dev Server Logs Button */}
-          {latestDevServerProcess && (
+      {!hideActions && (
+        <div className="col-span-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    onClick={handleViewDevServerLogs}
-                    className="gap-1"
+                  <div
+                    className={!projectHasDevScript ? 'cursor-not-allowed' : ''}
+                    onMouseEnter={() => setIsHoveringDevServer(true)}
+                    onMouseLeave={() => setIsHoveringDevServer(false)}
                   >
-                    <ScrollText className="h-3 w-3" />
-                  </Button>
+                    <Button
+                      variant={runningDevServer ? 'destructive' : 'outline'}
+                      size="xs"
+                      onClick={
+                        runningDevServer ? stopDevServer : startDevServer
+                      }
+                      disabled={isStartingDevServer || !projectHasDevScript}
+                      className="gap-1"
+                    >
+                      {runningDevServer ? (
+                        <>
+                          <StopCircle className="h-3 w-3" />
+                          Stop Dev
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3 w-3" />
+                          Dev
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>View dev server logs</p>
+                <TooltipContent
+                  className={runningDevServer ? 'max-w-2xl p-4' : ''}
+                  side="top"
+                  align="center"
+                  avoidCollisions={true}
+                >
+                  {!projectHasDevScript ? (
+                    <p>
+                      Add a dev server script in project settings to enable this
+                      feature
+                    </p>
+                  ) : runningDevServer && devServerDetails ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">
+                        Dev Server Logs (Last 10 lines):
+                      </p>
+                      <pre className="text-xs bg-muted p-2 rounded max-h-64 overflow-y-auto whitespace-pre-wrap">
+                        {processedDevServerLogs}
+                      </pre>
+                    </div>
+                  ) : runningDevServer ? (
+                    <p>Stop the running dev server</p>
+                  ) : (
+                    <p>Start the dev server</p>
+                  )}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          )}
-        </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Git Operations */}
-          {selectedAttempt && branchStatus && !mergeInfo.hasMergedPR && (
-            <>
-              {(branchStatus.commits_behind ?? 0) > 0 && (
-                <Button
-                  onClick={handleRebaseClick}
-                  disabled={rebasing || isAttemptRunning}
-                  variant="outline"
-                  size="xs"
-                  className="border-orange-300 text-orange-700 hover:bg-orange-50 gap-1"
-                >
-                  <RefreshCw
-                    className={`h-3 w-3 ${rebasing ? 'animate-spin' : ''}`}
-                  />
-                  {rebasing ? 'Rebasing...' : `Rebase`}
-                </Button>
-              )}
-              <>
-                <Button
-                  onClick={handlePRButtonClick}
-                  disabled={
-                    creatingPR ||
-                    pushing ||
-                    Boolean((branchStatus.commits_behind ?? 0) > 0) ||
-                    isAttemptRunning ||
-                    (mergeInfo.hasOpenPR &&
-                      branchStatus.remote_commits_ahead === 0) ||
-                    ((branchStatus.commits_ahead ?? 0) === 0 &&
-                      !pushSuccess &&
-                      !mergeSuccess)
-                  }
-                  variant="outline"
-                  size="xs"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-50 gap-1 min-w-[120px]"
-                >
-                  <GitPullRequest className="h-3 w-3" />
-                  {mergeInfo.hasOpenPR
-                    ? pushSuccess
-                      ? 'Pushed!'
-                      : pushing
-                        ? 'Pushing...'
-                        : branchStatus.remote_commits_ahead === 0
-                          ? 'Push to PR'
-                          : branchStatus.remote_commits_ahead === 1
-                            ? 'Push 1 commit'
-                            : `Push ${branchStatus.remote_commits_ahead || 0} commits`
-                    : creatingPR
-                      ? 'Creating...'
-                      : 'Create PR'}
-                </Button>
-                <Button
-                  onClick={handleMergeClick}
-                  disabled={
-                    mergeInfo.hasOpenPR ||
-                    merging ||
-                    Boolean((branchStatus.commits_behind ?? 0) > 0) ||
-                    isAttemptRunning ||
-                    ((branchStatus.commits_ahead ?? 0) === 0 &&
-                      !pushSuccess &&
-                      !mergeSuccess)
-                  }
-                  size="xs"
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 gap-1 min-w-[120px]"
-                >
-                  <GitBranchIcon className="h-3 w-3" />
-                  {mergeSuccess ? 'Merged!' : merging ? 'Merging...' : 'Merge'}
-                </Button>
-              </>
-            </>
-          )}
-
-          {isStopping || isAttemptRunning ? (
-            <Button
-              variant="destructive"
-              size="xs"
-              onClick={stopAllExecutions}
-              disabled={isStopping}
-              className="gap-2"
-            >
-              <StopCircle className="h-4 w-4" />
-              {isStopping ? 'Stopping...' : 'Stop Attempt'}
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={handleEnterCreateAttemptMode}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Attempt
-            </Button>
-          )}
-          {taskAttempts.length > 1 && (
-            <DropdownMenu>
+            {/* View Dev Server Logs Button */}
+            {latestDevServerProcess && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="xs" className="gap-2">
-                        <History className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={handleViewDevServerLogs}
+                      className="gap-1"
+                    >
+                      <ScrollText className="h-3 w-3" />
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>View attempt history</p>
+                    <p>View dev server logs</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <DropdownMenuContent align="start" className="w-64">
-                {taskAttempts.map((attempt) => (
-                  <DropdownMenuItem
-                    key={attempt.id}
-                    onClick={() => handleAttemptChange(attempt)}
-                    className={
-                      selectedAttempt?.id === attempt.id ? 'bg-accent' : ''
-                    }
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Git Operations */}
+            {selectedAttempt && branchStatus && !mergeInfo.hasMergedPR && (
+              <>
+                {(branchStatus.commits_behind ?? 0) > 0 && (
+                  <Button
+                    onClick={handleRebaseClick}
+                    disabled={rebasing || isAttemptRunning}
+                    variant="outline"
+                    size="xs"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50 gap-1"
                   >
-                    <div className="flex flex-col w-full">
-                      <span className="font-medium text-sm">
-                        {new Date(attempt.created_at).toLocaleDateString()}{' '}
-                        {new Date(attempt.created_at).toLocaleTimeString()}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {attempt.profile || 'Base Agent'}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                    <RefreshCw
+                      className={`h-3 w-3 ${rebasing ? 'animate-spin' : ''}`}
+                    />
+                    {rebasing ? 'Rebasing...' : `Rebase`}
+                  </Button>
+                )}
+                <>
+                  <Button
+                    onClick={handlePRButtonClick}
+                    disabled={
+                      creatingPR ||
+                      pushing ||
+                      Boolean((branchStatus.commits_behind ?? 0) > 0) ||
+                      isAttemptRunning ||
+                      (mergeInfo.hasOpenPR &&
+                        branchStatus.remote_commits_ahead === 0) ||
+                      ((branchStatus.commits_ahead ?? 0) === 0 &&
+                        !pushSuccess &&
+                        !mergeSuccess)
+                    }
+                    variant="outline"
+                    size="xs"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50 gap-1 min-w-[120px]"
+                  >
+                    <GitPullRequest className="h-3 w-3" />
+                    {mergeInfo.hasOpenPR
+                      ? pushSuccess
+                        ? 'Pushed!'
+                        : pushing
+                          ? 'Pushing...'
+                          : branchStatus.remote_commits_ahead === 0
+                            ? 'Push to PR'
+                            : branchStatus.remote_commits_ahead === 1
+                              ? 'Push 1 commit'
+                              : `Push ${branchStatus.remote_commits_ahead || 0} commits`
+                      : creatingPR
+                        ? 'Creating...'
+                        : 'Create PR'}
+                  </Button>
+                  <Button
+                    onClick={handleMergeClick}
+                    disabled={
+                      mergeInfo.hasOpenPR ||
+                      merging ||
+                      Boolean((branchStatus.commits_behind ?? 0) > 0) ||
+                      isAttemptRunning ||
+                      ((branchStatus.commits_ahead ?? 0) === 0 &&
+                        !pushSuccess &&
+                        !mergeSuccess)
+                    }
+                    size="xs"
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 gap-1 min-w-[120px]"
+                  >
+                    <GitBranchIcon className="h-3 w-3" />
+                    {mergeSuccess
+                      ? 'Merged!'
+                      : merging
+                        ? 'Merging...'
+                        : 'Merge'}
+                  </Button>
+                </>
+              </>
+            )}
+
+            {isStopping || isAttemptRunning ? (
+              <Button
+                variant="destructive"
+                size="xs"
+                onClick={stopAllExecutions}
+                disabled={isStopping}
+                className="gap-2"
+              >
+                <StopCircle className="h-4 w-4" />
+                {isStopping ? 'Stopping...' : 'Stop Attempt'}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={handleEnterCreateAttemptMode}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Attempt
+              </Button>
+            )}
+            {taskAttempts.length > 1 && (
+              <DropdownMenu>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="xs" className="gap-2">
+                          <History className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>View attempt history</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DropdownMenuContent align="start" className="w-64">
+                  {taskAttempts.map((attempt) => (
+                    <DropdownMenuItem
+                      key={attempt.id}
+                      onClick={() => handleAttemptChange(attempt)}
+                      className={
+                        selectedAttempt?.id === attempt.id ? 'bg-accent' : ''
+                      }
+                    >
+                      <div className="flex flex-col w-full">
+                        <span className="font-medium text-sm">
+                          {new Date(attempt.created_at).toLocaleDateString()}{' '}
+                          {new Date(attempt.created_at).toLocaleTimeString()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {attempt.profile || 'Base Agent'}
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Rebase Dialog */}
       <Dialog open={showRebaseDialog} onOpenChange={setShowRebaseDialog}>
