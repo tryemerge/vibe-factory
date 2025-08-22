@@ -1107,12 +1107,10 @@ impl GitService {
     ) -> Result<(), GitServiceError> {
         let repo = Repository::open(worktree_path)?;
         self.check_worktree_clean(&repo)?;
-        let mut branch = Self::find_branch(&repo, branch_name)?;
 
         // Get the remote
         let remote_name = self.default_remote_name(&repo);
         let remote = repo.find_remote(&remote_name)?;
-        branch.set_upstream(Some(&format!("{remote_name}/{branch_name}")))?;
 
         let remote_url = remote
             .url()
@@ -1150,6 +1148,11 @@ impl GitService {
 
         // Check push result
         push_result?;
+        self.fetch_from_remote(&repo, github_token, &remote)?;
+        let mut branch = Self::find_branch(&repo, branch_name)?;
+        if !branch.get().is_remote() {
+            branch.set_upstream(Some(&format!("{remote_name}/{branch_name}")))?;
+        }
 
         Ok(())
     }
