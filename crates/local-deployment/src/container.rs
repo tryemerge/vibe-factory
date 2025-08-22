@@ -21,7 +21,7 @@ use db::{
         merge::Merge,
         project::Project,
         task::{Task, TaskStatus},
-        task_attempt::{self, TaskAttempt},
+        task_attempt::TaskAttempt,
     },
 };
 use deployment::DeploymentError;

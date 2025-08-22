@@ -30,7 +30,6 @@ use executors::{
 };
 use futures_util::TryStreamExt;
 use git2::BranchType;
-use local_deployment::container;
 use serde::{Deserialize, Serialize};
 use services::services::{
     container::ContainerService,
@@ -109,19 +108,6 @@ pub async fn create_task_attempt(
                 profile_variant_label.profile
             )))
         })?;
-    // Get parent task
-    let project = Task::find_by_id(&deployment.db().pool, payload.task_id)
-        .await?
-        .ok_or(SqlxError::RowNotFound)?
-        .parent_project(&deployment.db().pool)
-        .await?
-        .ok_or(SqlxError::RowNotFound)?;
-
-    // let local_base_branch = deployment
-    //     .container()
-    //     .ensure_local_base_branch(&project, &payload.base_branch)
-    //     .await?;
-
     let task_attempt = TaskAttempt::create(
         &deployment.db().pool,
         &CreateTaskAttempt {
@@ -652,8 +638,8 @@ pub async fn get_task_attempt_branch_status(
     // Fetch merges for this task attempt and add to branch status
     let merges = Merge::find_by_task_attempt_id(pool, task_attempt.id).await?;
     let mut branch_status = BranchStatus {
-        commits_ahead: commits_ahead,
-        commits_behind: commits_behind,
+        commits_ahead,
+        commits_behind,
         has_uncommitted_changes,
         remote_commits_ahead: None,
         remote_commits_behind: None,
@@ -742,7 +728,7 @@ pub async fn rebase_task_attempt(
             TaskAttempt::update_base_branch(
                 &deployment.db().pool,
                 task_attempt.id,
-                &new_base_branch,
+                new_base_branch,
             )
             .await?;
         }

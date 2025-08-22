@@ -231,7 +231,7 @@ impl GitService {
                 base_branch,
             } => {
                 let repo = Repository::open(worktree_path)?;
-                let base_git_branch = GitService::find_branch(&repo, &base_branch)?;
+                let base_git_branch = GitService::find_branch(&repo, base_branch)?;
                 let base_tree = base_git_branch.get().peel_to_commit()?.tree()?;
 
                 let mut diff_opts = DiffOptions::new();
@@ -589,12 +589,14 @@ impl GitService {
         base_branch_ref: &Reference,
     ) -> Result<(usize, usize), GitServiceError> {
         let (a, b) = repo.graph_ahead_behind(
-            branch_ref
-                .target()
-                .ok_or(GitServiceError::BranchNotFound(format!("Branch not found")))?,
+            branch_ref.target().ok_or(GitServiceError::BranchNotFound(
+                "Branch not found".to_string(),
+            ))?,
             base_branch_ref
                 .target()
-                .ok_or(GitServiceError::BranchNotFound(format!("Branch not found")))?,
+                .ok_or(GitServiceError::BranchNotFound(
+                    "Branch not found".to_string(),
+                ))?,
         )?;
         Ok((a, b))
     }
@@ -884,7 +886,7 @@ impl GitService {
         let task_branch_commit_id = worktree_repo.head()?.peel_to_commit()?.id();
 
         let signature = worktree_repo.signature()?;
-        let old_base_commit_id = Self::find_branch(&main_repo, &old_base_branch)?
+        let old_base_commit_id = Self::find_branch(&main_repo, old_base_branch)?
             .into_reference()
             .peel_to_commit()?
             .id();
@@ -1111,7 +1113,6 @@ impl GitService {
         let remote_name = self.default_remote_name(&repo);
         let remote = repo.find_remote(&remote_name)?;
         branch.set_upstream(Some(&format!("{remote_name}/{branch_name}")))?;
-        branch.set_upstream(Some(&format!("{remote_name}/{branch_name}")))?;
 
         let remote_url = remote
             .url()
@@ -1197,7 +1198,7 @@ impl GitService {
         // Configure fetch options
         let mut fetch_opts = FetchOptions::new();
         fetch_opts.remote_callbacks(callbacks);
-        let default_remote_name = self.default_remote_name(&repo);
+        let default_remote_name = self.default_remote_name(repo);
         let remote_name = remote.name().unwrap_or(&default_remote_name);
 
         let refspec = format!("+refs/heads/*:refs/remotes/{remote_name}/*");

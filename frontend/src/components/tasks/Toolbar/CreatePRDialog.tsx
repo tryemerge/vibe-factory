@@ -181,11 +181,11 @@ function CreatePrDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((branch) => (
-                      <SelectItem key={branch.name} value={branch.name}>
-                        {branch.name}
-                        {branch.is_current && ' (current)'}
-                      </SelectItem>
-                    ))}
+                    <SelectItem key={branch.name} value={branch.name}>
+                      {branch.name}
+                      {branch.is_current && ' (current)'}
+                    </SelectItem>
+                  ))}
                   {/* Add common branches as fallback if not in the list */}
                   {!branches.some((b) => b.name === 'main' && !b.is_remote) && (
                     <SelectItem value="main">main</SelectItem>
