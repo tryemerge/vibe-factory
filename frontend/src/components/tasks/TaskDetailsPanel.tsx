@@ -29,6 +29,8 @@ interface TaskDetailsPanelProps {
   hideBackdrop?: boolean;
   className?: string;
   hideHeader?: boolean;
+  isFullScreen?: boolean;
+  onToggleFullScreen?: () => void;
 }
 
 export function TaskDetailsPanel({
@@ -42,6 +44,8 @@ export function TaskDetailsPanel({
   hideBackdrop = false,
   className,
   hideHeader = false,
+  isFullScreen = false,
+  onToggleFullScreen,
 }: TaskDetailsPanelProps) {
   const [showEditorDialog, setShowEditorDialog] = useState(false);
 
@@ -97,6 +101,8 @@ export function TaskDetailsPanel({
                       onEditTask={onEditTask}
                       onDeleteTask={onDeleteTask}
                       hideCloseButton={hideBackdrop}
+                      isFullScreen={isFullScreen}
+                      onToggleFullScreen={onToggleFullScreen}
                     />
                   )}
 

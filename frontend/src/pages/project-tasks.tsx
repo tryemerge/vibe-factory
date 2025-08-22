@@ -68,6 +68,7 @@ export function ProjectTasks() {
   // Panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isPanelFullscreen, setIsPanelFullscreen] = useState(false);
 
   // Define task creation handler
   const handleCreateNewTask = useCallback(() => {
@@ -270,6 +271,7 @@ export function ProjectTasks() {
   );
 
   const handleClosePanel = useCallback(() => {
+    setIsPanelFullscreen(false);
     // setIsPanelOpen(false);
     // setSelectedTask(null);
     // Remove task ID from URL when closing panel
@@ -368,6 +370,7 @@ export function ProjectTasks() {
       // Close panel when no taskId in URL
       setIsPanelOpen(false);
       setSelectedTask(null);
+      setIsPanelFullscreen(false);
     }
   }, [taskId, tasks, loading, fetchTasks]);
 
@@ -379,10 +382,16 @@ export function ProjectTasks() {
     return <div className="text-center py-8 text-destructive">{error}</div>;
   }
 
+  const panelClassName = isPanelFullscreen
+    ? 'absolute inset-0 z-50 w-full h-full bg-background overflow-hidden'
+    : undefined;
+
   return (
-    <div className={getMainContainerClasses(isPanelOpen)}>
+    <div className={`${getMainContainerClasses(isPanelOpen)} relative`}>
       {/* Left Column - Kanban Section */}
-      <div className={getKanbanSectionClasses(isPanelOpen)}>
+      <div
+        className={getKanbanSectionClasses(isPanelOpen && !isPanelFullscreen)}
+      >
         {/* Header */}
 
         <div className="px-8 my-12 flex flex-row">
@@ -527,6 +536,10 @@ export function ProjectTasks() {
           onEditTask={handleEditTask}
           onDeleteTask={handleDeleteTask}
           isDialogOpen={isTaskDialogOpen || isProjectSettingsOpen}
+          hideBackdrop={isPanelFullscreen}
+          className={panelClassName}
+          isFullScreen={isPanelFullscreen}
+          onToggleFullScreen={() => setIsPanelFullscreen((v) => !v)}
         />
       )}
 
