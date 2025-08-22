@@ -300,13 +300,23 @@ function CreateAttempt({
               }
               if (currentProfile) {
                 return (
-                  <Button variant="outline" size="sm" disabled className="w-full text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="w-full text-xs"
+                  >
                     Default
                   </Button>
                 );
               }
               return (
-                <Button variant="outline" size="sm" disabled className="w-full text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className="w-full text-xs"
+                >
                   Select profile first
                 </Button>
               );

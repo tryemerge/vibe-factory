@@ -17,6 +17,7 @@ import TabNavigation from '@/components/tasks/TaskDetails/TabNavigation.tsx';
 import { TaskAttemptActions } from '@/components/tasks/TaskAttemptActions';
 import TaskDetailsProvider from '../context/TaskDetailsContextProvider.tsx';
 import TaskDetailsToolbar from './TaskDetailsToolbar.tsx';
+import TaskBreakdownPanel from '@/components/tasks/TaskBreakdownPanel';
 import { Edit } from 'lucide-react';
 import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
@@ -169,6 +170,9 @@ export function TaskDetailsPanel({
                           onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
                           // hide actions in sidebar; moved to header in fullscreen
                         />
+
+                        {/* Task Breakdown (TODOs) */}
+                        <TaskBreakdownPanel />
                       </aside>
 
                       {/* Main content */}
