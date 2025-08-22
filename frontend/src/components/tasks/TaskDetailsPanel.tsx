@@ -114,7 +114,7 @@ export function TaskDetailsPanel({
                   {isFullScreen ? (
                     <div className="flex-1 min-h-0 flex">
                       {/* Sidebar */}
-                      <aside className="w-96 shrink-0 border-r overflow-y-auto p-4 space-y-4">
+                      <aside className="w-[28rem] shrink-0 border-r overflow-y-auto p-4 space-y-4">
                         {/* Description + Edit */}
                         <div className="space-y-2">
                           <div className="text-sm text-muted-foreground">

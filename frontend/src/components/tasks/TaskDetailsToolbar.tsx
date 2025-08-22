@@ -381,6 +381,7 @@ function TaskDetailsToolbar({
                   handleEnterCreateAttemptMode={handleEnterCreateAttemptMode}
                   handleAttemptSelect={handleAttemptSelect}
                   branches={branches}
+                  layout={variant === 'sidebar' ? 'sidebar' : 'default'}
                 />
               ) : (
                 <div className="text-center py-8">

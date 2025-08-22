@@ -85,6 +85,7 @@ type Props = {
   handleEnterCreateAttemptMode: () => void;
   handleAttemptSelect: (attempt: TaskAttempt) => void;
   branches: GitBranch[];
+  layout?: 'default' | 'sidebar';
 };
 
 function CurrentAttempt({
@@ -97,6 +98,7 @@ function CurrentAttempt({
   handleEnterCreateAttemptMode,
   handleAttemptSelect,
   branches,
+  layout = 'default',
 }: Props) {
   const { task, projectId, handleOpenInEditor, projectHasDevScript } =
     useContext(TaskDetailsContext);
@@ -478,8 +480,14 @@ function CurrentAttempt({
   }, [mergeInfo, branchStatus]);
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-6 items-start">
+    <div className="space-y-3">
+      <div
+        className={
+          layout === 'sidebar'
+            ? 'grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3'
+            : 'flex gap-6 items-start flex-wrap'
+        }
+      >
         <div className="min-w-0">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
             Profile
