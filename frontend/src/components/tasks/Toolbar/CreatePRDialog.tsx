@@ -180,9 +180,7 @@ function CreatePrDialog({
                   <SelectValue placeholder="Select base branch" />
                 </SelectTrigger>
                 <SelectContent>
-                  {branches
-                    .filter((branch) => !branch.is_remote) // Only show local branches
-                    .map((branch) => (
+                  {branches.map((branch) => (
                       <SelectItem key={branch.name} value={branch.name}>
                         {branch.name}
                         {branch.is_current && ' (current)'}
