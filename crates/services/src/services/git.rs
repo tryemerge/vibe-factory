@@ -1127,8 +1127,7 @@ impl GitService {
         let mut temp_remote = repo.remote(temp_remote_name, &https_url)?;
 
         // Create refspec for pushing the branch
-        // Use force push (+) to handle non-fast-forward updates (e.g., after rebase)
-        let refspec = format!("+refs/heads/{branch_name}:refs/heads/{branch_name}");
+        let refspec = format!("refs/heads/{branch_name}:refs/heads/{branch_name}");
 
         // Set up authentication callback using the GitHub token
         let mut callbacks = git2::RemoteCallbacks::new();
