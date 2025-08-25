@@ -176,131 +176,136 @@ export function TaskFollowUpSection() {
                 />
               </div>
             )}
-            <div className="flex gap-2 items-start">
-              <FileSearchTextarea
-                placeholder="Continue working on this task... Type @ to search files."
-                value={followUpMessage}
-                onChange={(value) => {
-                  setFollowUpMessage(value);
-                  if (followUpError) setFollowUpError(null);
-                }}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                    e.preventDefault();
-                    if (
-                      canSendFollowUp &&
-                      followUpMessage.trim() &&
-                      !isSendingFollowUp
-                    ) {
-                      onSendFollowUp();
+            <div className="flex flex-col gap-2">
+              <div>
+                <FileSearchTextarea
+                  placeholder="Continue working on this task... Type @ to search files."
+                  value={followUpMessage}
+                  onChange={(value) => {
+                    setFollowUpMessage(value);
+                    if (followUpError) setFollowUpError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      if (
+                        canSendFollowUp &&
+                        followUpMessage.trim() &&
+                        !isSendingFollowUp
+                      ) {
+                        onSendFollowUp();
+                      }
                     }
-                  }
-                }}
-                className="flex-1 min-h-[40px] resize-none"
-                disabled={!canSendFollowUp}
-                projectId={projectId}
-                rows={1}
-                maxRows={6}
-              />
-
-              {/* Image button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10 w-10 p-0"
-                onClick={() => setShowImageUpload(!showImageUpload)}
-                disabled={!canSendFollowUp}
-              >
-                <ImageIcon
-                  className={cn('h-4 w-4', images.length > 0 && 'text-primary')}
+                  }}
+                  className="flex-1 min-h-[40px] resize-none"
+                  disabled={!canSendFollowUp}
+                  projectId={projectId}
+                  rows={1}
+                  maxRows={6}
                 />
-              </Button>
+              </div>
+              <div className="flex flex-row">
+                <div className="flex-1 flex gap-2">
+                  {/* Image button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 w-10 p-0"
+                    onClick={() => setShowImageUpload(!showImageUpload)}
+                    disabled={!canSendFollowUp}
+                  >
+                    <ImageIcon
+                      className={cn('h-4 w-4', images.length > 0 && 'text-primary')}
+                    />
+                  </Button>
 
-              {/* Variant selector */}
-              {(() => {
-                const hasVariants =
-                  currentProfile?.variants &&
-                  currentProfile.variants.length > 0;
+                  {/* Variant selector */}
+                  {(() => {
+                    const hasVariants =
+                      currentProfile?.variants &&
+                      currentProfile.variants.length > 0;
 
-                if (hasVariants) {
-                  return (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    if (hasVariants) {
+                      return (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              ref={variantButtonRef}
+                              variant="outline"
+                              size="sm"
+                              className={cn(
+                                'h-10 w-24 px-2 flex items-center justify-between transition-all',
+                                isAnimating && 'scale-105 bg-accent'
+                              )}
+                            >
+                              <span className="text-xs truncate flex-1 text-left">
+                                {selectedVariant || 'Default'}
+                              </span>
+                              <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem
+                              onClick={() => setSelectedVariant(null)}
+                              className={!selectedVariant ? 'bg-accent' : ''}
+                            >
+                              Default
+                            </DropdownMenuItem>
+                            {currentProfile.variants.map((variant) => (
+                              <DropdownMenuItem
+                                key={variant.label}
+                                onClick={() => setSelectedVariant(variant.label)}
+                                className={
+                                  selectedVariant === variant.label
+                                    ? 'bg-accent'
+                                    : ''
+                                }
+                              >
+                                {variant.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      );
+                    } else if (currentProfile) {
+                      // Show disabled button when profile exists but has no variants
+                      return (
                         <Button
                           ref={variantButtonRef}
                           variant="outline"
                           size="sm"
-                          className={cn(
-                            'h-10 w-24 px-2 flex items-center justify-between transition-all',
-                            isAnimating && 'scale-105 bg-accent'
-                          )}
+                          className="h-10 w-24 px-2 flex items-center justify-between transition-all"
+                          disabled
                         >
                           <span className="text-xs truncate flex-1 text-left">
-                            {selectedVariant || 'Default'}
+                            Default
                           </span>
-                          <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem
-                          onClick={() => setSelectedVariant(null)}
-                          className={!selectedVariant ? 'bg-accent' : ''}
-                        >
-                          Default
-                        </DropdownMenuItem>
-                        {currentProfile.variants.map((variant) => (
-                          <DropdownMenuItem
-                            key={variant.label}
-                            onClick={() => setSelectedVariant(variant.label)}
-                            className={
-                              selectedVariant === variant.label
-                                ? 'bg-accent'
-                                : ''
-                            }
-                          >
-                            {variant.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  );
-                } else if (currentProfile) {
-                  // Show disabled button when profile exists but has no variants
-                  return (
-                    <Button
-                      ref={variantButtonRef}
-                      variant="outline"
-                      size="sm"
-                      className="h-10 w-24 px-2 flex items-center justify-between transition-all"
-                      disabled
-                    >
-                      <span className="text-xs truncate flex-1 text-left">
-                        Default
-                      </span>
-                    </Button>
-                  );
-                }
-                return null;
-              })()}
+                      );
+                    }
+                    return null;
+                  })()}
 
-              <Button
-                onClick={onSendFollowUp}
-                disabled={
-                  !canSendFollowUp ||
-                  !followUpMessage.trim() ||
-                  isSendingFollowUp
-                }
-                size="sm"
-              >
-                {isSendingFollowUp ? (
-                  <Loader size={16} className="mr-2" />
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send
-                  </>
-                )}
-              </Button>
+                </div>
+                <Button
+                  onClick={onSendFollowUp}
+                  disabled={
+                    !canSendFollowUp ||
+                    !followUpMessage.trim() ||
+                    isSendingFollowUp
+                  }
+                  size="sm"
+                >
+                  {isSendingFollowUp ? (
+                    <Loader size={16} className="mr-2" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

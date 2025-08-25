@@ -128,75 +128,76 @@ export function TaskDetailsPanel({
                   className || getTaskPanelClasses(isFullScreen || false)
                 }
               >
-                <TaskDetailsHeader
-                  onClose={onClose}
-                  onEditTask={onEditTask}
-                  onDeleteTask={onDeleteTask}
-                  hideCloseButton={hideBackdrop}
-                  isFullScreen={isFullScreen}
-                  setFullScreen={setFullScreen}
-                />
-                <div className="flex flex-col h-full">
+                <div className="">
+                  <TaskDetailsHeader
+                    onClose={onClose}
+                    onEditTask={onEditTask}
+                    onDeleteTask={onDeleteTask}
+                    hideCloseButton={hideBackdrop}
+                    isFullScreen={isFullScreen}
+                    setFullScreen={setFullScreen}
+                  />
+                </div>
 
 
-                  {isFullScreen ? (
-                    <div className="flex-1 min-h-0 flex">
-                      {/* Sidebar */}
-                      <aside className="w-[28rem] shrink-0 border-r overflow-y-auto p-4 space-y-4">
-                        {/* Fullscreen sidebar shows title and description above edit/delete */}
-                        <div className="space-y-2">
-                          <TaskTitleDescription task={task} />
-                        </div>
+                {isFullScreen ? (
+                  <div className="flex-1 min-h-0 flex">
+                    {/* Sidebar */}
+                    <aside className="w-[28rem] shrink-0 border-r overflow-y-auto p-4 space-y-4">
+                      {/* Fullscreen sidebar shows title and description above edit/delete */}
+                      <div className="space-y-2">
+                        <TaskTitleDescription task={task} />
+                      </div>
 
-                        {/* Current Attempt / Actions */}
-                        <TaskDetailsToolbar
-                          forceCreateAttempt={forceCreateAttempt}
-                          onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
-                        // hide actions in sidebar; moved to header in fullscreen
-                        />
+                      {/* Current Attempt / Actions */}
+                      <TaskDetailsToolbar
+                        forceCreateAttempt={forceCreateAttempt}
+                        onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
+                      // hide actions in sidebar; moved to header in fullscreen
+                      />
 
-                        {/* Task Breakdown (TODOs) */}
-                        <TodoPanel />
-                      </aside>
+                      {/* Task Breakdown (TODOs) */}
+                      <TodoPanel />
+                    </aside>
 
-                      {/* Main content */}
-                      <main className="flex-1 min-h-0 min-w-0 flex flex-col">
-                        <TabNavigation
-                          activeTab={activeTab}
-                          setActiveTab={setActiveTab}
-                        />
+                    {/* Main content */}
+                    <main className="flex-1 min-h-0 min-w-0 flex flex-col">
+                      <TabNavigation
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                      />
 
-                        <div className="flex-1 flex flex-col min-h-0">
-                          {activeTab === 'diffs' ? (
-                            <DiffTab />
-                          ) : activeTab === 'processes' ? (
-                            <ProcessesTab />
-                          ) : (
-                            <LogsTab />
-                          )}
-                        </div>
+                      <div className="flex-1 flex flex-col min-h-0">
+                        {activeTab === 'diffs' ? (
+                          <DiffTab />
+                        ) : activeTab === 'processes' ? (
+                          <ProcessesTab />
+                        ) : (
+                          <LogsTab />
+                        )}
+                      </div>
 
-                        <TaskFollowUpSection />
-                      </main>
-                    </div>
-                  ) : (
-                    <>
-                      <Card className="flex shrink-0 items-center gap-2 border-b border-dashed bg-secondary">
-                        <div className="p-3 flex flex-1 items-center truncate">
-                          <p className="ml-2 text-sm">Attempt (1/3)</p>
-                        </div>
-                      </Card>
-                      {/* <div className="p-4 border-b">
+                      <TaskFollowUpSection />
+                    </main>
+                  </div>
+                ) : (
+                  <>
+                    <Card className="flex shrink-0 items-center gap-2 border-b bg-secondary">
+                      <div className="p-3 flex flex-1 items-center truncate">
+                        <p className="ml-2 text-sm">Attempt (1/3)</p>
+                      </div>
+                    </Card>
+                    {/* <div className="p-4 border-b">
                         <TaskDetailsToolbar />
                       </div> */}
 
-                      {/* <TabNavigation
+                    {/* <TabNavigation
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                       /> */}
 
-                      {/* Tab Content */}
-                      {/* <div className="flex-1 flex flex-col min-h-0">
+                    {/* Tab Content */}
+                    {/* <div className="flex-1 flex flex-col min-h-0">
                         {activeTab === 'diffs' ? (
                           <DiffTab />
                         ) : activeTab === 'processes' ? (
@@ -206,11 +207,13 @@ export function TaskDetailsPanel({
                         )}
                       </div> */}
 
-                      <TaskFollowUpSection />
-                    </>
-                  )}
-                </div>
+                    <LogsTab />
+
+                    <TaskFollowUpSection />
+                  </>
+                )}
               </div>
+
 
               <EditorSelectionDialog
                 isOpen={showEditorDialog}

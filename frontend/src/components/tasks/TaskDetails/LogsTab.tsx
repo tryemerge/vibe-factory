@@ -287,7 +287,7 @@ function LogsTab() {
           increaseViewportBy={200}
           overscan={5}
           components={{
-            Footer: () => <div style={{ height: '50px' }} />,
+            Footer: () => <div className="pb-4" />,
           }}
         />
       </div>

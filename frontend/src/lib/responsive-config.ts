@@ -21,9 +21,9 @@ export const PANEL_WIDTHS = {
 // Generate classes for TaskDetailsPanel
 export const getTaskPanelClasses = (forceFullScreen: boolean) => {
   const overlayClasses = forceFullScreen
-    ? 'fixed inset-y-0 right-0 z-50 w-full'
+    ? 'fixed inset-y-0 flex flex-col right-0 z-50 w-full'
     : [
-      'fixed inset-y-0 right-0 z-50',
+      'fixed flex flex-col inset-y-0 right-0 z-50',
       PANEL_WIDTHS.base,
       PANEL_WIDTHS.sm,
       PANEL_WIDTHS.md,
