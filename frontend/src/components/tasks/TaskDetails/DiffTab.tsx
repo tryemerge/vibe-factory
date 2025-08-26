@@ -1,14 +1,17 @@
 import { useDiffEntries } from '@/hooks/useDiffEntries';
-import { useMemo, useContext, useCallback, useState, useEffect } from 'react';
-import { TaskSelectedAttemptContext } from '@/components/context/taskDetailsContext.ts';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import DiffCard from '@/components/DiffCard';
 import { generateDiffFile } from '@git-diff-view/file';
 import { getHighLightLanguageFromPath } from '@/utils/extToLanguage';
+import type { TaskAttempt } from 'shared/types';
 
-function DiffTab() {
-  const { selectedAttempt } = useContext(TaskSelectedAttemptContext);
+interface DiffTabProps {
+  selectedAttempt: TaskAttempt | null;
+}
+
+function DiffTab({ selectedAttempt }: DiffTabProps) {
   const [loading, setLoading] = useState(true);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const { diffs, error } = useDiffEntries(selectedAttempt?.id ?? null, true);
@@ -136,6 +139,7 @@ function DiffTab() {
               diff={diff}
               expanded={!collapsedIds.has(id)}
               onToggle={() => toggle(id)}
+              selectedAttempt={selectedAttempt}
             />
           );
         })}

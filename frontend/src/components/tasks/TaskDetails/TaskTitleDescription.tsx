@@ -7,27 +7,24 @@ interface TaskTitleDescriptionProps {
   task: TaskWithAttemptStatus;
 }
 
-export function TaskTitleDescription({
-  task,
-}: TaskTitleDescriptionProps) {
+export function TaskTitleDescription({ task }: TaskTitleDescriptionProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   return (
     <div>
-      <h2 className="text-lg font-bold mb-1 line-clamp-2">
-        {task.title}
-      </h2>
-      
+      <h2 className="text-lg font-bold mb-1 line-clamp-2">{task.title}</h2>
+
       <div className="mt-2">
         <div className="p-2">
           <div className="flex items-start gap-2 text-sm text-muted-foreground">
             {task.description ? (
               <div className="flex-1 min-w-0">
                 <p
-                  className={`whitespace-pre-wrap break-words ${!isDescriptionExpanded && task.description.length > 350
-                    ? 'line-clamp-6'
-                    : ''
-                    }`}
+                  className={`whitespace-pre-wrap break-words ${
+                    !isDescriptionExpanded && task.description.length > 350
+                      ? 'line-clamp-6'
+                      : ''
+                  }`}
                 >
                   {task.description}
                 </p>

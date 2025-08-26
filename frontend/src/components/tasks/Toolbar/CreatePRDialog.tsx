@@ -17,18 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCallback, useContext, useEffect, useState } from 'react';
-import {
-  TaskAttemptDataContext,
-  TaskDetailsContext,
-  TaskSelectedAttemptContext,
-} from '@/components/context/taskDetailsContext.ts';
+import { useCallback, useEffect, useState } from 'react';
 import { attemptsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
-import { GitBranch, GitHubServiceError } from 'shared/types';
+import { GitBranch, GitHubServiceError, TaskWithAttemptStatus } from 'shared/types';
 
 type Props = {
+  task: TaskWithAttemptStatus;
+  projectId: string;
+  selectedAttemptId?: string;
   showCreatePRDialog: boolean;
   setShowCreatePRDialog: (show: boolean) => void;
   creatingPR: boolean;
@@ -38,6 +36,9 @@ type Props = {
 };
 
 function CreatePrDialog({
+  task,
+  projectId,
+  selectedAttemptId,
   showCreatePRDialog,
   setCreatingPR,
   setShowCreatePRDialog,
@@ -45,14 +46,9 @@ function CreatePrDialog({
   setError,
   branches,
 }: Props) {
-  const { projectId, task } = useContext(TaskDetailsContext);
-  const { selectedAttempt } = useContext(TaskSelectedAttemptContext);
-  const { fetchAttemptData } = useContext(TaskAttemptDataContext);
   const [prTitle, setPrTitle] = useState('');
   const [prBody, setPrBody] = useState('');
-  const [prBaseBranch, setPrBaseBranch] = useState(
-    selectedAttempt?.base_branch || 'main'
-  );
+  const [prBaseBranch, setPrBaseBranch] = useState('main');
   const [showPatDialog, setShowPatDialog] = useState(false);
   const [patDialogError, setPatDialogError] = useState<string | null>(null);
   const [showGitHubLoginDialog, setShowGitHubLoginDialog] = useState(false);
@@ -65,19 +61,14 @@ function CreatePrDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCreatePRDialog]);
 
-  // Update PR base branch when selected attempt changes
-  useEffect(() => {
-    if (selectedAttempt?.base_branch) {
-      setPrBaseBranch(selectedAttempt.base_branch);
-    }
-  }, [selectedAttempt?.base_branch]);
+  // Remove attempt-specific base branch logic since we don't have selectedAttempt
 
   const handleConfirmCreatePR = useCallback(async () => {
-    if (!projectId || !selectedAttempt?.id || !selectedAttempt?.task_id) return;
+    if (!projectId || !selectedAttemptId) return;
 
     setCreatingPR(true);
 
-    const result = await attemptsApi.createPR(selectedAttempt.id, {
+    const result = await attemptsApi.createPR(selectedAttemptId, {
       title: prTitle,
       body: prBody || null,
       base_branch: prBaseBranch || null,
@@ -89,9 +80,8 @@ function CreatePrDialog({
       // Reset form
       setPrTitle('');
       setPrBody('');
-      setPrBaseBranch(selectedAttempt?.base_branch || 'main');
-      // Refresh branch status to show the new PR
-      fetchAttemptData(selectedAttempt.id);
+      setPrBaseBranch('main');
+      // No need to manually refetch - React Query will handle this
     } else {
       if (result.error) {
         setShowCreatePRDialog(false);
@@ -120,11 +110,10 @@ function CreatePrDialog({
     setCreatingPR(false);
   }, [
     projectId,
-    selectedAttempt,
+    selectedAttemptId,
     prBaseBranch,
     prBody,
     prTitle,
-    fetchAttemptData,
     setCreatingPR,
     setError,
     setShowCreatePRDialog,

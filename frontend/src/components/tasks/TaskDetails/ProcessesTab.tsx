@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Play,
   Square,
@@ -8,17 +8,22 @@ import {
   Cog,
   ArrowLeft,
 } from 'lucide-react';
-import { TaskAttemptDataContext } from '@/components/context/taskDetailsContext.ts';
 import { executionProcessesApi } from '@/lib/api.ts';
 import { ProfileVariantBadge } from '@/components/common/ProfileVariantBadge.tsx';
+import { useAttemptData } from '@/hooks';
 import ProcessLogsViewer from './ProcessLogsViewer';
 import type { ExecutionProcessStatus, ExecutionProcess } from 'shared/types';
 import { useProcessSelection } from '@/contexts/ProcessSelectionContext';
 
-function ProcessesTab() {
-  const { attemptData, setAttemptData } = useContext(TaskAttemptDataContext);
+interface ProcessesTabProps {
+  attemptId?: string;
+}
+
+function ProcessesTab({ attemptId }: ProcessesTabProps) {
+  const { attemptData } = useAttemptData(attemptId);
   const { selectedProcessId, setSelectedProcessId } = useProcessSelection();
   const [loadingProcessId, setLoadingProcessId] = useState<string | null>(null);
+  const [localProcessDetails, setLocalProcessDetails] = useState<Record<string, ExecutionProcess>>({});
 
   const getStatusIcon = (status: ExecutionProcessStatus) => {
     switch (status) {
@@ -61,12 +66,9 @@ function ProcessesTab() {
       const result = await executionProcessesApi.getDetails(processId);
 
       if (result !== undefined) {
-        setAttemptData((prev) => ({
+        setLocalProcessDetails((prev) => ({
           ...prev,
-          runningProcessDetails: {
-            ...prev.runningProcessDetails,
-            [processId]: result,
-          },
+          [processId]: result,
         }));
       }
     } catch (err) {
@@ -80,23 +82,24 @@ function ProcessesTab() {
   useEffect(() => {
     if (
       selectedProcessId &&
-      !attemptData.runningProcessDetails[selectedProcessId]
+      !attemptData.runningProcessDetails[selectedProcessId] &&
+      !localProcessDetails[selectedProcessId]
     ) {
       fetchProcessDetails(selectedProcessId);
     }
-  }, [selectedProcessId, attemptData.runningProcessDetails]);
+  }, [selectedProcessId, attemptData.runningProcessDetails, localProcessDetails]);
 
   const handleProcessClick = async (process: ExecutionProcess) => {
     setSelectedProcessId(process.id);
 
     // If we don't have details for this process, fetch them
-    if (!attemptData.runningProcessDetails[process.id]) {
+    if (!attemptData.runningProcessDetails[process.id] && !localProcessDetails[process.id]) {
       await fetchProcessDetails(process.id);
     }
   };
 
   const selectedProcess = selectedProcessId
-    ? attemptData.runningProcessDetails[selectedProcessId]
+    ? attemptData.runningProcessDetails[selectedProcessId] || localProcessDetails[selectedProcessId]
     : null;
 
   if (!attemptData.processes || attemptData.processes.length === 0) {

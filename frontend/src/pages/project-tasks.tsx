@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
-import { projectsApi, tasksApi } from '@/lib/api';
+import { projectsApi, tasksApi, attemptsApi } from '@/lib/api';
 import { TaskFormDialog } from '@/components/tasks/TaskFormDialog';
 import { ProjectForm } from '@/components/projects/project-form';
 import { TaskTemplateManager } from '@/components/TaskTemplateManager';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts';
 import { useSearch } from '@/contexts/search-context';
+import { useQuery } from '@tanstack/react-query';
 
 import {
   Dialog,
@@ -31,6 +32,7 @@ import type {
   TaskWithAttemptStatus,
   Project,
   TaskTemplate,
+  TaskAttempt,
 } from 'shared/types';
 import type { CreateTask } from 'shared/types';
 import type { DragEndEvent } from '@/components/ui/shadcn-io/kanban';
@@ -38,11 +40,14 @@ import type { DragEndEvent } from '@/components/ui/shadcn-io/kanban';
 type Task = TaskWithAttemptStatus;
 
 export function ProjectTasks() {
-  const { projectId, taskId } = useParams<{
+  const { projectId, taskId, attemptId } = useParams<{
     projectId: string;
     taskId?: string;
+    attemptId?: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +66,55 @@ export function ProjectTasks() {
   // Panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  
+  // Fullscreen state from query params
+  const isFullscreen = searchParams.get('view') === 'full';
+
+  // Attempts fetching (only when task is selected)
+  const { data: attempts = [] } = useQuery({
+    queryKey: ['taskAttempts', selectedTask?.id],
+    queryFn: () => attemptsApi.getAll(selectedTask?.id!),
+    enabled: !!selectedTask?.id,
+  });
+
+  // Selected attempt logic
+  const selectedAttempt = useMemo(() => {
+    if (!attempts.length) return null;
+    if (attemptId) {
+      const found = attempts.find(a => a.id === attemptId);
+      if (found) return found;
+    }
+    return attempts[0] || null; // Most recent fallback
+  }, [attempts, attemptId]);
+
+  // Navigation callback for attempt selection
+  const setSelectedAttempt = useCallback((attempt: TaskAttempt | null) => {
+    if (!selectedTask) return;
+
+    const baseUrl = `/projects/${projectId}/tasks/${selectedTask.id}`;
+    const attemptUrl = attempt ? `/attempts/${attempt.id}` : '';
+    const fullUrl = `${baseUrl}${attemptUrl}`;
+    
+    navigate({
+      pathname: fullUrl,
+      search: location.search // Preserve query params like ?view=full
+    }, { replace: true });
+  }, [navigate, projectId, selectedTask, location.search]);
+
+  // Sync selectedTask with URL params
+  useEffect(() => {
+    if (taskId && tasks.length > 0) {
+      const taskFromUrl = tasks.find(t => t.id === taskId);
+      if (taskFromUrl && taskFromUrl !== selectedTask) {
+        setSelectedTask(taskFromUrl);
+        setIsPanelOpen(true);
+      }
+    } else if (!taskId && selectedTask) {
+      // Clear selection when no taskId in URL
+      setSelectedTask(null);
+      setIsPanelOpen(false);
+    }
+  }, [taskId, tasks, selectedTask]);
 
   // Define task creation handler
   const handleCreateNewTask = useCallback(() => {
@@ -69,11 +123,7 @@ export function ProjectTasks() {
     setIsTaskDialogOpen(true);
   }, []);
 
-
-
   // Full screen
-  const [fullScreenTaskDetails, setFullScreenTaskDetails] = useState(false);
-
 
 
   const fetchProject = useCallback(async () => {
@@ -84,10 +134,6 @@ export function ProjectTasks() {
       setError('Failed to load project');
     }
   }, [projectId]);
-
-
-
-
 
   const handleCloseTemplateManager = useCallback(() => {
     setIsTemplateManagerOpen(false);
@@ -344,11 +390,11 @@ export function ProjectTasks() {
 
   return (
     <div
-      className={getMainContainerClasses(isPanelOpen, fullScreenTaskDetails)}
+      className={getMainContainerClasses(isPanelOpen, isFullscreen)}
     >
       {/* Left Column - Kanban Section */}
       <div
-        className={getKanbanSectionClasses(isPanelOpen, fullScreenTaskDetails)}
+        className={getKanbanSectionClasses(isPanelOpen, isFullscreen)}
       >
         {tasks.length === 0 ? (
           <div className="max-w-7xl mx-auto">
@@ -389,8 +435,18 @@ export function ProjectTasks() {
           onEditTask={handleEditTask}
           onDeleteTask={handleDeleteTask}
           isDialogOpen={isTaskDialogOpen || isProjectSettingsOpen}
-          isFullScreen={fullScreenTaskDetails}
-          setFullScreen={setFullScreenTaskDetails}
+          isFullScreen={isFullscreen}
+          setFullScreen={(fullscreen) => {
+            if (fullscreen) {
+              searchParams.set('view', 'full');
+            } else {
+              searchParams.delete('view');
+            }
+            setSearchParams(searchParams, { replace: true });
+          }}
+          selectedAttempt={selectedAttempt}
+          attempts={attempts}
+          setSelectedAttempt={setSelectedAttempt}
         />
       )}
 

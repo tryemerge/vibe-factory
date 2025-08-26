@@ -4,7 +4,6 @@ import { ImageUploadSection } from '@/components/ui/ImageUploadSection';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileSearchTextarea } from '@/components/ui/file-search-textarea';
 import {
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -12,12 +11,8 @@ import {
   useCallback,
 } from 'react';
 import { attemptsApi, imagesApi } from '@/lib/api.ts';
-import type { ImageResponse } from 'shared/types';
-import {
-  TaskAttemptDataContext,
-  TaskDetailsContext,
-  TaskSelectedAttemptContext,
-} from '@/components/context/taskDetailsContext.ts';
+import type { ImageResponse, TaskWithAttemptStatus } from 'shared/types';
+import { useAttemptData, useBranchStatus, useExecutionProcesses } from '@/hooks';
 import { Loader } from '@/components/ui/loader';
 import { useUserSystem } from '@/components/config-provider';
 import {
@@ -29,17 +24,52 @@ import {
 import { cn } from '@/lib/utils';
 import { useVariantCyclingShortcut } from '@/lib/keyboard-shortcuts';
 
-export function TaskFollowUpSection() {
-  const { task, projectId } = useContext(TaskDetailsContext);
-  const { selectedAttempt } = useContext(TaskSelectedAttemptContext);
-  const {
-    attemptData,
-    fetchAttemptData,
-    isAttemptRunning,
-    defaultFollowUpVariant,
-    branchStatus,
-  } = useContext(TaskAttemptDataContext);
+interface TaskFollowUpSectionProps {
+  task: TaskWithAttemptStatus;
+  projectId: string;
+  selectedAttemptId?: string;
+  selectedAttemptProfile?: string;
+}
+
+export function TaskFollowUpSection({ task, projectId, selectedAttemptId, selectedAttemptProfile }: TaskFollowUpSectionProps) {
+  const { attemptData, isAttemptRunning } = useAttemptData(selectedAttemptId);
+  const { data: branchStatus } = useBranchStatus(selectedAttemptId);
+  const { data: executionData } = useExecutionProcesses(selectedAttemptId);
   const { profiles } = useUserSystem();
+
+  // Inline defaultFollowUpVariant logic
+  const defaultFollowUpVariant = useMemo(() => {
+    if (!executionData) return null;
+
+    // Find most recent coding agent process with variant
+    const latestProfile = executionData.processes
+      .filter((p) => p.run_reason === 'codingagent')
+      .reverse()
+      .map((process) => {
+        if (
+          process.executor_action?.typ.type === 'CodingAgentInitialRequest' ||
+          process.executor_action?.typ.type === 'CodingAgentFollowUpRequest'
+        ) {
+          return process.executor_action?.typ.profile_variant_label;
+        }
+        return undefined;
+      })
+      .find(Boolean);
+
+    if (latestProfile?.variant) {
+      return latestProfile.variant;
+    }
+
+    if (selectedAttemptProfile && profiles) {
+      // No processes yet, check if profile has default variant
+      const profile = profiles.find((p) => p.label === selectedAttemptProfile);
+      if (profile?.variants && profile.variants.length > 0) {
+        return profile.variants[0].label;
+      }
+    }
+
+    return null;
+  }, [executionData?.processes, selectedAttemptProfile, profiles]);
 
   const [followUpMessage, setFollowUpMessage] = useState('');
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
@@ -55,12 +85,12 @@ export function TaskFollowUpSection() {
     []
   );
 
-  // Get the profile from the selected attempt
-  const selectedProfile = selectedAttempt?.profile || null;
+  // Get the profile from the attempt data
+  const selectedProfile = selectedAttemptProfile;
 
   const canSendFollowUp = useMemo(() => {
     if (
-      !selectedAttempt ||
+      !selectedAttemptId ||
       attemptData.processes.length === 0 ||
       isAttemptRunning ||
       isSendingFollowUp
@@ -80,7 +110,7 @@ export function TaskFollowUpSection() {
 
     return true;
   }, [
-    selectedAttempt,
+    selectedAttemptId,
     attemptData.processes,
     isAttemptRunning,
     isSendingFollowUp,
@@ -119,7 +149,7 @@ export function TaskFollowUpSection() {
   });
 
   const onSendFollowUp = async () => {
-    if (!task || !selectedAttempt || !followUpMessage.trim()) return;
+    if (!task || !selectedAttemptId || !followUpMessage.trim()) return;
 
     try {
       setIsSendingFollowUp(true);
@@ -132,7 +162,7 @@ export function TaskFollowUpSection() {
             ? images.map((img) => img.id)
             : null;
 
-      await attemptsApi.followUp(selectedAttempt.id, {
+      await attemptsApi.followUp(selectedAttemptId, {
         prompt: followUpMessage.trim(),
         variant: selectedVariant,
         image_ids: imageIds,
@@ -142,7 +172,7 @@ export function TaskFollowUpSection() {
       setImages([]);
       setNewlyUploadedImageIds([]);
       setShowImageUpload(false);
-      fetchAttemptData(selectedAttempt.id);
+      // No need to manually refetch - React Query will handle this
     } catch (error: unknown) {
       // @ts-expect-error it is type ApiError
       setFollowUpError(`Failed to start follow-up execution: ${error.message}`);
@@ -152,7 +182,7 @@ export function TaskFollowUpSection() {
   };
 
   return (
-    selectedAttempt && (
+    selectedAttemptId && (
       <div className="border-t p-4">
         <div className="space-y-2">
           {followUpError && (
@@ -215,7 +245,10 @@ export function TaskFollowUpSection() {
                     disabled={!canSendFollowUp}
                   >
                     <ImageIcon
-                      className={cn('h-4 w-4', images.length > 0 && 'text-primary')}
+                      className={cn(
+                        'h-4 w-4',
+                        images.length > 0 && 'text-primary'
+                      )}
                     />
                   </Button>
 
@@ -254,7 +287,9 @@ export function TaskFollowUpSection() {
                             {currentProfile.variants.map((variant) => (
                               <DropdownMenuItem
                                 key={variant.label}
-                                onClick={() => setSelectedVariant(variant.label)}
+                                onClick={() =>
+                                  setSelectedVariant(variant.label)
+                                }
                                 className={
                                   selectedVariant === variant.label
                                     ? 'bg-accent'
@@ -285,7 +320,6 @@ export function TaskFollowUpSection() {
                     }
                     return null;
                   })()}
-
                 </div>
                 <Button
                   onClick={onSendFollowUp}

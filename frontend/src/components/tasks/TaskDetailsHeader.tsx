@@ -1,11 +1,5 @@
-import { memo, useContext } from 'react';
-import {
-  Edit,
-  Trash2,
-  X,
-  Maximize2,
-  Minimize2,
-} from 'lucide-react';
+import { memo } from 'react';
+import { Edit, Trash2, X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -14,12 +8,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { TaskWithAttemptStatus } from 'shared/types';
-import { TaskDetailsContext } from '@/components/context/taskDetailsContext.ts';
 import { TaskTitleDescription } from './TaskDetails/TaskTitleDescription';
 import { Card } from '../ui/card';
 import { statusBoardColors, statusLabels } from '@/utils/status-labels';
 
 interface TaskDetailsHeaderProps {
+  task: TaskWithAttemptStatus;
   onClose: () => void;
   onEditTask?: (task: TaskWithAttemptStatus) => void;
   onDeleteTask?: (taskId: string) => void;
@@ -29,6 +23,7 @@ interface TaskDetailsHeaderProps {
 }
 
 function TaskDetailsHeader({
+  task,
   onClose,
   onEditTask,
   onDeleteTask,
@@ -36,15 +31,21 @@ function TaskDetailsHeader({
   isFullScreen,
   setFullScreen,
 }: TaskDetailsHeaderProps) {
-  const { task } = useContext(TaskDetailsContext);
 
   return (
     <div>
-      <Card className="flex shrink-0 items-center gap-2 border-b border-dashed" style={{ backgroundColor: `hsl(var(${statusBoardColors[task.status]}) / 0.03)` }}>
+      <Card
+        className="flex shrink-0 items-center gap-2 border-b border-dashed"
+        style={{
+          backgroundColor: `hsl(var(${statusBoardColors[task.status]}) / 0.03)`,
+        }}
+      >
         <div className="p-3 flex flex-1 items-center truncate">
           <div
             className="h-2 w-2 rounded-full inline-block"
-            style={{ backgroundColor: `hsl(var(${statusBoardColors[task.status]}))` }}
+            style={{
+              backgroundColor: `hsl(var(${statusBoardColors[task.status]}))`,
+            }}
           />
           <p className="ml-2 text-sm">{statusLabels[task.status]}</p>
         </div>

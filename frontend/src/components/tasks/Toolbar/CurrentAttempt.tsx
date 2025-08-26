@@ -37,16 +37,12 @@ import {
   Dispatch,
   SetStateAction,
   useCallback,
-  useContext,
   useMemo,
   useState,
 } from 'react';
-import type { GitBranch, TaskAttempt } from 'shared/types';
-import {
-  TaskAttemptDataContext,
-  TaskAttemptStoppingContext,
-  TaskDetailsContext,
-} from '@/components/context/taskDetailsContext.ts';
+import type { GitBranch, TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
+import { useAttemptData, useBranchStatus, useOpenInEditor } from '@/hooks';
+import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';
 import { useConfig } from '@/components/config-provider.tsx';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts.ts';
 import { writeClipboardViaBridge } from '@/vscode/bridge';
@@ -75,6 +71,9 @@ function getEditorDisplayName(editorType: string): string {
 }
 
 type Props = {
+  task: TaskWithAttemptStatus;
+  projectId: string;
+  projectHasDevScript: boolean;
   setError: Dispatch<SetStateAction<string | null>>;
   setShowCreatePRDialog: Dispatch<SetStateAction<boolean>>;
   selectedBranch: string | null;
@@ -82,11 +81,15 @@ type Props = {
   taskAttempts: TaskAttempt[];
   creatingPR: boolean;
   handleEnterCreateAttemptMode: () => void;
-  handleAttemptSelect: (attempt: TaskAttempt) => void;
   branches: GitBranch[];
+  onShowEditorDialog?: () => void;
+  setSelectedAttempt: (attempt: TaskAttempt | null) => void;
 };
 
 function CurrentAttempt({
+  task,
+  projectId,
+  projectHasDevScript,
   setError,
   setShowCreatePRDialog,
   selectedBranch,
@@ -94,15 +97,15 @@ function CurrentAttempt({
   taskAttempts,
   creatingPR,
   handleEnterCreateAttemptMode,
-  handleAttemptSelect,
   branches,
+  onShowEditorDialog,
+  setSelectedAttempt,
 }: Props) {
-  const { task, projectId, handleOpenInEditor, projectHasDevScript } =
-    useContext(TaskDetailsContext);
   const { config } = useConfig();
-  const { isStopping, setIsStopping } = useContext(TaskAttemptStoppingContext);
-  const { attemptData, fetchAttemptData, isAttemptRunning, branchStatus } =
-    useContext(TaskAttemptDataContext);
+  const { isStopping, setIsStopping } = useTaskStopping(task.id);
+  const { attemptData, isAttemptRunning } = useAttemptData(selectedAttempt?.id);
+  const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
+  const handleOpenInEditor = useOpenInEditor(selectedAttempt?.id, onShowEditorDialog);
   const { jumpToProcess } = useProcessSelection();
 
   const [isStartingDevServer, setIsStartingDevServer] = useState(false);
@@ -141,7 +144,7 @@ function CurrentAttempt({
 
     try {
       await attemptsApi.startDevServer(selectedAttempt.id);
-      fetchAttemptData(selectedAttempt.id);
+      // React Query will handle refetching
     } catch (err) {
       console.error('Failed to start dev server:', err);
     } finally {
@@ -156,7 +159,7 @@ function CurrentAttempt({
 
     try {
       await executionProcessesApi.stopExecutionProcess(runningDevServer.id);
-      fetchAttemptData(selectedAttempt.id);
+      // React Query will handle refetching
     } catch (err) {
       console.error('Failed to stop dev server:', err);
     } finally {
@@ -176,10 +179,7 @@ function CurrentAttempt({
     try {
       setIsStopping(true);
       await attemptsApi.stop(selectedAttempt.id);
-      await fetchAttemptData(selectedAttempt.id);
-      setTimeout(() => {
-        fetchAttemptData(selectedAttempt.id);
-      }, 1000);
+      // React Query will handle refetching automatically
     } catch (err) {
       console.error('Failed to stop executions:', err);
     } finally {
@@ -189,7 +189,6 @@ function CurrentAttempt({
     task,
     selectedAttempt,
     projectId,
-    fetchAttemptData,
     setIsStopping,
     isAttemptRunning,
   ]);
@@ -207,10 +206,10 @@ function CurrentAttempt({
 
   const handleAttemptChange = useCallback(
     (attempt: TaskAttempt) => {
-      handleAttemptSelect(attempt);
-      fetchAttemptData(attempt.id);
+      setSelectedAttempt(attempt);
+      // React Query will handle refetching when attemptId changes
     },
-    [fetchAttemptData, handleAttemptSelect]
+    [setSelectedAttempt]
   );
 
   const handleMergeClick = async () => {
@@ -228,7 +227,7 @@ function CurrentAttempt({
       setError(null); // Clear any previous errors on success
       setPushSuccess(true);
       setTimeout(() => setPushSuccess(false), 2000);
-      fetchAttemptData(selectedAttempt.id);
+      // React Query will handle refetching
     } catch (error: any) {
       console.error('Failed to push changes:', error);
       setError(error.message || 'Failed to push changes');
@@ -246,7 +245,7 @@ function CurrentAttempt({
       setError(null); // Clear any previous errors on success
       setMergeSuccess(true);
       setTimeout(() => setMergeSuccess(false), 2000);
-      fetchAttemptData(selectedAttempt.id);
+      // React Query will handle refetching
     } catch (error) {
       console.error('Failed to merge changes:', error);
       // @ts-expect-error it is type ApiError
@@ -263,7 +262,7 @@ function CurrentAttempt({
       setRebasing(true);
       await attemptsApi.rebase(selectedAttempt.id, { new_base_branch: null });
       setError(null); // Clear any previous errors on success
-      fetchAttemptData(selectedAttempt.id);
+      // React Query will handle refetching
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rebase branch');
     } finally {
@@ -280,7 +279,7 @@ function CurrentAttempt({
         new_base_branch: newBaseBranch,
       });
       setError(null); // Clear any previous errors on success
-      fetchAttemptData(selectedAttempt.id);
+      // React Query will handle refetching
       setShowRebaseDialog(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rebase branch');

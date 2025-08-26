@@ -1,9 +1,10 @@
-import { useContext, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Circle, CircleCheckBig, CircleDotDashed } from 'lucide-react';
 import { useProcessesLogs } from '@/hooks/useProcessesLogs';
 import { usePinnedTodos } from '@/hooks/usePinnedTodos';
-import { TaskAttemptDataContext } from '@/components/context/taskDetailsContext';
+import { useAttemptData } from '@/hooks';
 import { shouldShowInLogs } from '@/constants/processes';
+import type { TaskAttempt } from 'shared/types';
 
 function getStatusIcon(status?: string) {
   const s = (status || '').toLowerCase();
@@ -14,8 +15,12 @@ function getStatusIcon(status?: string) {
   return <Circle aria-hidden className="h-4 w-4 text-muted-foreground" />;
 }
 
-export function TodoPanel() {
-  const { attemptData } = useContext(TaskAttemptDataContext);
+interface TodoPanelProps {
+  selectedAttempt: TaskAttempt | null;
+}
+
+export function TodoPanel({ selectedAttempt }: TodoPanelProps) {
+  const { attemptData } = useAttemptData(selectedAttempt?.id);
 
   const filteredProcesses = useMemo(
     () =>

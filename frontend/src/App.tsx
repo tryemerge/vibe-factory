@@ -3,7 +3,6 @@ import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/layout/navbar';
 import { Projects } from '@/pages/projects';
 import { ProjectTasks } from '@/pages/project-tasks';
-import { TaskDetailsPage } from '@/pages/task-details';
 
 import { Settings } from '@/pages/Settings';
 import { McpServers } from '@/pages/McpServers';
@@ -31,7 +30,7 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPrivacyOptIn, setShowPrivacyOptIn] = useState(false);
   const [showGitHubLogin, setShowGitHubLogin] = useState(false);
-  const showNavbar = !location.pathname.endsWith('/full');
+  const showNavbar = !location.search.includes('view=full');
 
   useEffect(() => {
     if (config) {
@@ -162,18 +161,25 @@ function AppContent() {
             />
             {showNavbar && <Navbar />}
             <div className="flex-1 overflow-y-scroll">
-            <SentryRoutes>
-              <Route path="/" element={<Projects />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/projects/:projectId" element={<Projects />} />
-              <Route path="/projects/:projectId/tasks" element={<ProjectTasks />} />
-              <Route path="/projects/:projectId/tasks/:taskId/full" element={<TaskDetailsPage />} />
-              <Route path="/projects/:projectId/tasks/:taskId/attempts/:attemptId/full" element={<TaskDetailsPage />} />
-              <Route path="/projects/:projectId/tasks/:taskId/attempts/:attemptId" element={<ProjectTasks />} />
-              <Route path="/projects/:projectId/tasks/:taskId" element={<ProjectTasks />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/mcp-servers" element={<McpServers />} />
-            </SentryRoutes>
+              <SentryRoutes>
+                <Route path="/" element={<Projects />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/projects/:projectId" element={<Projects />} />
+                <Route
+                  path="/projects/:projectId/tasks"
+                  element={<ProjectTasks />}
+                />
+                <Route
+                  path="/projects/:projectId/tasks/:taskId/attempts/:attemptId"
+                  element={<ProjectTasks />}
+                />
+                <Route
+                  path="/projects/:projectId/tasks/:taskId"
+                  element={<ProjectTasks />}
+                />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/mcp-servers" element={<McpServers />} />
+              </SentryRoutes>
             </div>
           </div>
         </SearchProvider>

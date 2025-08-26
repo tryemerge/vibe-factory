@@ -1,5 +1,4 @@
 import {
-  useContext,
   useRef,
   useCallback,
   useMemo,
@@ -8,10 +7,7 @@ import {
 } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { Cog } from 'lucide-react';
-import {
-  TaskAttemptDataContext,
-  TaskSelectedAttemptContext,
-} from '@/components/context/taskDetailsContext.ts';
+import { useAttemptData } from '@/hooks/useAttemptData';
 import { useProcessesLogs } from '@/hooks/useProcessesLogs';
 import LogEntryRow from '@/components/logs/LogEntryRow';
 import {
@@ -22,7 +18,7 @@ import {
   getLatestCodingAgent,
   PROCESS_STATUSES,
 } from '@/constants/processes';
-import type { ExecutionProcessStatus } from 'shared/types';
+import type { ExecutionProcessStatus, TaskAttempt } from 'shared/types';
 
 // Helper functions
 function addAll<T>(set: Set<T>, items: T[]): Set<T> {
@@ -119,9 +115,12 @@ function reducer(state: LogsState, action: LogsAction): LogsState {
   }
 }
 
-function LogsTab() {
-  const { attemptData } = useContext(TaskAttemptDataContext);
-  const { selectedAttempt } = useContext(TaskSelectedAttemptContext);
+type Props = {
+  selectedAttempt: TaskAttempt | null;
+};
+
+function LogsTab({ selectedAttempt }: Props) {
+  const { attemptData } = useAttemptData(selectedAttempt?.id);
   const virtuosoRef = useRef<any>(null);
 
   const [state, dispatch] = useReducer(reducer, initialState);

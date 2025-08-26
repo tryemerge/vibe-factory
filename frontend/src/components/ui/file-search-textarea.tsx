@@ -275,10 +275,11 @@ export function FileSearchTextarea({
                 {searchResults.map((file, index) => (
                   <div
                     key={file.path}
-                    className={`px-3 py-2 cursor-pointer text-sm ${index === selectedIndex
+                    className={`px-3 py-2 cursor-pointer text-sm ${
+                      index === selectedIndex
                         ? 'bg-blue-50 text-blue-900'
                         : 'hover:bg-muted'
-                      }`}
+                    }`}
                     onClick={() => selectFile(file)}
                   >
                     <div className="font-medium truncate">{file.name}</div>

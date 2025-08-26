@@ -16,7 +16,7 @@ export function SearchBar({
   value = '',
   onChange,
   disabled = false,
-  onClear
+  onClear,
 }: SearchBarProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -39,14 +39,16 @@ export function SearchBar({
   }, [onClear]);
 
   return (
-    <div className={cn("relative w-64 sm:w-72", className)}>
+    <div className={cn('relative w-64 sm:w-72', className)}>
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
         ref={inputRef}
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
-        placeholder={disabled ? "Search available only on task pages" : "Search tasks..."}
+        placeholder={
+          disabled ? 'Search available only on task pages' : 'Search tasks...'
+        }
         className="pl-8 pr-14 h-8"
       />
       <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none select-none font-mono text-[10px] text-muted-foreground rounded border bg-muted px-1 py-0.5">

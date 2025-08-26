@@ -1,16 +1,17 @@
 import { GitCompare, MessageSquare, Cog } from 'lucide-react';
-import { useContext } from 'react';
-import { TaskAttemptDataContext } from '@/components/context/taskDetailsContext.ts';
+import { useAttemptData } from '@/hooks/useAttemptData';
 import type { TabType } from '@/types/tabs';
+import type { TaskAttempt } from 'shared/types';
 
 type Props = {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
   rightContent?: React.ReactNode;
+  selectedAttempt: TaskAttempt | null;
 };
 
-function TabNavigation({ activeTab, setActiveTab, rightContent }: Props) {
-  const { attemptData } = useContext(TaskAttemptDataContext);
+function TabNavigation({ activeTab, setActiveTab, rightContent, selectedAttempt }: Props) {
+  const { attemptData } = useAttemptData(selectedAttempt?.id);
   return (
     <div className="border-b bg-muted/20 sticky top-0 z-10">
       <div className="flex items-center px-4">

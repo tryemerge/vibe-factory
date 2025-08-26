@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useCallback, useContext } from 'react';
+import { Dispatch, SetStateAction, useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button.tsx';
 import { ArrowDown, Settings2, X } from 'lucide-react';
 import {
@@ -11,13 +11,11 @@ import type {
   ProfileConfig,
   GitBranch,
   ProfileVariantLabel,
+  Task,
 } from 'shared/types';
 import type { TaskAttempt } from 'shared/types';
 import { attemptsApi } from '@/lib/api.ts';
-import {
-  TaskAttemptDataContext,
-  TaskDetailsContext,
-} from '@/components/context/taskDetailsContext.ts';
+import { useAttemptData } from '@/hooks/useAttemptData';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts.ts';
 import {
@@ -28,35 +26,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog.tsx';
-import { useState } from 'react';
 
 type Props = {
+  task: Task;
   branches: GitBranch[];
   taskAttempts: TaskAttempt[];
   createAttemptBranch: string | null;
   selectedProfile: ProfileVariantLabel | null;
   selectedBranch: string | null;
-  fetchTaskAttempts: () => void;
   setIsInCreateAttemptMode: Dispatch<SetStateAction<boolean>>;
   setCreateAttemptBranch: Dispatch<SetStateAction<string | null>>;
   setSelectedProfile: Dispatch<SetStateAction<ProfileVariantLabel | null>>;
   availableProfiles: ProfileConfig[] | null;
+  selectedAttempt: TaskAttempt | null;
 };
 
 function CreateAttempt({
+  task,
   branches,
   taskAttempts,
   createAttemptBranch,
   selectedProfile,
   selectedBranch,
-  fetchTaskAttempts,
   setIsInCreateAttemptMode,
   setCreateAttemptBranch,
   setSelectedProfile,
   availableProfiles,
+  selectedAttempt,
 }: Props) {
-  const { task } = useContext(TaskDetailsContext);
-  const { isAttemptRunning } = useContext(TaskAttemptDataContext);
+  const { isAttemptRunning } = useAttemptData(selectedAttempt?.id);
 
   const [showCreateAttemptConfirmation, setShowCreateAttemptConfirmation] =
     useState(false);
@@ -79,9 +77,9 @@ function CreateAttempt({
         profile_variant_label: profile,
         base_branch: effectiveBaseBranch,
       });
-      fetchTaskAttempts();
+      // React Query will handle refetching automatically
     },
-    [task.id, selectedProfile, selectedBranch, fetchTaskAttempts]
+    [task.id, selectedProfile, selectedBranch]
   );
 
   // Handler for Enter key or Start button

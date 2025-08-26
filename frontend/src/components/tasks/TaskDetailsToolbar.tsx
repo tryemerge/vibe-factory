@@ -1,25 +1,17 @@
 import {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useReducer,
   useState,
 } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { attemptsApi, projectsApi } from '@/lib/api';
-import type { GitBranch, ProfileVariantLabel } from 'shared/types';
-import type { TaskAttempt } from 'shared/types';
+import { projectsApi } from '@/lib/api';
+import type { GitBranch, ProfileVariantLabel, TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 
-import {
-  TaskAttemptDataContext,
-  TaskAttemptLoadingContext,
-  TaskAttemptStoppingContext,
-  TaskDetailsContext,
-  TaskSelectedAttemptContext,
-} from '@/components/context/taskDetailsContext.ts';
+import { useAttemptData } from '@/hooks';
+import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';
 import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog.tsx';
 import CreateAttempt from '@/components/tasks/Toolbar/CreateAttempt.tsx';
 import CurrentAttempt from '@/components/tasks/Toolbar/CurrentAttempt.tsx';
@@ -71,36 +63,39 @@ function uiReducer(state: UiState, action: UiAction): UiState {
 }
 
 function TaskDetailsToolbar({
+  task,
+  projectId,
+  projectHasDevScript,
   forceCreateAttempt,
   onLeaveForceCreateAttempt,
+  attempts,
+  selectedAttempt,
+  setSelectedAttempt,
 }: {
+  task: TaskWithAttemptStatus;
+  projectId: string;
+  projectHasDevScript?: boolean;
   forceCreateAttempt?: boolean;
   onLeaveForceCreateAttempt?: () => void;
+  attempts: TaskAttempt[];
+  selectedAttempt: TaskAttempt | null;
+  setSelectedAttempt: (attempt: TaskAttempt | null) => void;
 }) {
-  const { task, projectId } = useContext(TaskDetailsContext);
-  const { setLoading } = useContext(TaskAttemptLoadingContext);
-  const { selectedAttempt, setSelectedAttempt } = useContext(
-    TaskSelectedAttemptContext
-  );
-
-  const { isStopping } = useContext(TaskAttemptStoppingContext);
-  const location = useLocation();
-  const { setAttemptData, isAttemptRunning } = useContext(
-    TaskAttemptDataContext
-  );
+  // Use props instead of context
+  const taskAttempts = attempts;
+  // const { setLoading } = useTaskLoading(task.id);
+  const { isStopping } = useTaskStopping(task.id);
+  const { isAttemptRunning } = useAttemptData(selectedAttempt?.id);
 
   // UI state using reducer
   const [ui, dispatch] = useReducer(uiReducer, initialUi);
 
   // Data state
-  const [taskAttempts, setTaskAttempts] = useState<TaskAttempt[]>([]);
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] =
     useState<ProfileVariantLabel | null>(null);
-
-  const navigate = useNavigate();
-  const { attemptId: urlAttemptId } = useParams<{ attemptId?: string }>();
+  // const { attemptId: urlAttemptId } = useParams<{ attemptId?: string }>();
   const { system, profiles } = useUserSystem();
 
   // Memoize latest attempt calculation
@@ -153,130 +148,17 @@ function TaskDetailsToolbar({
     }
   }, [system.config?.profile]);
 
-  const fetchTaskAttempts = useCallback(async () => {
-    if (!task) return;
+  // Simplified - hooks handle data fetching and navigation
+  // const fetchTaskAttempts = useCallback(() => {
+  //   // The useSelectedAttempt hook handles all this logic now
+  // }, []);
 
-    try {
-      setLoading(true);
-      const result = await attemptsApi.getAll(task.id);
-
-      setTaskAttempts((prev) => {
-        if (JSON.stringify(prev) === JSON.stringify(result)) return prev;
-        return result || prev;
-      });
-
-      if (result.length > 0) {
-        // Check if we have a new latest attempt (newly created)
-        const currentLatest =
-          taskAttempts.length > 0
-            ? taskAttempts.reduce((latest, current) =>
-                new Date(current.created_at) > new Date(latest.created_at)
-                  ? current
-                  : latest
-              )
-            : null;
-
-        const newLatest = result.reduce((latest, current) =>
-          new Date(current.created_at) > new Date(latest.created_at)
-            ? current
-            : latest
-        );
-
-        // If we have a new attempt that wasn't there before, navigate to it immediately
-        const hasNewAttempt =
-          newLatest && (!currentLatest || newLatest.id !== currentLatest.id);
-
-        if (hasNewAttempt) {
-          // Always navigate to newly created attempts
-          handleAttemptSelect(newLatest);
-          return;
-        }
-
-        // Otherwise, follow existing logic for URL-based attempt selection
-        const urlParams = new URLSearchParams(location.search);
-        const queryAttemptParam = urlParams.get('attempt');
-        const attemptParam = urlAttemptId || queryAttemptParam;
-
-        let selectedAttemptToUse: TaskAttempt;
-
-        if (attemptParam) {
-          const specificAttempt = result.find(
-            (attempt) => attempt.id === attemptParam
-          );
-          if (specificAttempt) {
-            selectedAttemptToUse = specificAttempt;
-          } else {
-            selectedAttemptToUse = newLatest;
-          }
-        } else {
-          selectedAttemptToUse = newLatest;
-        }
-
-        setSelectedAttempt((prev) => {
-          if (JSON.stringify(prev) === JSON.stringify(selectedAttemptToUse))
-            return prev;
-
-          // Only navigate if we're not already on the correct attempt URL
-          if (
-            selectedAttemptToUse &&
-            task &&
-            (!urlAttemptId || urlAttemptId !== selectedAttemptToUse.id)
-          ) {
-            const isFullScreen = location.pathname.endsWith('/full');
-            const targetUrl = isFullScreen
-              ? `/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttemptToUse.id}/full`
-              : `/projects/${projectId}/tasks/${task.id}/attempts/${selectedAttemptToUse.id}`;
-            navigate(targetUrl, { replace: true });
-          }
-
-          return selectedAttemptToUse;
-        });
-      } else {
-        setSelectedAttempt(null);
-        setAttemptData({
-          processes: [],
-          runningProcessDetails: {},
-        });
-      }
-    } catch (error) {
-      // we already logged error
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    task,
-    location.search,
-    urlAttemptId,
-    navigate,
-    projectId,
-    setLoading,
-    setSelectedAttempt,
-    setAttemptData,
-  ]);
-
-  useEffect(() => {
-    fetchTaskAttempts();
-  }, [fetchTaskAttempts]);
+  // Remove fetchTaskAttempts - hooks handle this now
 
   // Handle entering create attempt mode
   const handleEnterCreateAttemptMode = useCallback(() => {
     dispatch({ type: 'ENTER_CREATE_MODE' });
   }, []);
-
-  // Handle attempt selection with URL navigation
-  const handleAttemptSelect = useCallback(
-    (attempt: TaskAttempt | null) => {
-      setSelectedAttempt(attempt);
-      if (attempt && task) {
-        const isFullScreen = location.pathname.endsWith('/full');
-        const targetUrl = isFullScreen
-          ? `/projects/${projectId}/tasks/${task.id}/attempts/${attempt.id}/full`
-          : `/projects/${projectId}/tasks/${task.id}/attempts/${attempt.id}`;
-        navigate(targetUrl, { replace: true });
-      }
-    },
-    [navigate, projectId, task, setSelectedAttempt, location.pathname]
-  );
 
   // Stub handlers for backward compatibility with CreateAttempt
   const setCreateAttemptBranch = useCallback(
@@ -344,7 +226,7 @@ function TaskDetailsToolbar({
 
         {isInCreateAttemptMode ? (
           <CreateAttempt
-            fetchTaskAttempts={fetchTaskAttempts}
+            task={task}
             createAttemptBranch={createAttemptBranch}
             selectedBranch={selectedBranch}
             selectedProfile={selectedProfile}
@@ -354,6 +236,7 @@ function TaskDetailsToolbar({
             setIsInCreateAttemptMode={setIsInCreateAttemptMode}
             setSelectedProfile={setSelectedProfile}
             availableProfiles={profiles}
+            selectedAttempt={selectedAttempt}
           />
         ) : (
           <div className="space-y-3 p-3 bg-muted/20 rounded-lg border">
@@ -361,6 +244,9 @@ function TaskDetailsToolbar({
             <div className="space-y-2">
               {selectedAttempt ? (
                 <CurrentAttempt
+                  task={task}
+                  projectId={projectId}
+                  projectHasDevScript={projectHasDevScript ?? false}
                   selectedAttempt={selectedAttempt}
                   taskAttempts={taskAttempts}
                   selectedBranch={selectedBranch}
@@ -368,8 +254,8 @@ function TaskDetailsToolbar({
                   setShowCreatePRDialog={setShowCreatePRDialog}
                   creatingPR={ui.creatingPR}
                   handleEnterCreateAttemptMode={handleEnterCreateAttemptMode}
-                  handleAttemptSelect={handleAttemptSelect}
                   branches={branches}
+                  setSelectedAttempt={setSelectedAttempt}
                 />
               ) : (
                 <div className="text-center py-8">
@@ -401,6 +287,9 @@ function TaskDetailsToolbar({
       </div>
 
       <CreatePRDialog
+        task={task}
+        projectId={projectId}
+        selectedAttemptId={selectedAttempt?.id}
         creatingPR={ui.creatingPR}
         setShowCreatePRDialog={setShowCreatePRDialog}
         showCreatePRDialog={ui.showCreatePRDialog}
