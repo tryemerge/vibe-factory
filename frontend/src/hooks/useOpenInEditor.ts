@@ -1,28 +1,39 @@
 import { useCallback } from 'react';
 import { attemptsApi } from '@/lib/api';
-import type { EditorType } from 'shared/types';
+import { useEditorDialog } from '@/contexts/editor-dialog-context';
+import type { EditorType, TaskAttempt } from 'shared/types';
 
 export function useOpenInEditor(
-  attemptId: string | undefined,
+  attempt: TaskAttempt | null,
   onShowEditorDialog?: () => void
 ) {
+  const { showEditorDialog } = useEditorDialog();
+  
   return useCallback(
     async (editorType?: EditorType) => {
-      if (!attemptId) return;
+      if (!attempt) return;
 
       try {
-        const result = await attemptsApi.openEditor(attemptId, editorType);
+        const result = await attemptsApi.openEditor(attempt.id, editorType);
 
-        if (result === undefined && !editorType && onShowEditorDialog) {
-          onShowEditorDialog();
+        if (result === undefined && !editorType) {
+          if (onShowEditorDialog) {
+            onShowEditorDialog();
+          } else {
+            showEditorDialog(attempt);
+          }
         }
       } catch (err) {
         console.error('Failed to open editor:', err);
-        if (!editorType && onShowEditorDialog) {
-          onShowEditorDialog();
+        if (!editorType) {
+          if (onShowEditorDialog) {
+            onShowEditorDialog();
+          } else {
+            showEditorDialog(attempt);
+          }
         }
       }
     },
-    [attemptId, onShowEditorDialog]
+    [attempt, onShowEditorDialog, showEditorDialog]
   );
 }

@@ -29,7 +29,7 @@ export function EditorSelectionDialog({
   onClose,
   selectedAttempt,
 }: EditorSelectionDialogProps) {
-  const handleOpenInEditor = useOpenInEditor(selectedAttempt?.id, onClose);
+  const handleOpenInEditor = useOpenInEditor(selectedAttempt, onClose);
   const [selectedEditor, setSelectedEditor] = useState<EditorType>(
     EditorType.VS_CODE
   );

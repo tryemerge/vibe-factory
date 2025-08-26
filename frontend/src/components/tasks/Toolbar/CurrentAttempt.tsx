@@ -86,7 +86,6 @@ type Props = {
   creatingPR: boolean;
   handleEnterCreateAttemptMode: () => void;
   branches: GitBranch[];
-  onShowEditorDialog?: () => void;
   setSelectedAttempt: (attempt: TaskAttempt | null) => void;
 };
 
@@ -102,14 +101,13 @@ function CurrentAttempt({
   creatingPR,
   handleEnterCreateAttemptMode,
   branches,
-  onShowEditorDialog,
   setSelectedAttempt,
 }: Props) {
   const { config } = useConfig();
   const { isStopping, setIsStopping } = useTaskStopping(task.id);
   const { isAttemptRunning } = useAttemptData(selectedAttempt?.id);
   const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
-  const handleOpenInEditor = useOpenInEditor(selectedAttempt?.id, onShowEditorDialog);
+  const handleOpenInEditor = useOpenInEditor(selectedAttempt);
   const { jumpToProcess } = useProcessSelection();
 
   // Attempt action hooks

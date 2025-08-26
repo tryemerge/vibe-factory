@@ -12,6 +12,8 @@ import { PrivacyOptInDialog } from '@/components/PrivacyOptInDialog';
 import { ConfigProvider, useConfig } from '@/components/config-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SearchProvider } from '@/contexts/search-context';
+import { EditorDialogProvider, useEditorDialog } from '@/contexts/editor-dialog-context';
+import { EditorSelectionDialog } from '@/components/tasks/EditorSelectionDialog';
 import type { EditorType, ProfileVariantLabel } from 'shared/types';
 import { ThemeMode } from 'shared/types';
 import { configApi } from '@/lib/api';
@@ -26,6 +28,7 @@ const SentryRoutes = Sentry.withSentryReactRouterV6Routing(Routes);
 function AppContent() {
   const { config, updateConfig, loading } = useConfig();
   const location = useLocation();
+  const { isOpen: editorDialogOpen, selectedAttempt, closeEditorDialog } = useEditorDialog();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPrivacyOptIn, setShowPrivacyOptIn] = useState(false);
@@ -159,6 +162,11 @@ function AppContent() {
               open={showPrivacyOptIn}
               onComplete={handlePrivacyOptInComplete}
             />
+            <EditorSelectionDialog
+              isOpen={editorDialogOpen}
+              onClose={closeEditorDialog}
+              selectedAttempt={selectedAttempt}
+            />
             {showNavbar && <Navbar />}
             <div className="flex-1 overflow-y-scroll">
               <SentryRoutes>
@@ -192,7 +200,9 @@ function App() {
   return (
     <BrowserRouter>
       <ConfigProvider>
-        <AppContent />
+        <EditorDialogProvider>
+          <AppContent />
+        </EditorDialogProvider>
       </ConfigProvider>
     </BrowserRouter>
   );

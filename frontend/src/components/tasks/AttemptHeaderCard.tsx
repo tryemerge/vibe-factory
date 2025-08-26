@@ -31,7 +31,7 @@ export function AttemptHeaderCard({
   const { start: startDevServer, stop: stopDevServer, runningDevServer } = useDevServer(selectedAttempt?.id);
   const rebase = useRebase(selectedAttempt?.id);
   const merge = useMerge(selectedAttempt?.id);
-  const openInEditor = useOpenInEditor(selectedAttempt?.id);
+  const openInEditor = useOpenInEditor(selectedAttempt);
   return (
     <Card className="border-b border-dashed bg-secondary flex items-center text-sm text-muted-foreground">
       <div className="flex-1 flex gap-6 p-3">
