@@ -38,7 +38,12 @@ function labelAndIcon(diff: Diff) {
   return { label: undefined as string | undefined, Icon: PencilLine };
 }
 
-export default function DiffCard({ diff, expanded, onToggle, selectedAttempt }: Props) {
+export default function DiffCard({
+  diff,
+  expanded,
+  onToggle,
+  selectedAttempt,
+}: Props) {
   const { config } = useConfig();
   const theme = config?.theme === ThemeMode.DARK ? 'dark' : 'light';
 

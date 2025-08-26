@@ -23,12 +23,12 @@ export function TaskFormDialogContainer() {
     onSuccess: (createdTask) => {
       // Invalidate and refetch tasks list
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      
+
       // Navigate to the new task
       navigate(`/projects/${projectId}/tasks/${createdTask.id}`, {
         replace: true,
       });
-      
+
       handleSuccess(createdTask);
     },
     onError: (err) => {
@@ -41,12 +41,12 @@ export function TaskFormDialogContainer() {
     onSuccess: (result) => {
       // Invalidate and refetch tasks list
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      
+
       // Navigate to the new task
       navigate(`/projects/${projectId}/tasks/${result.id}`, {
         replace: true,
       });
-      
+
       handleSuccess(result);
     },
     onError: (err) => {
@@ -55,13 +55,13 @@ export function TaskFormDialogContainer() {
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ taskId, data }: { taskId: string; data: any }) => 
+    mutationFn: ({ taskId, data }: { taskId: string; data: any }) =>
       tasksApi.update(taskId, data),
     onSuccess: (updatedTask) => {
       // Invalidate and refetch tasks list and individual task
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['task', updatedTask.id] });
-      
+
       handleSuccess(updatedTask);
     },
     onError: (err) => {
@@ -72,7 +72,7 @@ export function TaskFormDialogContainer() {
   const handleCreateTask = useCallback(
     async (title: string, description: string, imageIds?: string[]) => {
       if (!projectId) return;
-      
+
       createTaskMutation.mutate({
         project_id: projectId,
         title,
@@ -87,7 +87,7 @@ export function TaskFormDialogContainer() {
   const handleCreateAndStartTask = useCallback(
     async (title: string, description: string, imageIds?: string[]) => {
       if (!projectId) return;
-      
+
       createAndStartTaskMutation.mutate({
         project_id: projectId,
         title,

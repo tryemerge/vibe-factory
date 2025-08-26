@@ -10,7 +10,12 @@ type Props = {
   selectedAttempt: TaskAttempt | null;
 };
 
-function TabNavigation({ activeTab, setActiveTab, rightContent, selectedAttempt }: Props) {
+function TabNavigation({
+  activeTab,
+  setActiveTab,
+  rightContent,
+  selectedAttempt,
+}: Props) {
   const { attemptData } = useAttemptData(selectedAttempt?.id);
   return (
     <div className="border-b bg-muted/20 sticky top-0 z-10">

@@ -21,7 +21,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { attemptsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
-import { GitBranch, GitHubServiceError, TaskWithAttemptStatus } from 'shared/types';
+import {
+  GitBranch,
+  GitHubServiceError,
+  TaskWithAttemptStatus,
+} from 'shared/types';
 
 type Props = {
   task: TaskWithAttemptStatus;

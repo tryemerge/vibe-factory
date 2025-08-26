@@ -28,11 +28,11 @@ const defaultUiState: TaskUiState = {
 
 export const useTaskDetailsUiStore = create<TaskDetailsUiStore>((set, get) => ({
   ui: {},
-  
+
   getUiState: (taskId: string) => {
     return get().ui[taskId] ?? defaultUiState;
   },
-  
+
   setUiState: (taskId: string, partial: Partial<TaskUiState>) => {
     set((state) => ({
       ui: {
@@ -42,13 +42,14 @@ export const useTaskDetailsUiStore = create<TaskDetailsUiStore>((set, get) => ({
           ...state.ui[taskId],
           ...partial,
           // Handle Set immutability for deletingFiles
-          deletingFiles: partial.deletingFiles ? new Set(partial.deletingFiles) : 
-                         state.ui[taskId]?.deletingFiles ?? new Set(),
+          deletingFiles: partial.deletingFiles
+            ? new Set(partial.deletingFiles)
+            : (state.ui[taskId]?.deletingFiles ?? new Set()),
         },
       },
     }));
   },
-  
+
   clearUiState: (taskId: string) => {
     set((state) => {
       const { [taskId]: _, ...rest } = state.ui;
@@ -61,7 +62,7 @@ export const useTaskDetailsUiStore = create<TaskDetailsUiStore>((set, get) => ({
 export const useTaskLoading = (taskId: string) => {
   const { getUiState, setUiState } = useTaskDetailsUiStore();
   const { loading } = getUiState(taskId);
-  
+
   return {
     loading,
     setLoading: (value: boolean) => setUiState(taskId, { loading: value }),
@@ -71,21 +72,24 @@ export const useTaskLoading = (taskId: string) => {
 export const useTaskStopping = (taskId: string) => {
   const { getUiState, setUiState } = useTaskDetailsUiStore();
   const { isStopping } = getUiState(taskId);
-  
+
   return {
     isStopping,
-    setIsStopping: (value: boolean) => setUiState(taskId, { isStopping: value }),
+    setIsStopping: (value: boolean) =>
+      setUiState(taskId, { isStopping: value }),
   };
 };
 
 export const useTaskDeletingFiles = (taskId: string) => {
   const { getUiState, setUiState } = useTaskDetailsUiStore();
   const { deletingFiles, fileToDelete } = getUiState(taskId);
-  
+
   return {
     deletingFiles,
     fileToDelete,
-    setFileToDelete: (value: string | null) => setUiState(taskId, { fileToDelete: value }),
-    setDeletingFiles: (value: Set<string>) => setUiState(taskId, { deletingFiles: value }),
+    setFileToDelete: (value: string | null) =>
+      setUiState(taskId, { fileToDelete: value }),
+    setDeletingFiles: (value: Set<string>) =>
+      setUiState(taskId, { deletingFiles: value }),
   };
 };

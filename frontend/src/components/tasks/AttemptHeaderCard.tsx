@@ -28,16 +28,33 @@ export function AttemptHeaderCard({
   onCreatePR,
   onCreateNewAttempt,
 }: AttemptHeaderCardProps) {
-  const { start: startDevServer, stop: stopDevServer, runningDevServer } = useDevServer(selectedAttempt?.id);
+  const {
+    start: startDevServer,
+    stop: stopDevServer,
+    runningDevServer,
+  } = useDevServer(selectedAttempt?.id);
   const rebase = useRebase(selectedAttempt?.id);
   const merge = useMerge(selectedAttempt?.id);
   const openInEditor = useOpenInEditor(selectedAttempt);
   return (
     <Card className="border-b border-dashed bg-secondary flex items-center text-sm text-muted-foreground">
       <div className="flex-1 flex gap-6 p-3">
-        <p>Attempt &middot; <span className="text-primary">{attemptNumber}/{totalAttempts}</span></p>
-        <p>Profile &middot; <span className="text-primary">{selectedAttempt?.profile}</span></p>
-        {selectedAttempt?.branch && <p className="max-w-30 truncate">Branch &middot; <span className="text-primary">{selectedAttempt.branch}</span></p>}
+        <p>
+          Attempt &middot;{' '}
+          <span className="text-primary">
+            {attemptNumber}/{totalAttempts}
+          </span>
+        </p>
+        <p>
+          Profile &middot;{' '}
+          <span className="text-primary">{selectedAttempt?.profile}</span>
+        </p>
+        {selectedAttempt?.branch && (
+          <p className="max-w-30 truncate">
+            Branch &middot;{' '}
+            <span className="text-primary">{selectedAttempt.branch}</span>
+          </p>
+        )}
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -47,7 +64,10 @@ export function AttemptHeaderCard({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => openInEditor()} disabled={!selectedAttempt}>
+          <DropdownMenuItem
+            onClick={() => openInEditor()}
+            disabled={!selectedAttempt}
+          >
             Open in IDE
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -57,7 +77,10 @@ export function AttemptHeaderCard({
           >
             {runningDevServer ? 'Stop dev server' : 'Start dev server'}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => rebase()} disabled={!selectedAttempt}>
+          <DropdownMenuItem
+            onClick={() => rebase()}
+            disabled={!selectedAttempt}
+          >
             Rebase
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onCreatePR} disabled={!onCreatePR}>
@@ -66,7 +89,10 @@ export function AttemptHeaderCard({
           <DropdownMenuItem onClick={merge} disabled={!selectedAttempt}>
             Merge
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onCreateNewAttempt} disabled={!onCreateNewAttempt}>
+          <DropdownMenuItem
+            onClick={onCreateNewAttempt}
+            disabled={!onCreateNewAttempt}
+          >
             Create new attempt
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -40,7 +40,11 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type { GitBranch, TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
+import type {
+  GitBranch,
+  TaskAttempt,
+  TaskWithAttemptStatus,
+} from 'shared/types';
 import { useAttemptData, useBranchStatus, useOpenInEditor } from '@/hooks';
 import { useDevServer } from '@/hooks/useDevServer';
 import { useRebase } from '@/hooks/useRebase';
@@ -150,13 +154,7 @@ function CurrentAttempt({
     } finally {
       setIsStopping(false);
     }
-  }, [
-    task,
-    selectedAttempt,
-    projectId,
-    setIsStopping,
-    isAttemptRunning,
-  ]);
+  }, [task, selectedAttempt, projectId, setIsStopping, isAttemptRunning]);
 
   useKeyboardShortcuts({
     stopExecution: () => setShowStopConfirmation(true),

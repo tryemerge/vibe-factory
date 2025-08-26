@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useMemo,
+} from 'react';
 import type { TaskStatus, TaskTemplate } from 'shared/types';
 
 interface Task {
@@ -26,13 +33,16 @@ interface TaskDialogState {
 interface TaskDialogAPI {
   // State for the dialog component
   dialogState: TaskDialogState;
-  
+
   // Imperative actions
   openCreate: (options?: TaskDialogOptions) => void;
   openEdit: (task: Task, options?: TaskDialogOptions) => void;
-  openFromTemplate: (template: TaskTemplate, options?: TaskDialogOptions) => void;
+  openFromTemplate: (
+    template: TaskTemplate,
+    options?: TaskDialogOptions
+  ) => void;
   close: () => void;
-  
+
   // For dialog component to call after successful operations
   handleSuccess: (task: Task) => void;
 }
@@ -72,42 +82,48 @@ export function TaskDialogProvider({ children }: TaskDialogProviderProps) {
     });
   }, []);
 
-  const openFromTemplate = useCallback((
-    template: TaskTemplate, 
-    options?: TaskDialogOptions
-  ) => {
-    setDialogState({
-      isOpen: true,
-      mode: 'create',
-      task: null,
-      initialTemplate: template,
-      afterSubmit: options?.onSuccess,
-    });
-  }, []);
+  const openFromTemplate = useCallback(
+    (template: TaskTemplate, options?: TaskDialogOptions) => {
+      setDialogState({
+        isOpen: true,
+        mode: 'create',
+        task: null,
+        initialTemplate: template,
+        afterSubmit: options?.onSuccess,
+      });
+    },
+    []
+  );
 
   const close = useCallback(() => {
-    setDialogState(prev => ({
+    setDialogState((prev) => ({
       ...prev,
       isOpen: false,
     }));
   }, []);
 
-  const handleSuccess = useCallback((task: Task) => {
-    const { afterSubmit } = dialogState;
-    if (afterSubmit) {
-      afterSubmit(task);
-    }
-    close();
-  }, [dialogState, close]);
+  const handleSuccess = useCallback(
+    (task: Task) => {
+      const { afterSubmit } = dialogState;
+      if (afterSubmit) {
+        afterSubmit(task);
+      }
+      close();
+    },
+    [dialogState, close]
+  );
 
-  const value = useMemo(() => ({
-    dialogState,
-    openCreate,
-    openEdit,
-    openFromTemplate,
-    close,
-    handleSuccess,
-  }), [dialogState, openCreate, openEdit, openFromTemplate, close, handleSuccess]);
+  const value = useMemo(
+    () => ({
+      dialogState,
+      openCreate,
+      openEdit,
+      openFromTemplate,
+      close,
+      handleSuccess,
+    }),
+    [dialogState, openCreate, openEdit, openFromTemplate, close, handleSuccess]
+  );
 
   return (
     <TaskDialogContext.Provider value={value}>

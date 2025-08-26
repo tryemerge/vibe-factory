@@ -23,7 +23,9 @@ function ProcessesTab({ attemptId }: ProcessesTabProps) {
   const { attemptData } = useAttemptData(attemptId);
   const { selectedProcessId, setSelectedProcessId } = useProcessSelection();
   const [loadingProcessId, setLoadingProcessId] = useState<string | null>(null);
-  const [localProcessDetails, setLocalProcessDetails] = useState<Record<string, ExecutionProcess>>({});
+  const [localProcessDetails, setLocalProcessDetails] = useState<
+    Record<string, ExecutionProcess>
+  >({});
 
   const getStatusIcon = (status: ExecutionProcessStatus) => {
     switch (status) {
@@ -87,19 +89,27 @@ function ProcessesTab({ attemptId }: ProcessesTabProps) {
     ) {
       fetchProcessDetails(selectedProcessId);
     }
-  }, [selectedProcessId, attemptData.runningProcessDetails, localProcessDetails]);
+  }, [
+    selectedProcessId,
+    attemptData.runningProcessDetails,
+    localProcessDetails,
+  ]);
 
   const handleProcessClick = async (process: ExecutionProcess) => {
     setSelectedProcessId(process.id);
 
     // If we don't have details for this process, fetch them
-    if (!attemptData.runningProcessDetails[process.id] && !localProcessDetails[process.id]) {
+    if (
+      !attemptData.runningProcessDetails[process.id] &&
+      !localProcessDetails[process.id]
+    ) {
       await fetchProcessDetails(process.id);
     }
   };
 
   const selectedProcess = selectedProcessId
-    ? attemptData.runningProcessDetails[selectedProcessId] || localProcessDetails[selectedProcessId]
+    ? attemptData.runningProcessDetails[selectedProcessId] ||
+      localProcessDetails[selectedProcessId]
     : null;
 
   if (!attemptData.processes || attemptData.processes.length === 0) {

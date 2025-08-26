@@ -6,18 +6,15 @@ export function useMerge(
   onSuccess?: () => void,
   onError?: (err: unknown) => void
 ) {
-  return useCallback(
-    async () => {
-      if (!attemptId) return;
+  return useCallback(async () => {
+    if (!attemptId) return;
 
-      try {
-        await attemptsApi.merge(attemptId);
-        onSuccess?.();
-      } catch (err) {
-        console.error('Failed to merge:', err);
-        onError?.(err);
-      }
-    },
-    [attemptId, onSuccess, onError]
-  );
+    try {
+      await attemptsApi.merge(attemptId);
+      onSuccess?.();
+    } catch (err) {
+      console.error('Failed to merge:', err);
+      onError?.(err);
+    }
+  }, [attemptId, onSuccess, onError]);
 }

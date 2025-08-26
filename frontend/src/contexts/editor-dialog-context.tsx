@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useMemo,
+} from 'react';
 import type { TaskAttempt } from 'shared/types';
 
 interface EditorDialogState {
@@ -16,7 +23,9 @@ interface EditorDialogProviderProps {
 
 export function EditorDialogProvider({ children }: EditorDialogProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedAttempt, setSelectedAttempt] = useState<TaskAttempt | null>(null);
+  const [selectedAttempt, setSelectedAttempt] = useState<TaskAttempt | null>(
+    null
+  );
 
   const showEditorDialog = useCallback((attempt: TaskAttempt) => {
     setSelectedAttempt(attempt);
@@ -48,7 +57,9 @@ export function EditorDialogProvider({ children }: EditorDialogProviderProps) {
 export function useEditorDialog(): EditorDialogState {
   const context = useContext(EditorDialogContext);
   if (!context) {
-    throw new Error('useEditorDialog must be used within an EditorDialogProvider');
+    throw new Error(
+      'useEditorDialog must be used within an EditorDialogProvider'
+    );
   }
   return context;
 }

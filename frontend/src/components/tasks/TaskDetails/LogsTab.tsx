@@ -1,10 +1,4 @@
-import {
-  useRef,
-  useCallback,
-  useMemo,
-  useEffect,
-  useReducer,
-} from 'react';
+import { useRef, useCallback, useMemo, useEffect, useReducer } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { Cog } from 'lucide-react';
 import { useAttemptData } from '@/hooks/useAttemptData';

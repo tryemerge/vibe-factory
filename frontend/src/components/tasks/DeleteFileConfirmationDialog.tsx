@@ -17,7 +17,11 @@ type Props = {
   selectedAttempt: TaskAttempt | null;
 };
 
-function DeleteFileConfirmationDialog({ task, projectId, selectedAttempt }: Props) {
+function DeleteFileConfirmationDialog({
+  task,
+  projectId,
+  selectedAttempt,
+}: Props) {
   const { setDeletingFiles, fileToDelete, deletingFiles, setFileToDelete } =
     useTaskDeletingFiles(task.id);
 

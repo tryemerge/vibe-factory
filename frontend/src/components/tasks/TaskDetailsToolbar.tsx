@@ -1,14 +1,13 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { projectsApi } from '@/lib/api';
-import type { GitBranch, ProfileVariantLabel, TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
+import type {
+  GitBranch,
+  ProfileVariantLabel,
+  TaskAttempt,
+  TaskWithAttemptStatus,
+} from 'shared/types';
 
 import { useAttemptData } from '@/hooks';
 import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';

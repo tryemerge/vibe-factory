@@ -24,7 +24,6 @@ interface TaskDetailsHeaderProps {
 
 // backgroundColor: `hsl(var(${statusBoardColors[task.status]}) / 0.03)`,
 
-
 function TaskDetailsHeader({
   task,
   onClose,
@@ -34,13 +33,11 @@ function TaskDetailsHeader({
   isFullScreen,
   setFullScreen,
 }: TaskDetailsHeaderProps) {
-
   return (
     <div>
       <Card
         className="flex shrink-0 items-center gap-2 border-b border-dashed bg-secondary"
-        style={{
-        }}
+        style={{}}
       >
         <div className="p-3 flex flex-1 items-center truncate">
           <div

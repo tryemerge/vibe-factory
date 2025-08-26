@@ -71,9 +71,9 @@ export function TaskDetailsPanel({
   const [branches, setBranches] = useState<GitBranch[]>([]);
 
   // Attempt number, find the current attempt number
-  const attemptNumber = attempts.length - attempts.findIndex(
-    (attempt) => attempt.id === selectedAttempt?.id
-  );
+  const attemptNumber =
+    attempts.length -
+    attempts.findIndex((attempt) => attempt.id === selectedAttempt?.id);
 
   // Tab and collapsible state
   const [activeTab, setActiveTab] = useState<TabType>('logs');
@@ -167,7 +167,7 @@ export function TaskDetailsPanel({
                       attempts={attempts}
                       selectedAttempt={selectedAttempt}
                       setSelectedAttempt={setSelectedAttempt}
-                    // hide actions in sidebar; moved to header in fullscreen
+                      // hide actions in sidebar; moved to header in fullscreen
                     />
 
                     {/* Task Breakdown (TODOs) */}
@@ -253,7 +253,11 @@ export function TaskDetailsPanel({
               selectedAttempt={selectedAttempt}
             />
 
-            <DeleteFileConfirmationDialog task={task} projectId={projectId} selectedAttempt={selectedAttempt} />
+            <DeleteFileConfirmationDialog
+              task={task}
+              projectId={projectId}
+              selectedAttempt={selectedAttempt}
+            />
 
             {/* PR Dialog */}
             <CreatePRDialog

@@ -6,18 +6,15 @@ export function usePush(
   onSuccess?: () => void,
   onError?: (err: unknown) => void
 ) {
-  return useCallback(
-    async () => {
-      if (!attemptId) return;
+  return useCallback(async () => {
+    if (!attemptId) return;
 
-      try {
-        await attemptsApi.push(attemptId);
-        onSuccess?.();
-      } catch (err) {
-        console.error('Failed to push:', err);
-        onError?.(err);
-      }
-    },
-    [attemptId, onSuccess, onError]
-  );
+    try {
+      await attemptsApi.push(attemptId);
+      onSuccess?.();
+    } catch (err) {
+      console.error('Failed to push:', err);
+      onError?.(err);
+    }
+  }, [attemptId, onSuccess, onError]);
 }

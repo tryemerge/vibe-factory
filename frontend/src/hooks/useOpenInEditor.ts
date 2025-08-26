@@ -8,7 +8,7 @@ export function useOpenInEditor(
   onShowEditorDialog?: () => void
 ) {
   const { showEditorDialog } = useEditorDialog();
-  
+
   return useCallback(
     async (editorType?: EditorType) => {
       if (!attempt) return;

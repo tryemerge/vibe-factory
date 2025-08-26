@@ -20,13 +20,13 @@ interface ProjectProviderProps {
 
 export function ProjectProvider({ children }: ProjectProviderProps) {
   const location = useLocation();
-  
+
   // Extract projectId from current route path
   const projectId = useMemo(() => {
     const match = location.pathname.match(/^\/projects\/([^/]+)/);
     return match ? match[1] : undefined;
   }, [location.pathname]);
-  
+
   const query = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => projectsApi.getById(projectId!),
@@ -46,9 +46,7 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
   );
 
   return (
-    <ProjectContext.Provider value={value}>
-      {children}
-    </ProjectContext.Provider>
+    <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
   );
 }
 

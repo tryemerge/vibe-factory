@@ -12,7 +12,10 @@ import { PrivacyOptInDialog } from '@/components/PrivacyOptInDialog';
 import { ConfigProvider, useConfig } from '@/components/config-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SearchProvider } from '@/contexts/search-context';
-import { EditorDialogProvider, useEditorDialog } from '@/contexts/editor-dialog-context';
+import {
+  EditorDialogProvider,
+  useEditorDialog,
+} from '@/contexts/editor-dialog-context';
 import { EditorSelectionDialog } from '@/components/tasks/EditorSelectionDialog';
 import { TaskDialogProvider } from '@/contexts/task-dialog-context';
 import { TaskFormDialogContainer } from '@/components/tasks/TaskFormDialogContainer';
@@ -31,7 +34,11 @@ const SentryRoutes = Sentry.withSentryReactRouterV6Routing(Routes);
 function AppContent() {
   const { config, updateConfig, loading } = useConfig();
   const location = useLocation();
-  const { isOpen: editorDialogOpen, selectedAttempt, closeEditorDialog } = useEditorDialog();
+  const {
+    isOpen: editorDialogOpen,
+    selectedAttempt,
+    closeEditorDialog,
+  } = useEditorDialog();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPrivacyOptIn, setShowPrivacyOptIn] = useState(false);

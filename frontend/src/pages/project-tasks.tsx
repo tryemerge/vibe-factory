@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  useNavigate,
+  useParams,
+  useLocation,
+  useSearchParams,
+} from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
@@ -27,11 +32,7 @@ import {
 
 import TaskKanbanBoard from '@/components/tasks/TaskKanbanBoard';
 import { TaskDetailsPanel } from '@/components/tasks/TaskDetailsPanel';
-import type {
-  TaskWithAttemptStatus,
-  Project,
-  TaskAttempt,
-} from 'shared/types';
+import type { TaskWithAttemptStatus, Project, TaskAttempt } from 'shared/types';
 import type { DragEndEvent } from '@/components/ui/shadcn-io/kanban';
 
 type Task = TaskWithAttemptStatus;
@@ -53,21 +54,20 @@ export function ProjectTasks() {
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const { query: searchQuery } = useSearch();
 
-
   // Template management state
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
 
   // Panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  
+
   // Fullscreen state from query params
   const isFullscreen = searchParams.get('view') === 'full';
 
   // Attempts fetching (only when task is selected)
   const { data: attempts = [] } = useQuery({
     queryKey: ['taskAttempts', selectedTask?.id],
-    queryFn: () => attemptsApi.getAll(selectedTask?.id!),
+    queryFn: () => attemptsApi.getAll(selectedTask!.id),
     enabled: !!selectedTask?.id,
   });
 
@@ -75,30 +75,36 @@ export function ProjectTasks() {
   const selectedAttempt = useMemo(() => {
     if (!attempts.length) return null;
     if (attemptId) {
-      const found = attempts.find(a => a.id === attemptId);
+      const found = attempts.find((a) => a.id === attemptId);
       if (found) return found;
     }
     return attempts[0] || null; // Most recent fallback
   }, [attempts, attemptId]);
 
   // Navigation callback for attempt selection
-  const setSelectedAttempt = useCallback((attempt: TaskAttempt | null) => {
-    if (!selectedTask) return;
+  const setSelectedAttempt = useCallback(
+    (attempt: TaskAttempt | null) => {
+      if (!selectedTask) return;
 
-    const baseUrl = `/projects/${projectId}/tasks/${selectedTask.id}`;
-    const attemptUrl = attempt ? `/attempts/${attempt.id}` : '';
-    const fullUrl = `${baseUrl}${attemptUrl}`;
-    
-    navigate({
-      pathname: fullUrl,
-      search: location.search // Preserve query params like ?view=full
-    }, { replace: true });
-  }, [navigate, projectId, selectedTask, location.search]);
+      const baseUrl = `/projects/${projectId}/tasks/${selectedTask.id}`;
+      const attemptUrl = attempt ? `/attempts/${attempt.id}` : '';
+      const fullUrl = `${baseUrl}${attemptUrl}`;
+
+      navigate(
+        {
+          pathname: fullUrl,
+          search: location.search, // Preserve query params like ?view=full
+        },
+        { replace: true }
+      );
+    },
+    [navigate, projectId, selectedTask, location.search]
+  );
 
   // Sync selectedTask with URL params
   useEffect(() => {
     if (taskId && tasks.length > 0) {
-      const taskFromUrl = tasks.find(t => t.id === taskId);
+      const taskFromUrl = tasks.find((t) => t.id === taskId);
       if (taskFromUrl && taskFromUrl !== selectedTask) {
         setSelectedTask(taskFromUrl);
         setIsPanelOpen(true);
@@ -117,7 +123,6 @@ export function ProjectTasks() {
   }, [projectId, openCreate]);
 
   // Full screen
-
 
   const fetchProject = useCallback(async () => {
     try {
@@ -171,8 +176,6 @@ export function ProjectTasks() {
     [projectId]
   );
 
-
-
   const handleDeleteTask = useCallback(
     async (taskId: string) => {
       if (!confirm('Are you sure you want to delete this task?')) return;
@@ -187,9 +190,12 @@ export function ProjectTasks() {
     [fetchTasks]
   );
 
-  const handleEditTask = useCallback((task: Task) => {
-    openEdit(task);
-  }, [openEdit]);
+  const handleEditTask = useCallback(
+    (task: Task) => {
+      openEdit(task);
+    },
+    [openEdit]
+  );
 
   const handleViewTaskDetails = useCallback(
     (task: Task, attemptIdToShow?: string) => {
@@ -259,8 +265,7 @@ export function ProjectTasks() {
   useKeyboardShortcuts({
     navigate,
     currentPath: window.location.pathname,
-    hasOpenDialog:
-      isTemplateManagerOpen || isProjectSettingsOpen,
+    hasOpenDialog: isTemplateManagerOpen || isProjectSettingsOpen,
     closeDialog: () => {}, // No local dialog to close
     onC: handleCreateNewTask,
   });
@@ -314,13 +319,9 @@ export function ProjectTasks() {
   }
 
   return (
-    <div
-      className={getMainContainerClasses(isPanelOpen, isFullscreen)}
-    >
+    <div className={getMainContainerClasses(isPanelOpen, isFullscreen)}>
       {/* Left Column - Kanban Section */}
-      <div
-        className={getKanbanSectionClasses(isPanelOpen, isFullscreen)}
-      >
+      <div className={getKanbanSectionClasses(isPanelOpen, isFullscreen)}>
         {tasks.length === 0 ? (
           <div className="max-w-7xl mx-auto">
             <Card>

@@ -12,8 +12,8 @@ export function useRebase(
       if (!attemptId) return;
 
       try {
-        const data: RebaseTaskAttemptRequest = { 
-          new_base_branch: newBaseBranch || null 
+        const data: RebaseTaskAttemptRequest = {
+          new_base_branch: newBaseBranch || null,
         };
         await attemptsApi.rebase(attemptId, data);
         onSuccess?.();
