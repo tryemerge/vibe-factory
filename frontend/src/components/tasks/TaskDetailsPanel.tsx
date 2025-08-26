@@ -22,7 +22,7 @@ import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
 import { projectsApi } from '@/lib/api';
 import type { GitBranch } from 'shared/types';
-import { Card } from '../ui/card.tsx';
+import { AttemptHeaderCard } from './AttemptHeaderCard';
 
 interface TaskDetailsPanelProps {
   task: TaskWithAttemptStatus | null;
@@ -202,16 +202,31 @@ export function TaskDetailsPanel({
                 </div>
               ) : (
                 <>
-                  <Card className="border-b border-dashed bg-secondary p-3 flex text-sm text-muted-foreground">
-                    <div className="flex-1 flex gap-6">
-                      <p>Attempt &middot; <span className="text-primary">{attemptNumber}/{attempts.length}</span></p>
-                      <p>Profile &middot; <span className="text-primary">{selectedAttempt?.profile}</span></p>
-                      {selectedAttempt?.branch && <p className="max-w-30 truncate">Branch &middot; <span className="text-primary">{selectedAttempt.branch}</span></p>}
-                    </div>
-                    <div className="flex">
-                      <p>test</p>
-                    </div>
-                  </Card>
+                  <AttemptHeaderCard
+                    attemptNumber={attemptNumber}
+                    totalAttempts={attempts.length}
+                    selectedAttempt={selectedAttempt}
+                    onStartDevServer={() => {
+                      // TODO: Implement start dev server
+                      console.log('Start dev server');
+                    }}
+                    onRebase={() => {
+                      // TODO: Implement rebase
+                      console.log('Rebase');
+                    }}
+                    onCreatePR={() => {
+                      // TODO: Implement create PR
+                      console.log('Create PR');
+                    }}
+                    onMerge={() => {
+                      // TODO: Implement merge
+                      console.log('Merge');
+                    }}
+                    onCreateNewAttempt={() => {
+                      // TODO: Implement create new attempt
+                      console.log('Create new attempt');
+                    }}
+                  />
                   {/* <div className="p-4 border-b">
                         <TaskDetailsToolbar />
                       </div> */}
