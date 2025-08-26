@@ -46,19 +46,19 @@ export function AttemptHeaderCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onStartDevServer}>
+            <DropdownMenuItem onClick={onStartDevServer} disabled={!onStartDevServer}>
               Start dev server
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onRebase}>
+            <DropdownMenuItem onClick={onRebase} disabled={!onRebase}>
               Rebase
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onCreatePR}>
+            <DropdownMenuItem onClick={onCreatePR} disabled={!onCreatePR}>
               Create PR
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onMerge}>
+            <DropdownMenuItem onClick={onMerge} disabled={!onMerge}>
               Merge
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onCreateNewAttempt}>
+            <DropdownMenuItem onClick={onCreateNewAttempt} disabled={!onCreateNewAttempt}>
               Create new attempt
             </DropdownMenuItem>
           </DropdownMenuContent>
