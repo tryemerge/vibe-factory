@@ -14,6 +14,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { SearchProvider } from '@/contexts/search-context';
 import { EditorDialogProvider, useEditorDialog } from '@/contexts/editor-dialog-context';
 import { EditorSelectionDialog } from '@/components/tasks/EditorSelectionDialog';
+import { TaskDialogProvider } from '@/contexts/task-dialog-context';
+import { TaskFormDialogContainer } from '@/components/tasks/TaskFormDialogContainer';
+import { ProjectProvider } from '@/contexts/project-context';
 import type { EditorType, ProfileVariantLabel } from 'shared/types';
 import { ThemeMode } from 'shared/types';
 import { configApi } from '@/lib/api';
@@ -167,6 +170,7 @@ function AppContent() {
               onClose={closeEditorDialog}
               selectedAttempt={selectedAttempt}
             />
+            <TaskFormDialogContainer />
             {showNavbar && <Navbar />}
             <div className="flex-1 overflow-y-scroll">
               <SentryRoutes>
@@ -200,9 +204,13 @@ function App() {
   return (
     <BrowserRouter>
       <ConfigProvider>
-        <EditorDialogProvider>
-          <AppContent />
-        </EditorDialogProvider>
+        <ProjectProvider>
+          <EditorDialogProvider>
+            <TaskDialogProvider>
+              <AppContent />
+            </TaskDialogProvider>
+          </EditorDialogProvider>
+        </ProjectProvider>
       </ConfigProvider>
     </BrowserRouter>
   );

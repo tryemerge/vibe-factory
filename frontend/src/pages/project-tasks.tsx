@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 import { projectsApi, tasksApi, attemptsApi } from '@/lib/api';
-import { TaskFormDialog } from '@/components/tasks/TaskFormDialog';
+import { useTaskDialog } from '@/contexts/task-dialog-context';
 import { ProjectForm } from '@/components/projects/project-form';
 import { TaskTemplateManager } from '@/components/TaskTemplateManager';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts';
@@ -28,13 +28,10 @@ import {
 import TaskKanbanBoard from '@/components/tasks/TaskKanbanBoard';
 import { TaskDetailsPanel } from '@/components/tasks/TaskDetailsPanel';
 import type {
-  TaskStatus,
   TaskWithAttemptStatus,
   Project,
-  TaskTemplate,
   TaskAttempt,
 } from 'shared/types';
-import type { CreateTask } from 'shared/types';
 import type { DragEndEvent } from '@/components/ui/shadcn-io/kanban';
 
 type Task = TaskWithAttemptStatus;
@@ -52,13 +49,10 @@ export function ProjectTasks() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const { openCreate, openEdit } = useTaskDialog();
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const { query: searchQuery } = useSearch();
-  const [selectedTemplate, setSelectedTemplate] = useState<TaskTemplate | null>(
-    null
-  );
+
 
   // Template management state
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
@@ -118,10 +112,9 @@ export function ProjectTasks() {
 
   // Define task creation handler
   const handleCreateNewTask = useCallback(() => {
-    setEditingTask(null);
-    setSelectedTemplate(null);
-    setIsTaskDialogOpen(true);
-  }, []);
+    if (!projectId) return;
+    openCreate();
+  }, [projectId, openCreate]);
 
   // Full screen
 
@@ -178,74 +171,7 @@ export function ProjectTasks() {
     [projectId]
   );
 
-  const handleCreateTask = useCallback(
-    async (title: string, description: string, imageIds?: string[]) => {
-      try {
-        const createdTask = await tasksApi.create({
-          project_id: projectId!,
-          title,
-          description: description || null,
-          parent_task_attempt: null,
-          image_ids: imageIds || null,
-        });
-        await fetchTasks();
-        // Open the newly created task in the details panel
-        navigate(`/projects/${projectId}/tasks/${createdTask.id}`, {
-          replace: true,
-        });
-      } catch (err) {
-        setError('Failed to create task');
-      }
-    },
-    [projectId, fetchTasks, navigate]
-  );
 
-  const handleCreateAndStartTask = useCallback(
-    async (title: string, description: string, imageIds?: string[]) => {
-      try {
-        const payload: CreateTask = {
-          project_id: projectId!,
-          title,
-          description: description || null,
-          parent_task_attempt: null,
-          image_ids: imageIds || null,
-        };
-        const result = await tasksApi.createAndStart(payload);
-        await fetchTasks();
-        // Open the newly created task in the details panel
-        handleViewTaskDetails(result);
-      } catch (err) {
-        setError('Failed to create and start task');
-      }
-    },
-    [projectId, fetchTasks]
-  );
-
-  const handleUpdateTask = useCallback(
-    async (
-      title: string,
-      description: string,
-      status: TaskStatus,
-      imageIds?: string[]
-    ) => {
-      if (!editingTask) return;
-
-      try {
-        await tasksApi.update(editingTask.id, {
-          title,
-          description: description || null,
-          status,
-          parent_task_attempt: null,
-          image_ids: imageIds || null,
-        });
-        await fetchTasks();
-        setEditingTask(null);
-      } catch (err) {
-        setError('Failed to update task');
-      }
-    },
-    [editingTask, fetchTasks]
-  );
 
   const handleDeleteTask = useCallback(
     async (taskId: string) => {
@@ -262,9 +188,8 @@ export function ProjectTasks() {
   );
 
   const handleEditTask = useCallback((task: Task) => {
-    setEditingTask(task);
-    setIsTaskDialogOpen(true);
-  }, []);
+    openEdit(task);
+  }, [openEdit]);
 
   const handleViewTaskDetails = useCallback(
     (task: Task, attemptIdToShow?: string) => {
@@ -335,8 +260,8 @@ export function ProjectTasks() {
     navigate,
     currentPath: window.location.pathname,
     hasOpenDialog:
-      isTaskDialogOpen || isTemplateManagerOpen || isProjectSettingsOpen,
-    closeDialog: () => setIsTaskDialogOpen(false),
+      isTemplateManagerOpen || isProjectSettingsOpen,
+    closeDialog: () => {}, // No local dialog to close
     onC: handleCreateNewTask,
   });
 
@@ -434,7 +359,7 @@ export function ProjectTasks() {
           onClose={handleClosePanel}
           onEditTask={handleEditTask}
           onDeleteTask={handleDeleteTask}
-          isDialogOpen={isTaskDialogOpen || isProjectSettingsOpen}
+          isDialogOpen={isProjectSettingsOpen}
           isFullScreen={isFullscreen}
           setFullScreen={(fullscreen) => {
             if (fullscreen) {
@@ -451,21 +376,6 @@ export function ProjectTasks() {
       )}
 
       {/* Dialogs - rendered at main container level to avoid stacking issues */}
-      <TaskFormDialog
-        isOpen={isTaskDialogOpen}
-        onOpenChange={(open) => {
-          setIsTaskDialogOpen(open);
-          if (!open) {
-            setSelectedTemplate(null);
-          }
-        }}
-        task={editingTask}
-        projectId={projectId}
-        onCreateTask={handleCreateTask}
-        onCreateAndStartTask={handleCreateAndStartTask}
-        onUpdateTask={handleUpdateTask}
-        initialTemplate={selectedTemplate}
-      />
 
       <ProjectForm
         open={isProjectSettingsOpen}

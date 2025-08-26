@@ -19,6 +19,8 @@ import {
 import { Logo } from '@/components/logo';
 import { SearchBar } from '@/components/search-bar';
 import { useSearch } from '@/contexts/search-context';
+import { useTaskDialog } from '@/contexts/task-dialog-context';
+import { useProject } from '@/contexts/project-context';
 
 const INTERNAL_NAV = [
   { label: 'Projects', icon: FolderOpen, to: '/projects' },
@@ -41,7 +43,11 @@ const EXTERNAL_LINKS = [
 
 export function Navbar() {
   const location = useLocation();
+  const { projectId } = useProject();
   const { query, setQuery, active, clear } = useSearch();
+  const { openCreate } = useTaskDialog();
+
+  console.log('Navbar: projectId is', projectId);
 
   return (
     <div className="border-b bg-secondary">
@@ -62,9 +68,16 @@ export function Navbar() {
           />
 
           <div className="flex-1 flex justify-end">
-            <Button variant="ghost" size="icon">
-              <Plus className="h-4 w-4" />
-            </Button>
+            {projectId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => openCreate()}
+                aria-label="Create new task"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
