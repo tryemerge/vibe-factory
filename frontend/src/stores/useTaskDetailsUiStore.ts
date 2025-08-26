@@ -52,8 +52,9 @@ export const useTaskDetailsUiStore = create<TaskDetailsUiStore>((set, get) => ({
 
   clearUiState: (taskId: string) => {
     set((state) => {
-      const { [taskId]: _, ...rest } = state.ui;
-      return { ui: rest };
+      const newUi = { ...state.ui };
+      delete newUi[taskId];
+      return { ui: newUi };
     });
   },
 }));
