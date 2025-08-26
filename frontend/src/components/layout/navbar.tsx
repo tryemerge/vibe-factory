@@ -14,6 +14,7 @@ import {
   Server,
   MessageCircleQuestion,
   Menu,
+  Plus,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { SearchBar } from '@/components/search-bar';
@@ -61,6 +62,9 @@ export function Navbar() {
           />
 
           <div className="flex-1 flex justify-end">
+            <Button variant="ghost" size="icon">
+              <Plus className="h-4 w-4" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

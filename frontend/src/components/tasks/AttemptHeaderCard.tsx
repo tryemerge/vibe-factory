@@ -11,6 +11,7 @@ import type { TaskAttempt } from 'shared/types';
 import { useDevServer } from '@/hooks/useDevServer';
 import { useRebase } from '@/hooks/useRebase';
 import { useMerge } from '@/hooks/useMerge';
+import { useOpenInEditor } from '@/hooks/useOpenInEditor';
 
 interface AttemptHeaderCardProps {
   attemptNumber: number;
@@ -30,6 +31,7 @@ export function AttemptHeaderCard({
   const { start: startDevServer, stop: stopDevServer, runningDevServer } = useDevServer(selectedAttempt?.id);
   const rebase = useRebase(selectedAttempt?.id);
   const merge = useMerge(selectedAttempt?.id);
+  const openInEditor = useOpenInEditor(selectedAttempt?.id);
   return (
     <Card className="border-b border-dashed bg-secondary flex items-center text-sm text-muted-foreground">
       <div className="flex-1 flex gap-6 p-3">
@@ -45,6 +47,9 @@ export function AttemptHeaderCard({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => openInEditor()} disabled={!selectedAttempt}>
+            Open in IDE
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={runningDevServer ? stopDevServer : startDevServer}
             disabled={!selectedAttempt}
