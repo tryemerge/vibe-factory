@@ -22,6 +22,9 @@ interface TaskDetailsHeaderProps {
   setFullScreen?: (isFullScreen: boolean) => void;
 }
 
+// backgroundColor: `hsl(var(${statusBoardColors[task.status]}) / 0.03)`,
+
+
 function TaskDetailsHeader({
   task,
   onClose,
@@ -35,9 +38,8 @@ function TaskDetailsHeader({
   return (
     <div>
       <Card
-        className="flex shrink-0 items-center gap-2 border-b border-dashed"
+        className="flex shrink-0 items-center gap-2 border-b border-dashed bg-secondary"
         style={{
-          backgroundColor: `hsl(var(${statusBoardColors[task.status]}) / 0.03)`,
         }}
       >
         <div className="p-3 flex flex-1 items-center truncate">
@@ -136,7 +138,7 @@ function TaskDetailsHeader({
 
       {/* Title and Task Actions */}
       {!isFullScreen && (
-        <div className="p-3 border-b max-h-96 overflow-y-auto">
+        <div className="p-3 border-b border-dashed max-h-96 overflow-y-auto">
           <TaskTitleDescription task={task} />
         </div>
       )}
