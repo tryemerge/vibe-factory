@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.tsx';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
-import { attemptsApi, executionProcessesApi } from '@/lib/api.ts';
+import { attemptsApi } from '@/lib/api.ts';
 import {
   Dispatch,
   SetStateAction,
@@ -42,6 +42,10 @@ import {
 } from 'react';
 import type { GitBranch, TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 import { useAttemptData, useBranchStatus, useOpenInEditor } from '@/hooks';
+import { useDevServer } from '@/hooks/useDevServer';
+import { useRebase } from '@/hooks/useRebase';
+import { useMerge } from '@/hooks/useMerge';
+import { usePush } from '@/hooks/usePush';
 import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';
 import { useConfig } from '@/components/config-provider.tsx';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts.ts';
@@ -103,12 +107,23 @@ function CurrentAttempt({
 }: Props) {
   const { config } = useConfig();
   const { isStopping, setIsStopping } = useTaskStopping(task.id);
-  const { attemptData, isAttemptRunning } = useAttemptData(selectedAttempt?.id);
+  const { isAttemptRunning } = useAttemptData(selectedAttempt?.id);
   const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
   const handleOpenInEditor = useOpenInEditor(selectedAttempt?.id, onShowEditorDialog);
   const { jumpToProcess } = useProcessSelection();
 
-  const [isStartingDevServer, setIsStartingDevServer] = useState(false);
+  // Attempt action hooks
+  const {
+    start: startDevServer,
+    stop: stopDevServer,
+    isStarting: isStartingDevServer,
+    runningDevServer,
+    latestDevServerProcess,
+  } = useDevServer(selectedAttempt?.id);
+  const rebaseAction = useRebase(selectedAttempt?.id);
+  const mergeAction = useMerge(selectedAttempt?.id);
+  const pushAction = usePush(selectedAttempt?.id);
+
   const [merging, setMerging] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [rebasing, setRebasing] = useState(false);
@@ -118,54 +133,6 @@ function CurrentAttempt({
   const [copied, setCopied] = useState(false);
   const [mergeSuccess, setMergeSuccess] = useState(false);
   const [pushSuccess, setPushSuccess] = useState(false);
-
-  // Find running dev server in current project
-  const runningDevServer = useMemo(() => {
-    return attemptData.processes.find(
-      (process) =>
-        process.run_reason === 'devserver' && process.status === 'running'
-    );
-  }, [attemptData.processes]);
-
-  // Find latest dev server process (for logs viewing)
-  const latestDevServerProcess = useMemo(() => {
-    return [...attemptData.processes]
-      .filter((process) => process.run_reason === 'devserver')
-      .sort(
-        (a, b) =>
-          new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
-      )[0];
-  }, [attemptData.processes]);
-
-  const startDevServer = async () => {
-    if (!task || !selectedAttempt) return;
-
-    setIsStartingDevServer(true);
-
-    try {
-      await attemptsApi.startDevServer(selectedAttempt.id);
-      // React Query will handle refetching
-    } catch (err) {
-      console.error('Failed to start dev server:', err);
-    } finally {
-      setIsStartingDevServer(false);
-    }
-  };
-
-  const stopDevServer = async () => {
-    if (!task || !selectedAttempt || !runningDevServer) return;
-
-    setIsStartingDevServer(true);
-
-    try {
-      await executionProcessesApi.stopExecutionProcess(runningDevServer.id);
-      // React Query will handle refetching
-    } catch (err) {
-      console.error('Failed to stop dev server:', err);
-    } finally {
-      setIsStartingDevServer(false);
-    }
-  };
 
   const handleViewDevServerLogs = () => {
     if (latestDevServerProcess) {
@@ -220,16 +187,13 @@ function CurrentAttempt({
   };
 
   const handlePushClick = async () => {
-    if (!selectedAttempt?.id) return;
     try {
       setPushing(true);
-      await attemptsApi.push(selectedAttempt.id);
+      await pushAction();
       setError(null); // Clear any previous errors on success
       setPushSuccess(true);
       setTimeout(() => setPushSuccess(false), 2000);
-      // React Query will handle refetching
     } catch (error: any) {
-      console.error('Failed to push changes:', error);
       setError(error.message || 'Failed to push changes');
     } finally {
       setPushing(false);
@@ -237,17 +201,13 @@ function CurrentAttempt({
   };
 
   const performMerge = async () => {
-    if (!projectId || !selectedAttempt?.id || !selectedAttempt?.task_id) return;
-
     try {
       setMerging(true);
-      await attemptsApi.merge(selectedAttempt.id);
+      await mergeAction();
       setError(null); // Clear any previous errors on success
       setMergeSuccess(true);
       setTimeout(() => setMergeSuccess(false), 2000);
-      // React Query will handle refetching
     } catch (error) {
-      console.error('Failed to merge changes:', error);
       // @ts-expect-error it is type ApiError
       setError(error.message || 'Failed to merge changes');
     } finally {
@@ -256,13 +216,10 @@ function CurrentAttempt({
   };
 
   const handleRebaseClick = async () => {
-    if (!projectId || !selectedAttempt?.id || !selectedAttempt?.task_id) return;
-
     try {
       setRebasing(true);
-      await attemptsApi.rebase(selectedAttempt.id, { new_base_branch: null });
+      await rebaseAction();
       setError(null); // Clear any previous errors on success
-      // React Query will handle refetching
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rebase branch');
     } finally {
@@ -271,15 +228,10 @@ function CurrentAttempt({
   };
 
   const handleRebaseWithNewBranch = async (newBaseBranch: string) => {
-    if (!projectId || !selectedAttempt?.id || !selectedAttempt?.task_id) return;
-
     try {
       setRebasing(true);
-      await attemptsApi.rebase(selectedAttempt.id, {
-        new_base_branch: newBaseBranch,
-      });
+      await rebaseAction(newBaseBranch);
       setError(null); // Clear any previous errors on success
-      // React Query will handle refetching
       setShowRebaseDialog(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rebase branch');

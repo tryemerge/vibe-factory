@@ -8,15 +8,15 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import type { TaskAttempt } from 'shared/types';
+import { useDevServer } from '@/hooks/useDevServer';
+import { useRebase } from '@/hooks/useRebase';
+import { useMerge } from '@/hooks/useMerge';
 
 interface AttemptHeaderCardProps {
   attemptNumber: number;
   totalAttempts: number;
   selectedAttempt: TaskAttempt | null;
-  onStartDevServer?: () => void;
-  onRebase?: () => void;
   onCreatePR?: () => void;
-  onMerge?: () => void;
   onCreateNewAttempt?: () => void;
 }
 
@@ -24,12 +24,12 @@ export function AttemptHeaderCard({
   attemptNumber,
   totalAttempts,
   selectedAttempt,
-  onStartDevServer,
-  onRebase,
   onCreatePR,
-  onMerge,
   onCreateNewAttempt,
 }: AttemptHeaderCardProps) {
+  const { start: startDevServer, stop: stopDevServer, runningDevServer } = useDevServer(selectedAttempt?.id);
+  const rebase = useRebase(selectedAttempt?.id);
+  const merge = useMerge(selectedAttempt?.id);
   return (
     <Card className="border-b border-dashed bg-secondary p-3 flex text-sm text-muted-foreground">
       <div className="flex-1 flex gap-6">
@@ -46,16 +46,19 @@ export function AttemptHeaderCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onStartDevServer} disabled={!onStartDevServer}>
-              Start dev server
+            <DropdownMenuItem 
+              onClick={runningDevServer ? stopDevServer : startDevServer} 
+              disabled={!selectedAttempt}
+            >
+              {runningDevServer ? 'Stop dev server' : 'Start dev server'}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onRebase} disabled={!onRebase}>
+            <DropdownMenuItem onClick={() => rebase()} disabled={!selectedAttempt}>
               Rebase
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onCreatePR} disabled={!onCreatePR}>
               Create PR
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onMerge} disabled={!onMerge}>
+            <DropdownMenuItem onClick={merge} disabled={!selectedAttempt}>
               Merge
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onCreateNewAttempt} disabled={!onCreateNewAttempt}>

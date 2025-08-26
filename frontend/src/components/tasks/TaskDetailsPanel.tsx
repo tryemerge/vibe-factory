@@ -206,21 +206,9 @@ export function TaskDetailsPanel({
                     attemptNumber={attemptNumber}
                     totalAttempts={attempts.length}
                     selectedAttempt={selectedAttempt}
-                    onStartDevServer={() => {
-                      // TODO: Implement start dev server
-                      console.log('Start dev server');
-                    }}
-                    onRebase={() => {
-                      // TODO: Implement rebase
-                      console.log('Rebase');
-                    }}
                     onCreatePR={() => {
                       // TODO: Implement create PR
                       console.log('Create PR');
-                    }}
-                    onMerge={() => {
-                      // TODO: Implement merge
-                      console.log('Merge');
                     }}
                     onCreateNewAttempt={() => {
                       // TODO: Implement create new attempt
