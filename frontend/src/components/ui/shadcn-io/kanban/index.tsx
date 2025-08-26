@@ -140,7 +140,7 @@ export const KanbanHeader = (props: KanbanHeaderProps) =>
   'children' in props ? (
     props.children
   ) : (
-    <Card className={cn('flex shrink-0 items-center gap-2 p-3 border-b border-dashed', props.className)} style={{ backgroundColor: `hsl(var(${props.color}) / 0.03)` }}>
+    <Card className={cn('flex shrink-0 items-center gap-2 p-3 border-b border-dashed', props.className)} style={{ backgroundColor: `hsl(var(${props.color}) / 0.06)` }}>
       <div
         className="h-2 w-2 rounded-full"
         style={{ backgroundColor: `hsl(var(${props.color}))` }}
@@ -174,8 +174,8 @@ export const KanbanProvider = ({
     >
       <div
         className={cn(
-          'grid w-full auto-cols-fr grid-flow-col divide-x',
-          className
+          'inline-grid grid-flow-col auto-cols-[minmax(200px,400px)] divide-x border-x',
+          className,
         )}
       >
         {children}

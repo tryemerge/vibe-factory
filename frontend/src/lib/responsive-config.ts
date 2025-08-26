@@ -41,7 +41,7 @@ export const getTaskPanelClasses = (forceFullScreen: boolean) => {
       `${PANEL_SIDE_BY_SIDE_BREAKPOINT}:w-[800px]`,
     ].join(' ');
 
-  return `${overlayClasses} ${sideBySideClasses} bg-background border-l shadow-lg overflow-hidden`;
+  return `${overlayClasses} ${sideBySideClasses} bg-background border-l shadow-lg overflow-hidden -ml-px`;
 };
 
 // Generate classes for backdrop (only show in overlay mode)

@@ -365,18 +365,16 @@ export function ProjectTasks() {
             </Card>
           </div>
         ) : (
-          <div className="overflow-x-scroll">
-            <div className="min-w-[900px] max-w-[2000px] relative">
-              <TaskKanbanBoard
-                tasks={tasks}
-                searchQuery={searchQuery}
-                onDragEnd={handleDragEnd}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                onViewTaskDetails={handleViewTaskDetails}
-                isPanelOpen={isPanelOpen}
-              />
-            </div>
+          <div className="w-full overflow-x-auto bg-secondary">
+            <TaskKanbanBoard
+              tasks={tasks}
+              searchQuery={searchQuery}
+              onDragEnd={handleDragEnd}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onViewTaskDetails={handleViewTaskDetails}
+              isPanelOpen={isPanelOpen}
+            />
           </div>
         )}
       </div>
