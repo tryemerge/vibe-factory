@@ -70,6 +70,11 @@ export function TaskDetailsPanel({
   const [, setPrError] = useState<string | null>(null);
   const [branches, setBranches] = useState<GitBranch[]>([]);
 
+  // Attempt number, find the current attempt number
+  const attemptNumber = attempts.length - attempts.findIndex(
+    (attempt) => attempt.id === selectedAttempt?.id
+  );
+
   // Tab and collapsible state
   const [activeTab, setActiveTab] = useState<TabType>('logs');
 
@@ -117,102 +122,107 @@ export function TaskDetailsPanel({
       {!task ? null : (
         <TabNavContext.Provider value={{ activeTab, setActiveTab }}>
           <ProcessSelectionProvider>
-              {/* Backdrop - only on smaller screens (overlay mode) */}
-              {!hideBackdrop && (
-                <div
-                  className={getBackdropClasses(isFullScreen || false)}
-                  onClick={onClose}
-                />
-              )}
-
-              {/* Panel */}
+            {/* Backdrop - only on smaller screens (overlay mode) */}
+            {!hideBackdrop && (
               <div
-                className={
-                  className || getTaskPanelClasses(isFullScreen || false)
-                }
-              >
-                <div className="">
-                  <TaskDetailsHeader
-                    task={task}
-                    onClose={onClose}
-                    onEditTask={onEditTask}
-                    onDeleteTask={onDeleteTask}
-                    hideCloseButton={hideBackdrop}
-                    isFullScreen={isFullScreen}
-                    setFullScreen={setFullScreen}
-                  />
+                className={getBackdropClasses(isFullScreen || false)}
+                onClick={onClose}
+              />
+            )}
+
+            {/* Panel */}
+            <div
+              className={
+                className || getTaskPanelClasses(isFullScreen || false)
+              }
+            >
+              <div className="">
+                <TaskDetailsHeader
+                  task={task}
+                  onClose={onClose}
+                  onEditTask={onEditTask}
+                  onDeleteTask={onDeleteTask}
+                  hideCloseButton={hideBackdrop}
+                  isFullScreen={isFullScreen}
+                  setFullScreen={setFullScreen}
+                />
+              </div>
+
+              {isFullScreen ? (
+                <div className="flex-1 min-h-0 flex">
+                  {/* Sidebar */}
+                  <aside className="w-[28rem] shrink-0 border-r overflow-y-auto p-4 space-y-4">
+                    {/* Fullscreen sidebar shows title and description above edit/delete */}
+                    <div className="space-y-2">
+                      <TaskTitleDescription task={task} />
+                    </div>
+
+                    {/* Current Attempt / Actions */}
+                    <TaskDetailsToolbar
+                      task={task}
+                      projectId={projectId}
+                      projectHasDevScript={projectHasDevScript}
+                      forceCreateAttempt={forceCreateAttempt}
+                      onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
+                      attempts={attempts}
+                      selectedAttempt={selectedAttempt}
+                      setSelectedAttempt={setSelectedAttempt}
+                    // hide actions in sidebar; moved to header in fullscreen
+                    />
+
+                    {/* Task Breakdown (TODOs) */}
+                    <TodoPanel selectedAttempt={selectedAttempt} />
+                  </aside>
+
+                  {/* Main content */}
+                  <main className="flex-1 min-h-0 min-w-0 flex flex-col">
+                    <TabNavigation
+                      activeTab={activeTab}
+                      setActiveTab={setActiveTab}
+                      selectedAttempt={selectedAttempt}
+                    />
+
+                    <div className="flex-1 flex flex-col min-h-0">
+                      {activeTab === 'diffs' ? (
+                        <DiffTab selectedAttempt={selectedAttempt} />
+                      ) : activeTab === 'processes' ? (
+                        <ProcessesTab attemptId={selectedAttempt?.id} />
+                      ) : (
+                        <LogsTab selectedAttempt={selectedAttempt} />
+                      )}
+                    </div>
+
+                    <TaskFollowUpSection
+                      task={task}
+                      projectId={projectId}
+                      selectedAttemptId={selectedAttempt?.id}
+                      selectedAttemptProfile={selectedAttempt?.profile}
+                    />
+                  </main>
                 </div>
-
-                {isFullScreen ? (
-                  <div className="flex-1 min-h-0 flex">
-                    {/* Sidebar */}
-                    <aside className="w-[28rem] shrink-0 border-r overflow-y-auto p-4 space-y-4">
-                      {/* Fullscreen sidebar shows title and description above edit/delete */}
-                      <div className="space-y-2">
-                        <TaskTitleDescription task={task} />
-                      </div>
-
-                      {/* Current Attempt / Actions */}
-                      <TaskDetailsToolbar
-                        task={task}
-                        projectId={projectId}
-                        projectHasDevScript={projectHasDevScript}
-                        forceCreateAttempt={forceCreateAttempt}
-                        onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
-                        attempts={attempts}
-                        selectedAttempt={selectedAttempt}
-                        setSelectedAttempt={setSelectedAttempt}
-                        // hide actions in sidebar; moved to header in fullscreen
-                      />
-
-                      {/* Task Breakdown (TODOs) */}
-                      <TodoPanel selectedAttempt={selectedAttempt} />
-                    </aside>
-
-                    {/* Main content */}
-                    <main className="flex-1 min-h-0 min-w-0 flex flex-col">
-                      <TabNavigation
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                        selectedAttempt={selectedAttempt}
-                      />
-
-                      <div className="flex-1 flex flex-col min-h-0">
-                        {activeTab === 'diffs' ? (
-                          <DiffTab selectedAttempt={selectedAttempt} />
-                        ) : activeTab === 'processes' ? (
-                          <ProcessesTab attemptId={selectedAttempt?.id} />
-                        ) : (
-                          <LogsTab selectedAttempt={selectedAttempt} />
-                        )}
-                      </div>
-
-                      <TaskFollowUpSection 
-                        task={task}
-                        projectId={projectId}
-                        selectedAttemptId={selectedAttempt?.id}
-                        selectedAttemptProfile={selectedAttempt?.profile}
-                      />
-                    </main>
-                  </div>
-                ) : (
-                  <>
-                    <Card className="flex shrink-0 items-center gap-2 border-b bg-secondary">
-                      <div className="p-3 flex flex-1 items-center truncate">
-                        <p className="ml-2 text-sm">Attempt (1/3)</p>
-                      </div>
-                    </Card>
-                    {/* <div className="p-4 border-b">
+              ) : (
+                <>
+                  <Card className="border-b border-dashed bg-secondary p-3 flex text-sm text-muted-foreground">
+                    <div className="flex-1 flex gap-6">
+                      <p>Attempt &middot; <span className="text-primary">{attemptNumber}/{attempts.length}</span></p>
+                      <p>Profile &middot; <span className="text-primary">{selectedAttempt?.profile}</span></p>
+                      {selectedAttempt?.branch && <p className="max-w-30 truncate">Branch &middot; <span className="text-primary">{selectedAttempt.branch}</span></p>}
+                    </div>
+                    <div className="flex">
+                      <p>test</p>
+                    </div>
+                  </Card>
+                  {/* <div className="p-4 border-b">
                         <TaskDetailsToolbar />
                       </div> */}
 
-                    {/* <TabNavigation
+                  {/* <TabNavigation
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                       /> */}
 
-                    {/* Tab Content */}
-                    {/* <div className="flex-1 flex flex-col min-h-0">
+                  {/* Tab Content */}
+                  {/* <div className="flex-1 flex flex-col min-h-0">
                         {activeTab === 'diffs' ? (
                           <DiffTab />
                         ) : activeTab === 'processes' ? (
@@ -222,40 +232,40 @@ export function TaskDetailsPanel({
                         )}
                       </div> */}
 
-                    <LogsTab selectedAttempt={selectedAttempt} />
+                  <LogsTab selectedAttempt={selectedAttempt} />
 
-                    <TaskFollowUpSection 
-                      task={task}
-                      projectId={projectId}
-                      selectedAttemptId={selectedAttempt?.id}
-                      selectedAttemptProfile={selectedAttempt?.profile}
-                    />
-                  </>
-                )}
-              </div>
+                  <TaskFollowUpSection
+                    task={task}
+                    projectId={projectId}
+                    selectedAttemptId={selectedAttempt?.id}
+                    selectedAttemptProfile={selectedAttempt?.profile}
+                  />
+                </>
+              )}
+            </div>
 
-              <EditorSelectionDialog
-                isOpen={showEditorDialog}
-                onClose={() => setShowEditorDialog(false)}
-                selectedAttempt={selectedAttempt}
-              />
+            <EditorSelectionDialog
+              isOpen={showEditorDialog}
+              onClose={() => setShowEditorDialog(false)}
+              selectedAttempt={selectedAttempt}
+            />
 
-              <DeleteFileConfirmationDialog task={task} projectId={projectId} selectedAttempt={selectedAttempt} />
-              
-              {/* PR Dialog */}
-              <CreatePRDialog
-                task={task}
-                projectId={projectId}
-                selectedAttemptId={selectedAttempt?.id}
-                creatingPR={creatingPR}
-                setShowCreatePRDialog={setShowCreatePRDialog}
-                showCreatePRDialog={showCreatePRDialog}
-                setCreatingPR={setCreatingPR}
-                setError={setPrError}
-                branches={branches}
-              />
-            </ProcessSelectionProvider>
-          </TabNavContext.Provider>
+            <DeleteFileConfirmationDialog task={task} projectId={projectId} selectedAttempt={selectedAttempt} />
+
+            {/* PR Dialog */}
+            <CreatePRDialog
+              task={task}
+              projectId={projectId}
+              selectedAttemptId={selectedAttempt?.id}
+              creatingPR={creatingPR}
+              setShowCreatePRDialog={setShowCreatePRDialog}
+              showCreatePRDialog={showCreatePRDialog}
+              setCreatingPR={setCreatingPR}
+              setError={setPrError}
+              branches={branches}
+            />
+          </ProcessSelectionProvider>
+        </TabNavContext.Provider>
       )}
     </>
   );
