@@ -48,6 +48,7 @@ export function AttemptHeaderCard({
           <DropdownMenuItem
             onClick={runningDevServer ? stopDevServer : startDevServer}
             disabled={!selectedAttempt}
+            className={runningDevServer ? 'text-destructive' : ''}
           >
             {runningDevServer ? 'Stop dev server' : 'Start dev server'}
           </DropdownMenuItem>

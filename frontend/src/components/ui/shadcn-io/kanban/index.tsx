@@ -128,13 +128,13 @@ export const KanbanCards = ({ children, className }: KanbanCardsProps) => (
 
 export type KanbanHeaderProps =
   | {
-      children: ReactNode;
-    }
+    children: ReactNode;
+  }
   | {
-      name: Status['name'];
-      color: Status['color'];
-      className?: string;
-    };
+    name: Status['name'];
+    color: Status['color'];
+    className?: string;
+  };
 
 export const KanbanHeader = (props: KanbanHeaderProps) =>
   'children' in props ? (
@@ -145,7 +145,7 @@ export const KanbanHeader = (props: KanbanHeaderProps) =>
         'flex shrink-0 items-center gap-2 p-3 border-b border-dashed',
         props.className
       )}
-      style={{ backgroundColor: `hsl(var(${props.color}) / 0.06)` }}
+      style={{ backgroundColor: `hsl(var(${props.color}) / 0.03)` }}
     >
       <div
         className="h-2 w-2 rounded-full"
