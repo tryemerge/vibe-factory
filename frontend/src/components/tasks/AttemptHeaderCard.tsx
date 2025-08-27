@@ -77,7 +77,7 @@ export function AttemptHeaderCard({
         {fileCount > 0 && (
           <p>
             <Button variant="ghost" size="sm" className="h-4 p-0" onClick={onJumpToDiffFullScreen}>
-              Diff
+              Diffs
             </Button>
             {' '}&middot;{' '}
             <span className="text-green-600">+{added}</span>{' '}
