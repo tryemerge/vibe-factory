@@ -49,6 +49,7 @@ import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { useDevServer } from '@/hooks/useDevServer';
 import { useRebase } from '@/hooks/useRebase';
 import { useMerge } from '@/hooks/useMerge';
+import { useCreatePRDialog } from '@/contexts/create-pr-dialog-context';
 import { usePush } from '@/hooks/usePush';
 import { useConfig } from '@/components/config-provider.tsx';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts.ts';
@@ -82,7 +83,7 @@ type Props = {
   projectId: string;
   projectHasDevScript: boolean;
   setError: Dispatch<SetStateAction<string | null>>;
-  setShowCreatePRDialog: Dispatch<SetStateAction<boolean>>;
+
   selectedBranch: string | null;
   selectedAttempt: TaskAttempt;
   taskAttempts: TaskAttempt[];
@@ -97,7 +98,6 @@ function CurrentAttempt({
   projectId,
   projectHasDevScript,
   setError,
-  setShowCreatePRDialog,
   selectedBranch,
   selectedAttempt,
   taskAttempts,
@@ -123,6 +123,7 @@ function CurrentAttempt({
   const rebaseAction = useRebase(selectedAttempt?.id);
   const mergeAction = useMerge(selectedAttempt?.id);
   const pushAction = usePush(selectedAttempt?.id);
+  const { showCreatePRDialog } = useCreatePRDialog();
 
   const [merging, setMerging] = useState(false);
   const [pushing, setPushing] = useState(false);
@@ -242,7 +243,11 @@ function CurrentAttempt({
       return;
     }
 
-    setShowCreatePRDialog(true);
+    showCreatePRDialog({
+      attempt: selectedAttempt,
+      task,
+      projectId,
+    });
   };
 
   // Get display name for selected branch

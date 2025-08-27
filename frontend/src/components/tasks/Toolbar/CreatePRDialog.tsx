@@ -18,61 +18,46 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCallback, useEffect, useState } from 'react';
-import { attemptsApi } from '@/lib/api.ts';
+import { attemptsApi, projectsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
-import {
-  GitBranch,
-  GitHubServiceError,
-  TaskWithAttemptStatus,
-} from 'shared/types';
+import { GitHubServiceError } from 'shared/types';
+import { useCreatePRDialog } from '@/contexts/create-pr-dialog-context';
+import { useQuery } from '@tanstack/react-query';
 
-type Props = {
-  task: TaskWithAttemptStatus;
-  projectId: string;
-  selectedAttemptId?: string;
-  showCreatePRDialog: boolean;
-  setShowCreatePRDialog: (show: boolean) => void;
-  creatingPR: boolean;
-  setCreatingPR: (creating: boolean) => void;
-  setError: (error: string | null) => void;
-  branches: GitBranch[];
-};
-
-function CreatePrDialog({
-  task,
-  projectId,
-  selectedAttemptId,
-  showCreatePRDialog,
-  setCreatingPR,
-  setShowCreatePRDialog,
-  creatingPR,
-  setError,
-  branches,
-}: Props) {
+function CreatePrDialog() {
+  const { isOpen, data, closeCreatePRDialog } = useCreatePRDialog();
   const [prTitle, setPrTitle] = useState('');
   const [prBody, setPrBody] = useState('');
   const [prBaseBranch, setPrBaseBranch] = useState('main');
   const [showPatDialog, setShowPatDialog] = useState(false);
   const [patDialogError, setPatDialogError] = useState<string | null>(null);
   const [showGitHubLoginDialog, setShowGitHubLoginDialog] = useState(false);
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch branches when dialog opens
+  const { data: branches = [], isLoading: branchesLoading } = useQuery({
+    queryKey: ['branches', data?.projectId],
+    queryFn: () => projectsApi.getBranches(data!.projectId),
+    enabled: isOpen && !!data?.projectId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   useEffect(() => {
-    if (showCreatePRDialog) {
-      setPrTitle(`${task.title} (vibe-kanban)`);
-      setPrBody(task.description || '');
+    if (isOpen && data) {
+      setPrTitle(`${data.task.title} (vibe-kanban)`);
+      setPrBody(data.task.description || '');
+      setError(null); // Reset error when opening
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreatePRDialog]);
-
-  // Remove attempt-specific base branch logic since we don't have selectedAttempt
+  }, [isOpen, data]);
 
   const handleConfirmCreatePR = useCallback(async () => {
-    if (!projectId || !selectedAttemptId) return;
+    if (!data?.projectId || !data?.attempt.id) return;
 
     setCreatingPR(true);
 
-    const result = await attemptsApi.createPR(selectedAttemptId, {
+    const result = await attemptsApi.createPR(data.attempt.id, {
       title: prTitle,
       body: prBody || null,
       base_branch: prBaseBranch || null,
@@ -81,14 +66,14 @@ function CreatePrDialog({
     if (result.success) {
       setError(null); // Clear any previous errors on success
       window.open(result.data, '_blank');
-      // Reset form
+      // Reset form and close dialog
       setPrTitle('');
       setPrBody('');
       setPrBaseBranch('main');
-      // No need to manually refetch - React Query will handle this
+      closeCreatePRDialog();
     } else {
       if (result.error) {
-        setShowCreatePRDialog(false);
+        closeCreatePRDialog();
         switch (result.error) {
           case GitHubServiceError.TOKEN_INVALID:
             setShowGitHubLoginDialog(true);
@@ -110,34 +95,31 @@ function CreatePrDialog({
         setError('Failed to create GitHub PR');
       }
     }
-    setShowCreatePRDialog(false);
     setCreatingPR(false);
   }, [
-    projectId,
-    selectedAttemptId,
+    data,
     prBaseBranch,
     prBody,
     prTitle,
-    setCreatingPR,
-    setError,
-    setShowCreatePRDialog,
+    closeCreatePRDialog,
     setPatDialogError,
-    setShowPatDialog,
-    setShowGitHubLoginDialog,
   ]);
 
   const handleCancelCreatePR = useCallback(() => {
-    setShowCreatePRDialog(false);
+    closeCreatePRDialog();
     // Reset form to empty state
     setPrTitle('');
     setPrBody('');
     setPrBaseBranch('main');
-  }, [setShowCreatePRDialog]);
+  }, [closeCreatePRDialog]);
+
+  // Don't render if no data
+  if (!data) return null;
 
   return (
     <>
       <Dialog
-        open={showCreatePRDialog}
+        open={isOpen}
         onOpenChange={() => handleCancelCreatePR()}
       >
         <DialogContent className="sm:max-w-[525px]">
@@ -169,9 +151,13 @@ function CreatePrDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="pr-base">Base Branch</Label>
-              <Select value={prBaseBranch} onValueChange={setPrBaseBranch}>
+              <Select 
+                value={prBaseBranch} 
+                onValueChange={setPrBaseBranch}
+                disabled={branchesLoading}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select base branch" />
+                  <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select base branch"} />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((branch) => (
@@ -190,6 +176,11 @@ function CreatePrDialog({
                 </SelectContent>
               </Select>
             </div>
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCancelCreatePR}>

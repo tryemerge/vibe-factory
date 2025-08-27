@@ -11,7 +11,7 @@ import type {
 
 import { useAttemptExecution } from '@/hooks';
 import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';
-import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog.tsx';
+
 import CreateAttempt from '@/components/tasks/Toolbar/CreateAttempt.tsx';
 import CurrentAttempt from '@/components/tasks/Toolbar/CurrentAttempt.tsx';
 import { useUserSystem } from '@/components/config-provider';
@@ -196,23 +196,7 @@ function TaskDetailsToolbar({
     [ui.error]
   );
 
-  const setShowCreatePRDialog = useCallback(
-    (value: boolean | ((prev: boolean) => boolean)) => {
-      const boolValue =
-        typeof value === 'function' ? value(ui.showCreatePRDialog) : value;
-      dispatch({ type: boolValue ? 'OPEN_CREATE_PR' : 'CLOSE_CREATE_PR' });
-    },
-    [ui.showCreatePRDialog]
-  );
 
-  const setCreatingPR = useCallback(
-    (value: boolean | ((prev: boolean) => boolean)) => {
-      const boolValue =
-        typeof value === 'function' ? value(ui.creatingPR) : value;
-      dispatch({ type: boolValue ? 'CREATE_PR_START' : 'CREATE_PR_DONE' });
-    },
-    [ui.creatingPR]
-  );
 
   return (
     <>
@@ -255,7 +239,7 @@ function TaskDetailsToolbar({
                     taskAttempts={taskAttempts}
                     selectedBranch={selectedBranch}
                     setError={setError}
-                    setShowCreatePRDialog={setShowCreatePRDialog}
+
                     creatingPR={ui.creatingPR}
                     handleEnterCreateAttemptMode={handleEnterCreateAttemptMode}
                     branches={branches}
@@ -291,17 +275,7 @@ function TaskDetailsToolbar({
         )}
       </div>
 
-      <CreatePRDialog
-        task={task}
-        projectId={projectId}
-        selectedAttemptId={selectedAttempt?.id}
-        creatingPR={ui.creatingPR}
-        setShowCreatePRDialog={setShowCreatePRDialog}
-        showCreatePRDialog={ui.showCreatePRDialog}
-        setCreatingPR={setCreatingPR}
-        setError={setError}
-        branches={branches}
-      />
+
     </>
   );
 }

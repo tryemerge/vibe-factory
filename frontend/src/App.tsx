@@ -16,7 +16,9 @@ import {
   EditorDialogProvider,
   useEditorDialog,
 } from '@/contexts/editor-dialog-context';
+import { CreatePRDialogProvider } from '@/contexts/create-pr-dialog-context';
 import { EditorSelectionDialog } from '@/components/tasks/EditorSelectionDialog';
+import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog';
 import { TaskDialogProvider } from '@/contexts/task-dialog-context';
 import { TaskFormDialogContainer } from '@/components/tasks/TaskFormDialogContainer';
 import { ProjectProvider } from '@/contexts/project-context';
@@ -177,6 +179,7 @@ function AppContent() {
               onClose={closeEditorDialog}
               selectedAttempt={selectedAttempt}
             />
+            <CreatePRDialog />
             <TaskFormDialogContainer />
             {showNavbar && <Navbar />}
             <div className="flex-1 h-full overflow-y-scroll">
@@ -213,9 +216,11 @@ function App() {
       <ConfigProvider>
         <ProjectProvider>
           <EditorDialogProvider>
-            <TaskDialogProvider>
-              <AppContent />
-            </TaskDialogProvider>
+            <CreatePRDialogProvider>
+              <TaskDialogProvider>
+                <AppContent />
+              </TaskDialogProvider>
+            </CreatePRDialogProvider>
           </EditorDialogProvider>
         </ProjectProvider>
       </ConfigProvider>

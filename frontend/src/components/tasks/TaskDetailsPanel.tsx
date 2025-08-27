@@ -15,14 +15,11 @@ import DiffTab from '@/components/tasks/TaskDetails/DiffTab.tsx';
 import LogsTab from '@/components/tasks/TaskDetails/LogsTab.tsx';
 import ProcessesTab from '@/components/tasks/TaskDetails/ProcessesTab.tsx';
 import DeleteFileConfirmationDialog from '@/components/tasks/DeleteFileConfirmationDialog.tsx';
-import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog';
 import TabNavigation from '@/components/tasks/TaskDetails/TabNavigation.tsx';
 import TaskDetailsToolbar from './TaskDetailsToolbar.tsx';
 import TodoPanel from '@/components/tasks/TodoPanel';
 import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
-import { projectsApi } from '@/lib/api';
-import type { GitBranch } from 'shared/types';
 import { AttemptHeaderCard } from './AttemptHeaderCard';
 
 interface TaskDetailsPanelProps {
@@ -66,10 +63,6 @@ export function TaskDetailsPanel({
 }: TaskDetailsPanelProps) {
   // selectedAttempt now comes from AttemptContext for child components
   const [showEditorDialog, setShowEditorDialog] = useState(false);
-  const [showCreatePRDialog, setShowCreatePRDialog] = useState(false);
-  const [creatingPR, setCreatingPR] = useState(false);
-  const [, setPrError] = useState<string | null>(null);
-  const [branches, setBranches] = useState<GitBranch[]>([]);
 
   // Attempt number, find the current attempt number
   const attemptNumber =
@@ -94,19 +87,6 @@ export function TaskDetailsPanel({
 
   // Get selected attempt info for props
   // (now received as props instead of hook)
-
-  // Fetch branches for PR dialog usage when panel opens
-  useEffect(() => {
-    const fetchBranches = async () => {
-      try {
-        const result = await projectsApi.getBranches(projectId);
-        setBranches(result);
-      } catch (e) {
-        // noop
-      }
-    };
-    if (projectId) fetchBranches();
-  }, [projectId]);
 
   // Handle ESC key locally to prevent global navigation
   useEffect(() => {
@@ -227,10 +207,8 @@ export function TaskDetailsPanel({
                           attemptNumber={attemptNumber}
                           totalAttempts={attempts.length}
                           selectedAttempt={selectedAttempt}
-                          onCreatePR={() => {
-                            // TODO: Implement create PR
-                            console.log('Create PR');
-                          }}
+                          task={task}
+                          projectId={projectId}
                           // onCreateNewAttempt={() => {
                           //   // TODO: Implement create new attempt
                           //   console.log('Create new attempt');
@@ -264,19 +242,6 @@ export function TaskDetailsPanel({
               task={task}
               projectId={projectId}
               selectedAttempt={selectedAttempt}
-            />
-
-            {/* PR Dialog */}
-            <CreatePRDialog
-              task={task}
-              projectId={projectId}
-              selectedAttemptId={selectedAttempt?.id}
-              creatingPR={creatingPR}
-              setShowCreatePRDialog={setShowCreatePRDialog}
-              showCreatePRDialog={showCreatePRDialog}
-              setCreatingPR={setCreatingPR}
-              setError={setPrError}
-              branches={branches}
             />
           </ProcessSelectionProvider>
         </TabNavContext.Provider>

@@ -7,18 +7,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import type { TaskAttempt } from 'shared/types';
+import type { TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 import { useDevServer } from '@/hooks/useDevServer';
 import { useRebase } from '@/hooks/useRebase';
 import { useMerge } from '@/hooks/useMerge';
 import { useOpenInEditor } from '@/hooks/useOpenInEditor';
 import { useDiffSummary } from '@/hooks/useDiffSummary';
+import { useCreatePRDialog } from '@/contexts/create-pr-dialog-context';
 
 interface AttemptHeaderCardProps {
   attemptNumber: number;
   totalAttempts: number;
   selectedAttempt: TaskAttempt | null;
-  onCreatePR?: () => void;
+  task: TaskWithAttemptStatus;
+  projectId: string;
   // onCreateNewAttempt?: () => void;
   onJumpToDiffFullScreen?: () => void;
 }
@@ -27,7 +29,8 @@ export function AttemptHeaderCard({
   attemptNumber,
   totalAttempts,
   selectedAttempt,
-  onCreatePR,
+  task,
+  projectId,
   // onCreateNewAttempt,
   onJumpToDiffFullScreen,
 }: AttemptHeaderCardProps) {
@@ -40,6 +43,17 @@ export function AttemptHeaderCard({
   const merge = useMerge(selectedAttempt?.id);
   const openInEditor = useOpenInEditor(selectedAttempt);
   const { fileCount, added, deleted } = useDiffSummary(selectedAttempt?.id ?? null);
+  const { showCreatePRDialog } = useCreatePRDialog();
+
+  const handleCreatePR = () => {
+    if (selectedAttempt) {
+      showCreatePRDialog({
+        attempt: selectedAttempt,
+        task,
+        projectId,
+      });
+    }
+  };
 
   return (
     <Card className="border-b border-dashed bg-secondary flex items-center text-sm text-muted-foreground">
@@ -98,7 +112,7 @@ export function AttemptHeaderCard({
           >
             Rebase
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onCreatePR} disabled={!onCreatePR}>
+          <DropdownMenuItem onClick={handleCreatePR} disabled={!selectedAttempt}>
             Create PR
           </DropdownMenuItem>
           <DropdownMenuItem onClick={merge} disabled={!selectedAttempt}>
