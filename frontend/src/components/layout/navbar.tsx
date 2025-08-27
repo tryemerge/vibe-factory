@@ -47,8 +47,6 @@ export function Navbar() {
   const { query, setQuery, active, clear } = useSearch();
   const { openCreate } = useTaskDialog();
 
-  console.log('Navbar: projectId is', projectId);
-
   return (
     <div className="border-b bg-secondary">
       <div className="w-full px-3">
