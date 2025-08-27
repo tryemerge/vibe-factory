@@ -179,7 +179,7 @@ function AppContent() {
             />
             <TaskFormDialogContainer />
             {showNavbar && <Navbar />}
-            <div className="flex-1 overflow-y-scroll">
+            <div className="flex-1 h-full overflow-y-scroll">
               <SentryRoutes>
                 <Route path="/" element={<Projects />} />
                 <Route path="/projects" element={<Projects />} />

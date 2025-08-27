@@ -287,6 +287,10 @@
     @apply border-border;
   }
 
+  html, body, #root {
+    @apply min-h-screen;
+  }
+
   body {
     @apply bg-background text-foreground font-chivo-mono;
   }

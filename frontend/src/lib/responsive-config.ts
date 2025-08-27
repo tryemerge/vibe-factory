@@ -67,7 +67,9 @@ export const getKanbanSectionClasses = (
   isPanelOpen: boolean,
   forceFullScreen: boolean
 ) => {
-  if (!isPanelOpen) return 'w-full';
+  const baseClasses = 'h-full w-full';
+  
+  if (!isPanelOpen) return baseClasses;
 
   // const overlayClasses = 'w-full opacity-50 pointer-events-none';
   const sideBySideClasses =
@@ -83,5 +85,5 @@ export const getKanbanSectionClasses = (
         ].join(' ');
 
   // return `${overlayClasses} ${sideBySideClasses}`;
-  return `${sideBySideClasses}`;
+  return `${baseClasses} ${sideBySideClasses}`;
 };

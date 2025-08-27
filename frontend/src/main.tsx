@@ -4,7 +4,7 @@ import App from './App.tsx';
 import './styles/index.css';
 import { ClickToComponent } from 'click-to-react-component';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-// import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
 import * as Sentry from '@sentry/react';
 // Install VS Code iframe keyboard bridge when running inside an iframe
 import './vscode/bridge';

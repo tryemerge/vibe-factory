@@ -319,7 +319,7 @@ export function ProjectTasks() {
   }
 
   return (
-    <div className={getMainContainerClasses(isPanelOpen, isFullscreen)}>
+    <div className={`min-h-full ${getMainContainerClasses(isPanelOpen, isFullscreen)}`}>
       {/* Left Column - Kanban Section */}
       <div className={getKanbanSectionClasses(isPanelOpen, isFullscreen)}>
         {tasks.length === 0 ? (
@@ -337,7 +337,7 @@ export function ProjectTasks() {
             </Card>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto bg-secondary">
+          <div className="w-full h-full overflow-x-auto bg-secondary">
             <TaskKanbanBoard
               tasks={tasks}
               searchQuery={searchQuery}

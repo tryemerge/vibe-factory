@@ -42,7 +42,7 @@ export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
   return (
     <div
       className={cn(
-        'flex h-full min-h-40 flex-col bg-secondary',
+        'flex h-full min-h-40 flex-col overflow-y-auto bg-secondary',
         isOver ? 'outline-primary' : 'outline-black',
         className
       )}
@@ -142,10 +142,13 @@ export const KanbanHeader = (props: KanbanHeaderProps) =>
   ) : (
     <Card
       className={cn(
-        'flex shrink-0 items-center gap-2 p-3 border-b border-dashed',
+        'sticky top-0 z-20 flex shrink-0 items-center gap-2 p-3 border-b border-dashed',
+        'bg-secondary',
         props.className
       )}
-      style={{ backgroundColor: `hsl(var(${props.color}) / 0.03)` }}
+      style={{
+        backgroundImage: `linear-gradient(hsl(var(${props.color}) / 0.03), hsl(var(${props.color}) / 0.03))`,
+      }}
     >
       <div
         className="h-2 w-2 rounded-full"
@@ -180,7 +183,7 @@ export const KanbanProvider = ({
     >
       <div
         className={cn(
-          'inline-grid grid-flow-col auto-cols-[minmax(200px,400px)] divide-x border-x',
+          'inline-grid grid-flow-col auto-cols-[minmax(200px,400px)] divide-x border-x h-full',
           className
         )}
       >
