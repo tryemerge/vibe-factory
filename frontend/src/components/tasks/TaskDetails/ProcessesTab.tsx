@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { executionProcessesApi } from '@/lib/api.ts';
 import { ProfileVariantBadge } from '@/components/common/ProfileVariantBadge.tsx';
-import { useAttemptData } from '@/hooks';
+import { useAttemptExecution } from '@/hooks';
 import ProcessLogsViewer from './ProcessLogsViewer';
 import type { ExecutionProcessStatus, ExecutionProcess } from 'shared/types';
 import { useProcessSelection } from '@/contexts/ProcessSelectionContext';
@@ -20,7 +20,7 @@ interface ProcessesTabProps {
 }
 
 function ProcessesTab({ attemptId }: ProcessesTabProps) {
-  const { attemptData } = useAttemptData(attemptId);
+  const { attemptData } = useAttemptExecution(attemptId);
   const { selectedProcessId, setSelectedProcessId } = useProcessSelection();
   const [loadingProcessId, setLoadingProcessId] = useState<string | null>(null);
   const [localProcessDetails, setLocalProcessDetails] = useState<

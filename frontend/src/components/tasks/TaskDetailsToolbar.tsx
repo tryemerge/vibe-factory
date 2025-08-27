@@ -9,7 +9,7 @@ import type {
   TaskWithAttemptStatus,
 } from 'shared/types';
 
-import { useAttemptData } from '@/hooks';
+import { useAttemptExecution } from '@/hooks';
 import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';
 import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog.tsx';
 import CreateAttempt from '@/components/tasks/Toolbar/CreateAttempt.tsx';
@@ -84,7 +84,7 @@ function TaskDetailsToolbar({
   const taskAttempts = attempts;
   // const { setLoading } = useTaskLoading(task.id);
   const { isStopping } = useTaskStopping(task.id);
-  const { isAttemptRunning } = useAttemptData(selectedAttempt?.id);
+  const { isAttemptRunning } = useAttemptExecution(selectedAttempt?.id);
 
   // UI state using reducer
   const [ui, dispatch] = useReducer(uiReducer, initialUi);

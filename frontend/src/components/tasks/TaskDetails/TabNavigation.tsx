@@ -1,5 +1,5 @@
 import { GitCompare, MessageSquare, Cog } from 'lucide-react';
-import { useAttemptData } from '@/hooks/useAttemptData';
+import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import type { TabType } from '@/types/tabs';
 import type { TaskAttempt } from 'shared/types';
 
@@ -16,7 +16,7 @@ function TabNavigation({
   rightContent,
   selectedAttempt,
 }: Props) {
-  const { attemptData } = useAttemptData(selectedAttempt?.id);
+  const { attemptData } = useAttemptExecution(selectedAttempt?.id);
   return (
     <div className="border-b bg-muted/20 sticky top-0 z-10">
       <div className="flex items-center px-4">

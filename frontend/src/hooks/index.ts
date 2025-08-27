@@ -1,6 +1,6 @@
 export { useExecutionProcesses } from './useExecutionProcesses';
 export { useBranchStatus } from './useBranchStatus';
-export { useAttemptData } from './useAttemptData';
+export { useAttemptExecution } from './useAttemptExecution';
 export { useOpenInEditor } from './useOpenInEditor';
 export { useDevServer } from './useDevServer';
 export { useRebase } from './useRebase';

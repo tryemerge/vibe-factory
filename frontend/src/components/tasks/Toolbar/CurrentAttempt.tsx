@@ -32,7 +32,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.tsx';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
-import { attemptsApi } from '@/lib/api.ts';
 import {
   Dispatch,
   SetStateAction,
@@ -45,12 +44,12 @@ import type {
   TaskAttempt,
   TaskWithAttemptStatus,
 } from 'shared/types';
-import { useAttemptData, useBranchStatus, useOpenInEditor } from '@/hooks';
+import { useBranchStatus, useOpenInEditor } from '@/hooks';
+import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { useDevServer } from '@/hooks/useDevServer';
 import { useRebase } from '@/hooks/useRebase';
 import { useMerge } from '@/hooks/useMerge';
 import { usePush } from '@/hooks/usePush';
-import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';
 import { useConfig } from '@/components/config-provider.tsx';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts.ts';
 import { writeClipboardViaBridge } from '@/vscode/bridge';
@@ -108,8 +107,7 @@ function CurrentAttempt({
   setSelectedAttempt,
 }: Props) {
   const { config } = useConfig();
-  const { isStopping, setIsStopping } = useTaskStopping(task.id);
-  const { isAttemptRunning } = useAttemptData(selectedAttempt?.id);
+  const { isAttemptRunning, stopExecution, isStopping } = useAttemptExecution(selectedAttempt?.id, task.id);
   const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
   const handleOpenInEditor = useOpenInEditor(selectedAttempt);
   const { jumpToProcess } = useProcessSelection();
@@ -142,19 +140,7 @@ function CurrentAttempt({
     }
   };
 
-  const stopAllExecutions = useCallback(async () => {
-    if (!task || !selectedAttempt || !isAttemptRunning) return;
-
-    try {
-      setIsStopping(true);
-      await attemptsApi.stop(selectedAttempt.id);
-      // React Query will handle refetching automatically
-    } catch (err) {
-      console.error('Failed to stop executions:', err);
-    } finally {
-      setIsStopping(false);
-    }
-  }, [task, selectedAttempt, projectId, setIsStopping, isAttemptRunning]);
+  // Use the stopExecution function from the hook
 
   useKeyboardShortcuts({
     stopExecution: () => setShowStopConfirmation(true),
@@ -163,7 +149,7 @@ function CurrentAttempt({
     closeDialog: () => setShowStopConfirmation(false),
     onEnter: () => {
       setShowStopConfirmation(false);
-      stopAllExecutions();
+      stopExecution();
     },
   });
 
@@ -633,7 +619,7 @@ function CurrentAttempt({
               <Button
                 variant="destructive"
                 size="xs"
-                onClick={stopAllExecutions}
+                onClick={stopExecution}
                 disabled={isStopping}
                 className="gap-1 flex-1"
               >
@@ -762,7 +748,7 @@ function CurrentAttempt({
               variant="destructive"
               onClick={async () => {
                 setShowStopConfirmation(false);
-                await stopAllExecutions();
+                await stopExecution();
               }}
               disabled={isStopping}
             >

@@ -1,7 +1,7 @@
 import { useRef, useCallback, useMemo, useEffect, useReducer } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { Cog } from 'lucide-react';
-import { useAttemptData } from '@/hooks/useAttemptData';
+import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { useProcessesLogs } from '@/hooks/useProcessesLogs';
 import LogEntryRow from '@/components/logs/LogEntryRow';
 import {
@@ -114,7 +114,7 @@ type Props = {
 };
 
 function LogsTab({ selectedAttempt }: Props) {
-  const { attemptData } = useAttemptData(selectedAttempt?.id);
+  const { attemptData } = useAttemptExecution(selectedAttempt?.id);
   const virtuosoRef = useRef<any>(null);
 
   const [state, dispatch] = useReducer(reducer, initialState);

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Circle, CircleCheckBig, CircleDotDashed } from 'lucide-react';
 import { useProcessesLogs } from '@/hooks/useProcessesLogs';
 import { usePinnedTodos } from '@/hooks/usePinnedTodos';
-import { useAttemptData } from '@/hooks';
+import { useAttemptExecution } from '@/hooks';
 import { shouldShowInLogs } from '@/constants/processes';
 import type { TaskAttempt } from 'shared/types';
 
@@ -20,7 +20,7 @@ interface TodoPanelProps {
 }
 
 export function TodoPanel({ selectedAttempt }: TodoPanelProps) {
-  const { attemptData } = useAttemptData(selectedAttempt?.id);
+  const { attemptData } = useAttemptExecution(selectedAttempt?.id);
 
   const filteredProcesses = useMemo(
     () =>

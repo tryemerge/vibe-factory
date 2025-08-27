@@ -15,7 +15,7 @@ import type {
 } from 'shared/types';
 import type { TaskAttempt } from 'shared/types';
 import { attemptsApi } from '@/lib/api.ts';
-import { useAttemptData } from '@/hooks/useAttemptData';
+import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts.ts';
 import {
@@ -54,7 +54,7 @@ function CreateAttempt({
   availableProfiles,
   selectedAttempt,
 }: Props) {
-  const { isAttemptRunning } = useAttemptData(selectedAttempt?.id);
+  const { isAttemptRunning } = useAttemptExecution(selectedAttempt?.id);
 
   const [showCreateAttemptConfirmation, setShowCreateAttemptConfirmation] =
     useState(false);

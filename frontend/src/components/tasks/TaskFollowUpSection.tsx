@@ -1,4 +1,4 @@
-import { AlertCircle, Send, ChevronDown, ImageIcon } from 'lucide-react';
+import { AlertCircle, Send, ChevronDown, ImageIcon, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageUploadSection } from '@/components/ui/ImageUploadSection';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -7,10 +7,9 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { attemptsApi, imagesApi } from '@/lib/api.ts';
 import type { ImageResponse, TaskWithAttemptStatus } from 'shared/types';
 import {
-  useAttemptData,
   useBranchStatus,
-  useExecutionProcesses,
 } from '@/hooks';
+import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { Loader } from '@/components/ui/loader';
 import { useUserSystem } from '@/components/config-provider';
 import {
@@ -35,17 +34,16 @@ export function TaskFollowUpSection({
   selectedAttemptId,
   selectedAttemptProfile,
 }: TaskFollowUpSectionProps) {
-  const { attemptData, isAttemptRunning } = useAttemptData(selectedAttemptId);
+  const { attemptData, isAttemptRunning, stopExecution, isStopping, processes } = useAttemptExecution(selectedAttemptId, task.id);
   const { data: branchStatus } = useBranchStatus(selectedAttemptId);
-  const { data: executionData } = useExecutionProcesses(selectedAttemptId);
   const { profiles } = useUserSystem();
 
   // Inline defaultFollowUpVariant logic
   const defaultFollowUpVariant = useMemo(() => {
-    if (!executionData) return null;
+    if (!processes.length) return null;
 
     // Find most recent coding agent process with variant
-    const latestProfile = executionData.processes
+    const latestProfile = processes
       .filter((p) => p.run_reason === 'codingagent')
       .reverse()
       .map((process) => {
@@ -61,9 +59,9 @@ export function TaskFollowUpSection({
 
     if (latestProfile?.variant) {
       return latestProfile.variant;
-    }
-
-    if (selectedAttemptProfile && profiles) {
+    } else if (latestProfile) {
+      return null
+    } else if (selectedAttemptProfile && profiles) {
       // No processes yet, check if profile has default variant
       const profile = profiles.find((p) => p.label === selectedAttemptProfile);
       if (profile?.variants && profile.variants.length > 0) {
@@ -72,7 +70,7 @@ export function TaskFollowUpSection({
     }
 
     return null;
-  }, [executionData?.processes, selectedAttemptProfile, profiles]);
+  }, [processes, selectedAttemptProfile, profiles]);
 
   const [followUpMessage, setFollowUpMessage] = useState('');
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
@@ -95,7 +93,6 @@ export function TaskFollowUpSection({
     if (
       !selectedAttemptId ||
       attemptData.processes.length === 0 ||
-      isAttemptRunning ||
       isSendingFollowUp
     ) {
       return false;
@@ -115,7 +112,6 @@ export function TaskFollowUpSection({
   }, [
     selectedAttemptId,
     attemptData.processes,
-    isAttemptRunning,
     isSendingFollowUp,
     branchStatus?.merges,
   ]);
@@ -324,24 +320,42 @@ export function TaskFollowUpSection({
                     return null;
                   })()}
                 </div>
-                <Button
-                  onClick={onSendFollowUp}
-                  disabled={
-                    !canSendFollowUp ||
-                    !followUpMessage.trim() ||
-                    isSendingFollowUp
-                  }
-                  size="sm"
-                >
-                  {isSendingFollowUp ? (
-                    <Loader size={16} className="mr-2" />
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send
-                    </>
-                  )}
-                </Button>
+                {isAttemptRunning ? (
+                  <Button
+                    onClick={stopExecution}
+                    disabled={isStopping}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    {isStopping ? (
+                      <Loader size={16} className="mr-2" />
+                    ) : (
+                      <>
+                        <StopCircle className="h-4 w-4 mr-2" />
+                        Stop
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={onSendFollowUp}
+                    disabled={
+                      !canSendFollowUp ||
+                      !followUpMessage.trim() ||
+                      isSendingFollowUp
+                    }
+                    size="sm"
+                  >
+                    {isSendingFollowUp ? (
+                      <Loader size={16} className="mr-2" />
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

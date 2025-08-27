@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { attemptsApi, executionProcessesApi } from '@/lib/api';
-import { useAttemptData } from '@/hooks/useAttemptData';
+import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import type { ExecutionProcess } from 'shared/types';
 
 interface UseDevServerOptions {
@@ -14,7 +14,7 @@ export function useDevServer(
   attemptId: string | undefined,
   options?: UseDevServerOptions
 ) {
-  const { attemptData } = useAttemptData(attemptId);
+  const { attemptData } = useAttemptExecution(attemptId);
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 
