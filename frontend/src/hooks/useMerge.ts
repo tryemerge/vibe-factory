@@ -1,20 +1,30 @@
-import { useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { attemptsApi } from '@/lib/api';
 
 export function useMerge(
-  attemptId: string | undefined,
+  attemptId?: string,
   onSuccess?: () => void,
   onError?: (err: unknown) => void
 ) {
-  return useCallback(async () => {
-    if (!attemptId) return;
+  const queryClient = useQueryClient();
 
-    try {
-      await attemptsApi.merge(attemptId);
+  return useMutation({
+    mutationFn: () => {
+      if (!attemptId) return Promise.resolve();
+      return attemptsApi.merge(attemptId);
+    },
+    onSuccess: () => {
+      // Refresh attempt-specific branch information
+      queryClient.invalidateQueries({ queryKey: ['branchStatus', attemptId] });
+      
+      // If a merge can change the list of branches shown elsewhere
+      queryClient.invalidateQueries({ queryKey: ['projectBranches'] });
+      
       onSuccess?.();
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error('Failed to merge:', err);
       onError?.(err);
-    }
-  }, [attemptId, onSuccess, onError]);
+    },
+  });
 }

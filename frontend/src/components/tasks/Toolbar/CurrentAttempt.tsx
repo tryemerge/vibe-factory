@@ -121,8 +121,8 @@ function CurrentAttempt({
     latestDevServerProcess,
   } = useDevServer(selectedAttempt?.id);
   const rebaseMutation = useRebase(selectedAttempt?.id, projectId);
-  const mergeAction = useMerge(selectedAttempt?.id);
-  const pushAction = usePush(selectedAttempt?.id);
+  const mergeMutation = useMerge(selectedAttempt?.id);
+  const pushMutation = usePush(selectedAttempt?.id);
   const { showCreatePRDialog } = useCreatePRDialog();
 
   const [merging, setMerging] = useState(false);
@@ -172,7 +172,7 @@ function CurrentAttempt({
   const handlePushClick = async () => {
     try {
       setPushing(true);
-      await pushAction();
+      await pushMutation.mutateAsync();
       setError(null); // Clear any previous errors on success
       setPushSuccess(true);
       setTimeout(() => setPushSuccess(false), 2000);
@@ -186,7 +186,7 @@ function CurrentAttempt({
   const performMerge = async () => {
     try {
       setMerging(true);
-      await mergeAction();
+      await mergeMutation.mutateAsync();
       setError(null); // Clear any previous errors on success
       setMergeSuccess(true);
       setTimeout(() => setMergeSuccess(false), 2000);

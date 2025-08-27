@@ -40,7 +40,7 @@ export function AttemptHeaderCard({
     runningDevServer,
   } = useDevServer(selectedAttempt?.id);
   const rebaseMutation = useRebase(selectedAttempt?.id, projectId);
-  const merge = useMerge(selectedAttempt?.id);
+  const mergeMutation = useMerge(selectedAttempt?.id);
   const openInEditor = useOpenInEditor(selectedAttempt);
   const { fileCount, added, deleted } = useDiffSummary(selectedAttempt?.id ?? null);
   const { showCreatePRDialog } = useCreatePRDialog();
@@ -115,7 +115,7 @@ export function AttemptHeaderCard({
           <DropdownMenuItem onClick={handleCreatePR} disabled={!selectedAttempt}>
             Create PR
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={merge} disabled={!selectedAttempt}>
+          <DropdownMenuItem onClick={() => mergeMutation.mutate()} disabled={!selectedAttempt}>
             Merge
           </DropdownMenuItem>
           {/* <DropdownMenuItem
