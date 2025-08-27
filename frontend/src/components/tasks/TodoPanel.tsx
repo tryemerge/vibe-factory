@@ -5,6 +5,7 @@ import { usePinnedTodos } from '@/hooks/usePinnedTodos';
 import { useAttemptExecution } from '@/hooks';
 import { shouldShowInLogs } from '@/constants/processes';
 import type { TaskAttempt } from 'shared/types';
+import { Card } from '../ui/card';
 
 function getStatusIcon(status?: string) {
   const s = (status || '').toLowerCase();
@@ -37,9 +38,9 @@ export function TodoPanel({ selectedAttempt }: TodoPanelProps) {
   if (!todos || todos.length === 0) return null;
 
   return (
-    <div className="bg-background rounded-lg overflow-hidden border">
-      <div className="p-4">
-        <h3 className="font-medium mb-3">Task Breakdown</h3>
+    <div>
+      <Card className="bg-secondary p-3 border border-dashed text-sm">Todos</Card>
+      <div className="p-3">
         <ul className="space-y-2">
           {todos.map((todo, index) => (
             <li

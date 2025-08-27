@@ -158,9 +158,9 @@ export function TaskDetailsPanel({
                 {isFullScreen ? (
                   <div className="flex-1 min-h-0 flex">
                     {/* Sidebar */}
-                    <aside className="w-[28rem] shrink-0 border-r overflow-y-auto p-4 space-y-4">
+                    <aside className="w-[28rem] shrink-0 border-r overflow-y-auto">
                       {/* Fullscreen sidebar shows title and description above edit/delete */}
-                      <div className="space-y-2">
+                      <div className="space-y-2 p-3">
                         <TaskTitleDescription task={task} />
                       </div>
 

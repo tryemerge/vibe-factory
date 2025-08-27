@@ -15,6 +15,7 @@ import CreatePRDialog from '@/components/tasks/Toolbar/CreatePRDialog.tsx';
 import CreateAttempt from '@/components/tasks/Toolbar/CreateAttempt.tsx';
 import CurrentAttempt from '@/components/tasks/Toolbar/CurrentAttempt.tsx';
 import { useUserSystem } from '@/components/config-provider';
+import { Card } from '../ui/card';
 
 // UI State Management
 type UiAction =
@@ -218,7 +219,7 @@ function TaskDetailsToolbar({
       <div>
         {/* Error Display */}
         {ui.error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200">
             <div className="text-red-600 text-sm">{ui.error}</div>
           </div>
         )}
@@ -238,49 +239,54 @@ function TaskDetailsToolbar({
             selectedAttempt={selectedAttempt}
           />
         ) : (
-          <div className="space-y-3 p-3 bg-muted/20 rounded-lg border">
-            {/* Current Attempt Info */}
-            <div className="space-y-2">
-              {selectedAttempt ? (
-                <CurrentAttempt
-                  task={task}
-                  projectId={projectId}
-                  projectHasDevScript={projectHasDevScript ?? false}
-                  selectedAttempt={selectedAttempt}
-                  taskAttempts={taskAttempts}
-                  selectedBranch={selectedBranch}
-                  setError={setError}
-                  setShowCreatePRDialog={setShowCreatePRDialog}
-                  creatingPR={ui.creatingPR}
-                  handleEnterCreateAttemptMode={handleEnterCreateAttemptMode}
-                  branches={branches}
-                  setSelectedAttempt={setSelectedAttempt}
-                />
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-lg font-medium text-muted-foreground">
-                    No attempts yet
+          <div className="">
+            <Card className="bg-secondary border-y border-dashed p-3 text-sm">
+              Actions
+            </Card>
+            <div className="p-3">
+              {/* Current Attempt Info */}
+              <div className="space-y-2">
+                {selectedAttempt ? (
+                  <CurrentAttempt
+                    task={task}
+                    projectId={projectId}
+                    projectHasDevScript={projectHasDevScript ?? false}
+                    selectedAttempt={selectedAttempt}
+                    taskAttempts={taskAttempts}
+                    selectedBranch={selectedBranch}
+                    setError={setError}
+                    setShowCreatePRDialog={setShowCreatePRDialog}
+                    creatingPR={ui.creatingPR}
+                    handleEnterCreateAttemptMode={handleEnterCreateAttemptMode}
+                    branches={branches}
+                    setSelectedAttempt={setSelectedAttempt}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-lg font-medium text-muted-foreground">
+                      No attempts yet
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Start your first attempt to begin working on this task
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    Start your first attempt to begin working on this task
-                  </div>
+                )}
+              </div>
+
+              {/* Special Actions: show only in sidebar (non-fullscreen) */}
+              {!selectedAttempt && !isAttemptRunning && !isStopping && (
+                <div className="space-y-2 pt-3 border-t">
+                  <Button
+                    onClick={handleEnterCreateAttemptMode}
+                    size="sm"
+                    className="w-full gap-2 bg-black text-white hover:bg-black/90"
+                  >
+                    <Play className="h-4 w-4" />
+                    Start Attempt
+                  </Button>
                 </div>
               )}
             </div>
-
-            {/* Special Actions: show only in sidebar (non-fullscreen) */}
-            {!selectedAttempt && !isAttemptRunning && !isStopping && (
-              <div className="space-y-2 pt-3 border-t">
-                <Button
-                  onClick={handleEnterCreateAttemptMode}
-                  size="sm"
-                  className="w-full gap-2 bg-black text-white hover:bg-black/90"
-                >
-                  <Play className="h-4 w-4" />
-                  Start Attempt
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>
