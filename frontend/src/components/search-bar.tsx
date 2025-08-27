@@ -38,6 +38,10 @@ export function SearchBar({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClear]);
 
+  if (disabled) {
+    return null;
+  }
+
   return (
     <div className={cn('relative w-64 sm:w-72', className)}>
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -47,7 +51,7 @@ export function SearchBar({
         onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
         placeholder={
-          disabled ? 'Search available only on task pages' : 'Search tasks...'
+          'Search tasks...'
         }
         className="pl-8 pr-14 h-8"
       />

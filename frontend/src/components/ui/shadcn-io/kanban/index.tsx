@@ -42,7 +42,7 @@ export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
   return (
     <div
       className={cn(
-        'flex h-full min-h-40 flex-col overflow-y-auto bg-secondary',
+        'flex h-full min-h-40 flex-col bg-secondary',
         isOver ? 'outline-primary' : 'outline-black',
         className
       )}
@@ -107,6 +107,7 @@ export const KanbanCard = ({
       onClick={onClick}
       onKeyDown={onKeyDown}
       style={{
+        zIndex: isDragging ? 1000 : 1,
         transform: transform
           ? `translateX(${transform.x}px) translateY(${transform.y}px)`
           : 'none',

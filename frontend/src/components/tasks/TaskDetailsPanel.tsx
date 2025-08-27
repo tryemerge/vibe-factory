@@ -223,25 +223,7 @@ export function TaskDetailsPanel({
                       }}
                       onJumpToDiffFullScreen={jumpToDiffFullScreen}
                     />
-                    {/* <div className="p-4 border-b">
-                        <TaskDetailsToolbar />
-                      </div> */}
 
-                    {/* <TabNavigation
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                      /> */}
-
-                    {/* Tab Content */}
-                    {/* <div className="flex-1 flex flex-col min-h-0">
-                        {activeTab === 'diffs' ? (
-                          <DiffTab />
-                        ) : activeTab === 'processes' ? (
-                          <ProcessesTab />
-                        ) : (
-                          <LogsTab />
-                        )}
-                      </div> */}
 
                     <LogsTab selectedAttempt={selectedAttempt} />
 

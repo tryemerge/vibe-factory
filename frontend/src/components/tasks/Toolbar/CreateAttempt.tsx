@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog.tsx';
+import { Card } from '@/components/ui/card';
 
 type Props = {
   task: Task;
@@ -143,10 +144,12 @@ function CreateAttempt({
   };
 
   return (
-    <div className="p-4 bg-muted/20 rounded-lg border">
-      <div className="space-y-3">
+    <div className="">
+      <Card className="bg-secondary p-3 text-sm border-y border-dashed">
+        Create Attempt
+      </Card>
+      <div className="space-y-3 px-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">Create Attempt</h3>
           {taskAttempts.length > 0 && (
             <Button
               variant="ghost"
