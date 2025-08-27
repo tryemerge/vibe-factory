@@ -1,6 +1,6 @@
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, GitCompare } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import { useDevServer } from '@/hooks/useDevServer';
 import { useRebase } from '@/hooks/useRebase';
 import { useMerge } from '@/hooks/useMerge';
 import { useOpenInEditor } from '@/hooks/useOpenInEditor';
+import { useDiffSummary } from '@/hooks/useDiffSummary';
 
 interface AttemptHeaderCardProps {
   attemptNumber: number;
@@ -19,6 +20,7 @@ interface AttemptHeaderCardProps {
   selectedAttempt: TaskAttempt | null;
   onCreatePR?: () => void;
   onCreateNewAttempt?: () => void;
+  onJumpToDiffFullScreen?: () => void;
 }
 
 export function AttemptHeaderCard({
@@ -27,6 +29,7 @@ export function AttemptHeaderCard({
   selectedAttempt,
   onCreatePR,
   onCreateNewAttempt,
+  onJumpToDiffFullScreen,
 }: AttemptHeaderCardProps) {
   const {
     start: startDevServer,
@@ -36,6 +39,8 @@ export function AttemptHeaderCard({
   const rebase = useRebase(selectedAttempt?.id);
   const merge = useMerge(selectedAttempt?.id);
   const openInEditor = useOpenInEditor(selectedAttempt);
+  const { fileCount, added, deleted } = useDiffSummary(selectedAttempt?.id ?? null);
+
   return (
     <Card className="border-b border-dashed bg-secondary flex items-center text-sm text-muted-foreground">
       <div className="flex-1 flex gap-6 p-3">
@@ -53,6 +58,16 @@ export function AttemptHeaderCard({
           <p className="max-w-30 truncate">
             Branch &middot;{' '}
             <span className="text-primary">{selectedAttempt.branch}</span>
+          </p>
+        )}
+        {fileCount > 0 && (
+          <p>
+            <Button variant="ghost" size="sm" className="h-4 p-0" onClick={onJumpToDiffFullScreen}>
+              Diff
+            </Button>
+            {' '}&middot;{' '}
+            <span className="text-green-600">+{added}</span>{' '}
+            <span className="text-red-600">-{deleted}</span>
           </p>
         )}
       </div>
@@ -97,6 +112,6 @@ export function AttemptHeaderCard({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </Card>
+    </Card >
   );
 }

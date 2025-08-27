@@ -78,6 +78,12 @@ export function TaskDetailsPanel({
   // Tab and collapsible state
   const [activeTab, setActiveTab] = useState<TabType>('logs');
 
+  // Handler for jumping to diff tab in full screen
+  const jumpToDiffFullScreen = () => {
+    setFullScreen?.(true);
+    setActiveTab('diffs');
+  };
+
   // Reset to logs tab when task changes
   useEffect(() => {
     if (task?.id) {
@@ -214,6 +220,7 @@ export function TaskDetailsPanel({
                       // TODO: Implement create new attempt
                       console.log('Create new attempt');
                     }}
+                    onJumpToDiffFullScreen={jumpToDiffFullScreen}
                   />
                   {/* <div className="p-4 border-b">
                         <TaskDetailsToolbar />
