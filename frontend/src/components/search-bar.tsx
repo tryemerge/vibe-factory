@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Project } from 'shared/types';
 
 interface SearchBarProps {
   className?: string;
@@ -9,6 +10,7 @@ interface SearchBarProps {
   onChange?: (value: string) => void;
   disabled?: boolean;
   onClear?: () => void;
+  project: Project | null;
 }
 
 export function SearchBar({
@@ -17,6 +19,7 @@ export function SearchBar({
   onChange,
   disabled = false,
   onClear,
+  project,
 }: SearchBarProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -51,7 +54,7 @@ export function SearchBar({
         onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
         placeholder={
-          'Search tasks...'
+          project ? `Search ${project.name}...` : 'Search...'
         }
         className="pl-8 pr-14 h-8"
       />

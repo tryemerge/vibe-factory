@@ -43,7 +43,7 @@ const EXTERNAL_LINKS = [
 
 export function Navbar() {
   const location = useLocation();
-  const { projectId } = useProject();
+  const { projectId, project } = useProject();
   const { query, setQuery, active, clear } = useSearch();
   const { openCreate } = useTaskDialog();
 
@@ -63,6 +63,7 @@ export function Navbar() {
             onChange={setQuery}
             disabled={!active}
             onClear={clear}
+            project={project || null}
           />
 
           <div className="flex-1 flex justify-end">
