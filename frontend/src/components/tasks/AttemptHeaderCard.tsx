@@ -19,7 +19,7 @@ interface AttemptHeaderCardProps {
   totalAttempts: number;
   selectedAttempt: TaskAttempt | null;
   onCreatePR?: () => void;
-  onCreateNewAttempt?: () => void;
+  // onCreateNewAttempt?: () => void;
   onJumpToDiffFullScreen?: () => void;
 }
 
@@ -28,7 +28,7 @@ export function AttemptHeaderCard({
   totalAttempts,
   selectedAttempt,
   onCreatePR,
-  onCreateNewAttempt,
+  // onCreateNewAttempt,
   onJumpToDiffFullScreen,
 }: AttemptHeaderCardProps) {
   const {
@@ -104,12 +104,12 @@ export function AttemptHeaderCard({
           <DropdownMenuItem onClick={merge} disabled={!selectedAttempt}>
             Merge
           </DropdownMenuItem>
-          <DropdownMenuItem
+          {/* <DropdownMenuItem
             onClick={onCreateNewAttempt}
             disabled={!onCreateNewAttempt}
           >
             Create new attempt
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
         </DropdownMenuContent>
       </DropdownMenu>
     </Card >

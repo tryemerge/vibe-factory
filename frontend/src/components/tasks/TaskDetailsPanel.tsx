@@ -209,30 +209,46 @@ export function TaskDetailsPanel({
                   </div>
                 ) : (
                   <>
-                    <AttemptHeaderCard
-                      attemptNumber={attemptNumber}
-                      totalAttempts={attempts.length}
-                      selectedAttempt={selectedAttempt}
-                      onCreatePR={() => {
-                        // TODO: Implement create PR
-                        console.log('Create PR');
-                      }}
-                      onCreateNewAttempt={() => {
-                        // TODO: Implement create new attempt
-                        console.log('Create new attempt');
-                      }}
-                      onJumpToDiffFullScreen={jumpToDiffFullScreen}
-                    />
+                    {attempts.length === 0 ? (
+                      <TaskDetailsToolbar
+                        task={task}
+                        projectId={projectId}
+                        projectHasDevScript={projectHasDevScript}
+                        forceCreateAttempt={forceCreateAttempt}
+                        onLeaveForceCreateAttempt={onLeaveForceCreateAttempt}
+                        attempts={attempts}
+                        selectedAttempt={selectedAttempt}
+                        setSelectedAttempt={setSelectedAttempt}
+                      // hide actions in sidebar; moved to header in fullscreen
+                      />
+                    ) : (
+                      <>
+                        <AttemptHeaderCard
+                          attemptNumber={attemptNumber}
+                          totalAttempts={attempts.length}
+                          selectedAttempt={selectedAttempt}
+                          onCreatePR={() => {
+                            // TODO: Implement create PR
+                            console.log('Create PR');
+                          }}
+                          // onCreateNewAttempt={() => {
+                          //   // TODO: Implement create new attempt
+                          //   console.log('Create new attempt');
+                          // }}
+                          onJumpToDiffFullScreen={jumpToDiffFullScreen}
+                        />
 
 
-                    <LogsTab selectedAttempt={selectedAttempt} />
+                        <LogsTab selectedAttempt={selectedAttempt} />
 
-                    <TaskFollowUpSection
-                      task={task}
-                      projectId={projectId}
-                      selectedAttemptId={selectedAttempt?.id}
-                      selectedAttemptProfile={selectedAttempt?.profile}
-                    />
+                        <TaskFollowUpSection
+                          task={task}
+                          projectId={projectId}
+                          selectedAttemptId={selectedAttempt?.id}
+                          selectedAttemptProfile={selectedAttempt?.profile}
+                        />
+                      </>
+                    )}
                   </>
                 )}
               </div>

@@ -14,7 +14,7 @@ import type {
   Task,
 } from 'shared/types';
 import type { TaskAttempt } from 'shared/types';
-import { attemptsApi } from '@/lib/api.ts';
+import { useAttemptCreation } from '@/hooks/useAttemptCreation';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
 import { useKeyboardShortcuts } from '@/lib/keyboard-shortcuts.ts';
@@ -56,6 +56,7 @@ function CreateAttempt({
   selectedAttempt,
 }: Props) {
   const { isAttemptRunning } = useAttemptExecution(selectedAttempt?.id);
+  const { createAttempt, isCreating } = useAttemptCreation(task.id);
 
   const [showCreateAttemptConfirmation, setShowCreateAttemptConfirmation] =
     useState(false);
@@ -73,14 +74,12 @@ function CreateAttempt({
         throw new Error('Base branch is required to create an attempt');
       }
 
-      await attemptsApi.create({
-        task_id: task.id,
-        profile_variant_label: profile,
-        base_branch: effectiveBaseBranch,
+      await createAttempt({
+        profile,
+        baseBranch: effectiveBaseBranch,
       });
-      // React Query will handle refetching automatically
     },
-    [task.id, selectedProfile, selectedBranch]
+    [createAttempt, selectedBranch]
   );
 
   // Handler for Enter key or Start button
@@ -329,7 +328,7 @@ function CreateAttempt({
             <Button
               onClick={handleCreateAttempt}
               disabled={
-                !selectedProfile || !createAttemptBranch || isAttemptRunning
+                !selectedProfile || !createAttemptBranch || isAttemptRunning || isCreating
               }
               size="sm"
               className={
@@ -343,7 +342,7 @@ function CreateAttempt({
                     : undefined
               }
             >
-              Start
+              {isCreating ? 'Creating...' : 'Start'}
             </Button>
           </div>
         </div>
@@ -371,9 +370,10 @@ function CreateAttempt({
             </Button>
             <Button
               onClick={handleConfirmCreateAttempt}
+              disabled={isCreating}
               className="bg-black text-white hover:bg-black/90"
             >
-              Start
+              {isCreating ? 'Creating...' : 'Start'}
             </Button>
           </DialogFooter>
         </DialogContent>
