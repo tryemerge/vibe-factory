@@ -29,6 +29,7 @@ use executors::{
     profile::{ProfileConfigs, ProfileVariantLabel},
 };
 use futures_util::TryStreamExt;
+use git2::BranchType;
 use serde::{Deserialize, Serialize};
 use services::services::{
     container::ContainerService,
