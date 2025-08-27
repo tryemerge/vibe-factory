@@ -44,7 +44,7 @@ export const getTaskPanelClasses = (forceFullScreen: boolean) => {
 };
 
 export const getTaskPanelInnerClasses = () => {
-  return `flex-1 flex flex-col w-full max-w-[1400px] bg-background border`
+  return `flex-1 flex flex-col min-h-0 w-full max-w-[1400px] bg-background border`
 };
 
 // Generate classes for backdrop (only show in overlay mode)
@@ -59,8 +59,8 @@ export const getMainContainerClasses = (
 ) => {
   const overlayClasses =
     isPanelOpen && forceFullScreen
-      ? 'w-full'
-      : `${PANEL_SIDE_BY_SIDE_BREAKPOINT}:flex ${PANEL_SIDE_BY_SIDE_BREAKPOINT}:h-full`;
+      ? 'w-full h-full'
+      : `h-full ${PANEL_SIDE_BY_SIDE_BREAKPOINT}:flex`;
 
   return `${overlayClasses}`;
 };
