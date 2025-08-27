@@ -1,6 +1,8 @@
 use anyhow::{self, Error as AnyhowError};
+use db::models::project::Project;
 use deployment::{Deployment, DeploymentError};
 use server::{routes, DeploymentImpl};
+use services::services::file_search_cache::FileSearchCache;
 use sqlx::Error as SqlxError;
 use strip_ansi_escapes::strip;
 use thiserror::Error;
@@ -47,6 +49,9 @@ async fn main() -> Result<(), VibeKanbanError> {
         .track_if_analytics_allowed("session_start", serde_json::json!({}))
         .await;
 
+    // Initialize file search cache for all projects
+    spawn_file_cache_initialization(&deployment).await;
+
     let app_router = routes::router(deployment);
 
     let port = std::env::var("BACKEND_PORT")
@@ -85,4 +90,28 @@ async fn main() -> Result<(), VibeKanbanError> {
 
     axum::serve(listener, app_router).await?;
     Ok(())
+}
+
+/// Initialize file search cache for all projects in background threads
+async fn spawn_file_cache_initialization(deployment: &DeploymentImpl) {
+    tracing::info!("Starting file search cache initialization...");
+    
+    // Get all projects from the database
+    let projects = match Project::find_all(&deployment.db().pool).await {
+        Ok(projects) => projects,
+        Err(e) => {
+            tracing::error!("Failed to fetch projects for cache initialization: {}", e);
+            return;
+        }
+    };
+
+    tracing::info!("Initializing file search cache for {} projects", projects.len());
+
+    // Spawn async cache building for each project
+    for project in projects {
+        let repo_path = project.git_repo_path.clone();
+        tokio::spawn(async move {
+            FileSearchCache::rebuild(repo_path).await;
+        });
+    }
 }

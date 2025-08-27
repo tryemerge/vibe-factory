@@ -13,7 +13,7 @@ use db::models::project::{
 };
 use deployment::Deployment;
 use ignore::WalkBuilder;
-use services::services::{file_ranker::FileRanker, git::GitBranch};
+use services::services::{file_ranker::FileRanker, file_search_cache::FileSearchCache, git::GitBranch};
 use utils::response::ApiResponse;
 use uuid::Uuid;
 
@@ -135,6 +135,12 @@ pub async fn create_project(
                 )
                 .await;
 
+            // Start building cache for the new project
+            let repo_path = project.git_repo_path.clone();
+            tokio::spawn(async move {
+                FileSearchCache::rebuild(repo_path).await;
+            });
+
             Ok(ResponseJson(ApiResponse::success(project)))
         }
         Err(e) => Err(ProjectError::CreateFailed(e.to_string()).into()),
@@ -200,7 +206,20 @@ pub async fn update_project(
     )
     .await
     {
-        Ok(project) => Ok(ResponseJson(ApiResponse::success(project))),
+        Ok(project) => {
+            // Invalidate old cache if git repo path changed
+            if project.git_repo_path != existing_project.git_repo_path {
+                FileSearchCache::invalidate(&existing_project.git_repo_path);
+            }
+
+            // Rebuild cache for current project
+            let repo_path = project.git_repo_path.clone();
+            tokio::spawn(async move {
+                FileSearchCache::rebuild(repo_path).await;
+            });
+
+            Ok(ResponseJson(ApiResponse::success(project)))
+        }
         Err(e) => {
             tracing::error!("Failed to update project: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -217,6 +236,8 @@ pub async fn delete_project(
             if rows_affected == 0 {
                 Err(StatusCode::NOT_FOUND)
             } else {
+                // Invalidate cache for the deleted project
+                FileSearchCache::invalidate(&project.git_repo_path);
                 Ok(ResponseJson(ApiResponse::success(())))
             }
         }
@@ -290,8 +311,78 @@ async fn search_files_in_repo(
         return Err("Repository path does not exist".into());
     }
 
-    let mut results = Vec::new();
     let query_lower = query.to_lowercase();
+
+    // Try to use cache first
+    if let Some(cached_files) = FileSearchCache::maybe_get(repo_path) {
+        tracing::debug!("Using cached file list for search in: {}", repo_path.display());
+        return search_cached_files(cached_files, &query_lower, repo_path).await;
+    }
+
+    // Cache miss - trigger async rebuild and fall back to filesystem walk
+    tracing::debug!("Cache miss for {}, falling back to filesystem walk", repo_path.display());
+    let repo_path_buf = repo_path.to_path_buf();
+    tokio::spawn(async move {
+        FileSearchCache::rebuild(repo_path_buf).await;
+    });
+
+    // Fallback to original filesystem walking logic
+    fallback_filesystem_search(repo_path, &query_lower).await
+}
+
+/// Search using cached file list (fast path)
+async fn search_cached_files(
+    cached_files: std::sync::Arc<Vec<services::services::file_search_cache::FileMeta>>,
+    query_lower: &str,
+    repo_path: &Path,
+) -> Result<Vec<SearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    let mut results = Vec::new();
+
+    // Filter cached files based on query
+    for file_meta in cached_files.iter() {
+        let file_name = Path::new(&file_meta.path)
+            .file_name()
+            .map(|name| name.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+
+        // Check for matches using pre-computed lowercase path
+        if file_name.contains(query_lower) {
+            results.push(SearchResult {
+                path: file_meta.path.clone(),
+                is_file: file_meta.is_file,
+                match_type: SearchMatchType::FileName,
+            });
+        } else if file_meta.lower.contains(query_lower) {
+            // Check if it's a directory name match or full path match
+            let match_type = if Path::new(&file_meta.path)
+                .parent()
+                .and_then(|p| p.file_name())
+                .map(|name| name.to_string_lossy().to_lowercase())
+                .unwrap_or_default()
+                .contains(query_lower)
+            {
+                SearchMatchType::DirectoryName
+            } else {
+                SearchMatchType::FullPath
+            };
+
+            results.push(SearchResult {
+                path: file_meta.path.clone(),
+                is_file: file_meta.is_file,
+                match_type,
+            });
+        }
+    }
+
+    apply_ranking_and_limit(results, repo_path).await
+}
+
+/// Fallback filesystem search (same as original implementation)
+async fn fallback_filesystem_search(
+    repo_path: &Path,
+    query_lower: &str,
+) -> Result<Vec<SearchResult>, Box<dyn std::error::Error + Send + Sync>> {
+    let mut results = Vec::new();
 
     // We intentionally do NOT respect gitignore here because this search is
     // used to help users pick files like ".env" or local config files that are
@@ -330,20 +421,20 @@ async fn search_files_in_repo(
             .unwrap_or_default();
 
         // Check for matches
-        if file_name.contains(&query_lower) {
+        if file_name.contains(query_lower) {
             results.push(SearchResult {
                 path: relative_path.to_string_lossy().to_string(),
                 is_file: path.is_file(),
                 match_type: SearchMatchType::FileName,
             });
-        } else if relative_path_str.contains(&query_lower) {
+        } else if relative_path_str.contains(query_lower) {
             // Check if it's a directory name match or full path match
             let match_type = if path
                 .parent()
                 .and_then(|p| p.file_name())
                 .map(|name| name.to_string_lossy().to_lowercase())
                 .unwrap_or_default()
-                .contains(&query_lower)
+                .contains(query_lower)
             {
                 SearchMatchType::DirectoryName
             } else {
@@ -358,6 +449,14 @@ async fn search_files_in_repo(
         }
     }
 
+    apply_ranking_and_limit(results, repo_path).await
+}
+
+/// Apply git history-based ranking and limit results
+async fn apply_ranking_and_limit(
+    mut results: Vec<SearchResult>,
+    repo_path: &Path,
+) -> Result<Vec<SearchResult>, Box<dyn std::error::Error + Send + Sync>> {
     // Apply git history-based ranking
     let file_ranker = FileRanker::new();
     match file_ranker.get_stats(repo_path).await {
