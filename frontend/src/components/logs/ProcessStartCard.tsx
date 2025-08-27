@@ -61,7 +61,7 @@ function ProcessStartCard({
   return (
     <div className="px-4 pt-4 pb-2">
       <div
-        className="bg-muted/50 border border-border rounded-lg p-2 cursor-pointer select-none hover:bg-muted/70 transition-colors"
+        className="p-2 cursor-pointer select-none hover:bg-muted/70 transition-colors"
         role="button"
         tabIndex={0}
         onClick={handleClick}
@@ -79,15 +79,14 @@ function ProcessStartCard({
             <span>{formatTime(payload.startedAt)}</span>
           </div>
           <div
-            className={`ml-auto text-xs px-2 py-1 rounded-full ${
-              payload.status === 'running'
-                ? 'bg-blue-100 text-blue-700'
-                : payload.status === 'completed'
-                  ? 'bg-green-100 text-green-700'
-                  : payload.status === 'failed'
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-gray-100 text-gray-700'
-            }`}
+            className={`ml-auto text-xs px-2 py-1 rounded-full ${payload.status === 'running'
+              ? 'bg-blue-100 text-blue-700'
+              : payload.status === 'completed'
+                ? 'bg-green-100 text-green-700'
+                : payload.status === 'failed'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-gray-100 text-gray-700'
+              }`}
           >
             {payload.status}
           </div>
