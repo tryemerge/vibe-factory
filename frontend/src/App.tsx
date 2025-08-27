@@ -45,7 +45,7 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPrivacyOptIn, setShowPrivacyOptIn] = useState(false);
   const [showGitHubLogin, setShowGitHubLogin] = useState(false);
-  const showNavbar = !location.search.includes('view=full');
+  const showNavbar = !location.pathname.endsWith('/full');
 
   useEffect(() => {
     if (config) {
@@ -193,6 +193,10 @@ function AppContent() {
                 />
                 <Route
                   path="/projects/:projectId/tasks/:taskId/attempts/:attemptId"
+                  element={<ProjectTasks />}
+                />
+                <Route
+                  path="/projects/:projectId/tasks/:taskId/attempts/:attemptId/full"
                   element={<ProjectTasks />}
                 />
                 <Route

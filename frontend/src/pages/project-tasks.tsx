@@ -3,7 +3,6 @@ import {
   useNavigate,
   useParams,
   useLocation,
-  useSearchParams,
 } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,7 +44,7 @@ export function ProjectTasks() {
   }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,8 +60,8 @@ export function ProjectTasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  // Fullscreen state from query params
-  const isFullscreen = searchParams.get('view') === 'full';
+  // Fullscreen state from pathname
+  const isFullscreen = location.pathname.endsWith('/full');
 
   // Attempts fetching (only when task is selected)
   const { data: attempts = [] } = useQuery({
@@ -88,17 +87,12 @@ export function ProjectTasks() {
 
       const baseUrl = `/projects/${projectId}/tasks/${selectedTask.id}`;
       const attemptUrl = attempt ? `/attempts/${attempt.id}` : '';
-      const fullUrl = `${baseUrl}${attemptUrl}`;
+      const fullSuffix = isFullscreen ? '/full' : '';
+      const fullUrl = `${baseUrl}${attemptUrl}${fullSuffix}`;
 
-      navigate(
-        {
-          pathname: fullUrl,
-          search: location.search, // Preserve query params like ?view=full
-        },
-        { replace: true }
-      );
+      navigate(fullUrl, { replace: true });
     },
-    [navigate, projectId, selectedTask, location.search]
+    [navigate, projectId, selectedTask, isFullscreen]
   );
 
   // Sync selectedTask with URL params
@@ -362,14 +356,11 @@ export function ProjectTasks() {
           onDeleteTask={handleDeleteTask}
           isDialogOpen={isProjectSettingsOpen}
           isFullScreen={isFullscreen}
-          setFullScreen={(fullscreen) => {
-            if (fullscreen) {
-              searchParams.set('view', 'full');
-            } else {
-              searchParams.delete('view');
-            }
-            setSearchParams(searchParams, { replace: true });
-          }}
+          setFullScreen={selectedAttempt ? (fullscreen) => {
+            const baseUrl = `/projects/${projectId}/tasks/${selectedTask!.id}/attempts/${selectedAttempt.id}`;
+            const fullUrl = fullscreen ? `${baseUrl}/full` : baseUrl;
+            navigate(fullUrl, { replace: true });
+          } : undefined}
           selectedAttempt={selectedAttempt}
           attempts={attempts}
           setSelectedAttempt={setSelectedAttempt}
