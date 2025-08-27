@@ -186,7 +186,7 @@ export function TaskFollowUpSection({
 
   return (
     selectedAttemptId && (
-      <div className="border-t p-4">
+      <div className="border-t p-4 focus-within:ring ring-inset">
         <div className="space-y-2">
           {followUpError && (
             <Alert variant="destructive">
@@ -212,7 +212,7 @@ export function TaskFollowUpSection({
             <div className="flex flex-col gap-2">
               <div>
                 <FileSearchTextarea
-                  placeholder="Continue working on this task... Type @ to search files."
+                  placeholder="Continue working on this task attempt... Type @ to search files."
                   value={followUpMessage}
                   onChange={(value) => {
                     setFollowUpMessage(value);

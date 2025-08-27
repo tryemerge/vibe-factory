@@ -55,7 +55,7 @@ const AutoExpandingTextarea = React.forwardRef<
   return (
     <textarea
       className={cn(
-        'flex min-h-[80px] w-full rounded-md px-3 py-2 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none overflow-y-auto',
+        'p-0 min-h-[80px] w-full text-sm placeholder:text-muted-foreground outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto',
         className
       )}
       ref={textareaRef}

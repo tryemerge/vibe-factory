@@ -47,7 +47,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <Sentry.ErrorBoundary fallback={<p>An error has occurred</p>} showDialog>
         <ClickToComponent />
         <App />
-        <ReactQueryDevtools initialIsOpen={false} />
+        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
       </Sentry.ErrorBoundary>
     </QueryClientProvider>
   </React.StrictMode>
