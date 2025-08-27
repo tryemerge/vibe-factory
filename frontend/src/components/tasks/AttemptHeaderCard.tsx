@@ -39,7 +39,7 @@ export function AttemptHeaderCard({
     stop: stopDevServer,
     runningDevServer,
   } = useDevServer(selectedAttempt?.id);
-  const rebase = useRebase(selectedAttempt?.id);
+  const rebaseMutation = useRebase(selectedAttempt?.id, projectId);
   const merge = useMerge(selectedAttempt?.id);
   const openInEditor = useOpenInEditor(selectedAttempt);
   const { fileCount, added, deleted } = useDiffSummary(selectedAttempt?.id ?? null);
@@ -107,7 +107,7 @@ export function AttemptHeaderCard({
             {runningDevServer ? 'Stop dev server' : 'Start dev server'}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => rebase()}
+            onClick={() => rebaseMutation.mutate(undefined)}
             disabled={!selectedAttempt}
           >
             Rebase

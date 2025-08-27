@@ -18,12 +18,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCallback, useEffect, useState } from 'react';
-import { attemptsApi, projectsApi } from '@/lib/api.ts';
+import { attemptsApi } from '@/lib/api.ts';
 import { ProvidePatDialog } from '@/components/ProvidePatDialog';
 import { GitHubLoginDialog } from '@/components/GitHubLoginDialog';
 import { GitHubServiceError } from 'shared/types';
 import { useCreatePRDialog } from '@/contexts/create-pr-dialog-context';
-import { useQuery } from '@tanstack/react-query';
+import { useProjectBranches } from '@/hooks';
 
 function CreatePrDialog() {
   const { isOpen, data, closeCreatePRDialog } = useCreatePRDialog();
@@ -37,12 +37,9 @@ function CreatePrDialog() {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch branches when dialog opens
-  const { data: branches = [], isLoading: branchesLoading } = useQuery({
-    queryKey: ['branches', data?.projectId],
-    queryFn: () => projectsApi.getBranches(data!.projectId),
-    enabled: isOpen && !!data?.projectId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const { data: branches = [], isLoading: branchesLoading } = useProjectBranches(
+    isOpen ? data?.projectId : undefined
+  );
 
   useEffect(() => {
     if (isOpen && data) {

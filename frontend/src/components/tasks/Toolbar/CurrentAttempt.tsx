@@ -120,7 +120,7 @@ function CurrentAttempt({
     runningDevServer,
     latestDevServerProcess,
   } = useDevServer(selectedAttempt?.id);
-  const rebaseAction = useRebase(selectedAttempt?.id);
+  const rebaseMutation = useRebase(selectedAttempt?.id, projectId);
   const mergeAction = useMerge(selectedAttempt?.id);
   const pushAction = usePush(selectedAttempt?.id);
   const { showCreatePRDialog } = useCreatePRDialog();
@@ -201,7 +201,7 @@ function CurrentAttempt({
   const handleRebaseClick = async () => {
     try {
       setRebasing(true);
-      await rebaseAction();
+      await rebaseMutation.mutateAsync(undefined);
       setError(null); // Clear any previous errors on success
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rebase branch');
@@ -213,7 +213,7 @@ function CurrentAttempt({
   const handleRebaseWithNewBranch = async (newBaseBranch: string) => {
     try {
       setRebasing(true);
-      await rebaseAction(newBaseBranch);
+      await rebaseMutation.mutateAsync(newBaseBranch);
       setError(null); // Clear any previous errors on success
       setShowRebaseDialog(false);
     } catch (err) {
