@@ -21,6 +21,7 @@ import TodoPanel from '@/components/tasks/TodoPanel';
 import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
 import { AttemptHeaderCard } from './AttemptHeaderCard';
+import { inIframe } from '@/vscode/bridge';
 
 interface TaskDetailsPanelProps {
   task: TaskWithAttemptStatus | null;
@@ -125,20 +126,22 @@ export function TaskDetailsPanel({
             >
               <div className={getTaskPanelInnerClasses()}>
 
-                <TaskDetailsHeader
-                  task={task}
-                  onClose={onClose}
-                  onEditTask={onEditTask}
-                  onDeleteTask={onDeleteTask}
-                  hideCloseButton={hideBackdrop}
-                  isFullScreen={isFullScreen}
-                  setFullScreen={setFullScreen}
-                />
+                {!inIframe() && (
+                  <TaskDetailsHeader
+                    task={task}
+                    onClose={onClose}
+                    onEditTask={onEditTask}
+                    onDeleteTask={onDeleteTask}
+                    hideCloseButton={hideBackdrop}
+                    isFullScreen={isFullScreen}
+                    setFullScreen={setFullScreen}
+                  />
+                )}
 
                 {isFullScreen ? (
                   <div className="flex-1 min-h-0 flex">
                     {/* Sidebar */}
-                    <aside className="w-[28rem] shrink-0 border-r overflow-y-auto">
+                    <aside className={`w-[28rem] shrink-0 border-r overflow-y-auto ${inIframe() ? 'hidden' : ''}`}>
                       {/* Fullscreen sidebar shows title and description above edit/delete */}
                       <div className="space-y-2 p-3">
                         <TaskTitleDescription task={task} />
