@@ -96,7 +96,7 @@ export const KanbanCard = ({
   return (
     <Card
       className={cn(
-        'p-3 focus:ring-2 outline-none border-b',
+        'p-3 focus:ring-2 outline-none border-b flex-col space-y-2',
         isDragging && 'cursor-grabbing',
         className
       )}
@@ -128,13 +128,13 @@ export const KanbanCards = ({ children, className }: KanbanCardsProps) => (
 
 export type KanbanHeaderProps =
   | {
-      children: ReactNode;
-    }
+    children: ReactNode;
+  }
   | {
-      name: Status['name'];
-      color: Status['color'];
-      className?: string;
-    };
+    name: Status['name'];
+    color: Status['color'];
+    className?: string;
+  };
 
 export const KanbanHeader = (props: KanbanHeaderProps) =>
   'children' in props ? (
