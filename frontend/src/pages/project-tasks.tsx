@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import {
-  useNavigate,
-  useParams,
-  useLocation,
-} from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
@@ -313,7 +309,9 @@ export function ProjectTasks() {
   }
 
   return (
-    <div className={`min-h-full ${getMainContainerClasses(isPanelOpen, isFullscreen)}`}>
+    <div
+      className={`min-h-full ${getMainContainerClasses(isPanelOpen, isFullscreen)}`}
+    >
       {/* Left Column - Kanban Section */}
       <div className={getKanbanSectionClasses(isPanelOpen, isFullscreen)}>
         {tasks.length === 0 ? (
@@ -356,11 +354,15 @@ export function ProjectTasks() {
           onDeleteTask={handleDeleteTask}
           isDialogOpen={isProjectSettingsOpen}
           isFullScreen={isFullscreen}
-          setFullScreen={selectedAttempt ? (fullscreen) => {
-            const baseUrl = `/projects/${projectId}/tasks/${selectedTask!.id}/attempts/${selectedAttempt.id}`;
-            const fullUrl = fullscreen ? `${baseUrl}/full` : baseUrl;
-            navigate(fullUrl, { replace: true });
-          } : undefined}
+          setFullScreen={
+            selectedAttempt
+              ? (fullscreen) => {
+                  const baseUrl = `/projects/${projectId}/tasks/${selectedTask!.id}/attempts/${selectedAttempt.id}`;
+                  const fullUrl = fullscreen ? `${baseUrl}/full` : baseUrl;
+                  navigate(fullUrl, { replace: true });
+                }
+              : undefined
+          }
           selectedAttempt={selectedAttempt}
           attempts={attempts}
           setSelectedAttempt={setSelectedAttempt}

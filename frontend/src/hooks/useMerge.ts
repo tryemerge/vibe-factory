@@ -16,10 +16,10 @@ export function useMerge(
     onSuccess: () => {
       // Refresh attempt-specific branch information
       queryClient.invalidateQueries({ queryKey: ['branchStatus', attemptId] });
-      
+
       // If a merge can change the list of branches shown elsewhere
       queryClient.invalidateQueries({ queryKey: ['projectBranches'] });
-      
+
       onSuccess?.();
     },
     onError: (err) => {

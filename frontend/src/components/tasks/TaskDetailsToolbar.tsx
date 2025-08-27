@@ -196,8 +196,6 @@ function TaskDetailsToolbar({
     [ui.error]
   );
 
-
-
   return (
     <>
       <div>
@@ -239,7 +237,6 @@ function TaskDetailsToolbar({
                     taskAttempts={taskAttempts}
                     selectedBranch={selectedBranch}
                     setError={setError}
-
                     creatingPR={ui.creatingPR}
                     handleEnterCreateAttemptMode={handleEnterCreateAttemptMode}
                     branches={branches}
@@ -274,8 +271,6 @@ function TaskDetailsToolbar({
           </div>
         )}
       </div>
-
-
     </>
   );
 }

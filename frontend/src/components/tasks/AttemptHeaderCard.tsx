@@ -42,7 +42,9 @@ export function AttemptHeaderCard({
   const rebaseMutation = useRebase(selectedAttempt?.id, projectId);
   const mergeMutation = useMerge(selectedAttempt?.id);
   const openInEditor = useOpenInEditor(selectedAttempt);
-  const { fileCount, added, deleted } = useDiffSummary(selectedAttempt?.id ?? null);
+  const { fileCount, added, deleted } = useDiffSummary(
+    selectedAttempt?.id ?? null
+  );
   const { showCreatePRDialog } = useCreatePRDialog();
 
   const handleCreatePR = () => {
@@ -76,11 +78,15 @@ export function AttemptHeaderCard({
         )}
         {fileCount > 0 && (
           <p>
-            <Button variant="ghost" size="sm" className="h-4 p-0" onClick={onJumpToDiffFullScreen}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-4 p-0"
+              onClick={onJumpToDiffFullScreen}
+            >
               Diffs
-            </Button>
-            {' '}&middot;{' '}
-            <span className="text-green-600">+{added}</span>{' '}
+            </Button>{' '}
+            &middot; <span className="text-green-600">+{added}</span>{' '}
             <span className="text-red-600">-{deleted}</span>
           </p>
         )}
@@ -112,10 +118,16 @@ export function AttemptHeaderCard({
           >
             Rebase
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleCreatePR} disabled={!selectedAttempt}>
+          <DropdownMenuItem
+            onClick={handleCreatePR}
+            disabled={!selectedAttempt}
+          >
             Create PR
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => mergeMutation.mutate()} disabled={!selectedAttempt}>
+          <DropdownMenuItem
+            onClick={() => mergeMutation.mutate()}
+            disabled={!selectedAttempt}
+          >
             Merge
           </DropdownMenuItem>
           {/* <DropdownMenuItem
@@ -126,6 +138,6 @@ export function AttemptHeaderCard({
           </DropdownMenuItem> */}
         </DropdownMenuContent>
       </DropdownMenu>
-    </Card >
+    </Card>
   );
 }

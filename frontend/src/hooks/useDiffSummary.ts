@@ -20,7 +20,7 @@ export function useDiffSummary(attemptId: string | null) {
           const newContent = d.newContent || '';
           const oldLang = getHighLightLanguageFromPath(oldName) || 'plaintext';
           const newLang = getHighLightLanguageFromPath(newName) || 'plaintext';
-          
+
           const file = generateDiffFile(
             oldName,
             oldContent,

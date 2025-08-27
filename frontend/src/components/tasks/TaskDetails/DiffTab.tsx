@@ -14,7 +14,9 @@ function DiffTab({ selectedAttempt }: DiffTabProps) {
   const [loading, setLoading] = useState(true);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const { diffs, error } = useDiffEntries(selectedAttempt?.id ?? null, true);
-  const { fileCount, added, deleted } = useDiffSummary(selectedAttempt?.id ?? null);
+  const { fileCount, added, deleted } = useDiffSummary(
+    selectedAttempt?.id ?? null
+  );
 
   useEffect(() => {
     if (diffs.length > 0 && loading) {

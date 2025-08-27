@@ -37,9 +37,8 @@ function CreatePrDialog() {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch branches when dialog opens
-  const { data: branches = [], isLoading: branchesLoading } = useProjectBranches(
-    isOpen ? data?.projectId : undefined
-  );
+  const { data: branches = [], isLoading: branchesLoading } =
+    useProjectBranches(isOpen ? data?.projectId : undefined);
 
   useEffect(() => {
     if (isOpen && data) {
@@ -115,10 +114,7 @@ function CreatePrDialog() {
 
   return (
     <>
-      <Dialog
-        open={isOpen}
-        onOpenChange={() => handleCancelCreatePR()}
-      >
+      <Dialog open={isOpen} onOpenChange={() => handleCancelCreatePR()}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>Create GitHub Pull Request</DialogTitle>
@@ -148,13 +144,19 @@ function CreatePrDialog() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="pr-base">Base Branch</Label>
-              <Select 
-                value={prBaseBranch} 
+              <Select
+                value={prBaseBranch}
                 onValueChange={setPrBaseBranch}
                 disabled={branchesLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select base branch"} />
+                  <SelectValue
+                    placeholder={
+                      branchesLoading
+                        ? 'Loading branches...'
+                        : 'Select base branch'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((branch) => (

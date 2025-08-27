@@ -39,7 +39,9 @@ export function TodoPanel({ selectedAttempt }: TodoPanelProps) {
 
   return (
     <div>
-      <Card className="bg-secondary p-3 border border-dashed text-sm">Todos</Card>
+      <Card className="bg-secondary p-3 border border-dashed text-sm">
+        Todos
+      </Card>
       <div className="p-3">
         <ul className="space-y-2">
           {todos.map((todo, index) => (

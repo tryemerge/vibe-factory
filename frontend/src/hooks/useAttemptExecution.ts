@@ -78,7 +78,7 @@ export function useAttemptExecution(attemptId?: string, taskId?: string) {
     try {
       setIsStopping(true);
       await attemptsApi.stop(attemptId);
-      
+
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({
         queryKey: ['executionProcesses', attemptId],
@@ -89,7 +89,13 @@ export function useAttemptExecution(attemptId?: string, taskId?: string) {
     } finally {
       setIsStopping(false);
     }
-  }, [attemptId, executionData?.isAttemptRunning, isStopping, setIsStopping, queryClient]);
+  }, [
+    attemptId,
+    executionData?.isAttemptRunning,
+    isStopping,
+    setIsStopping,
+    queryClient,
+  ]);
 
   const isLoading =
     processesLoading || processDetailQueries.some((q) => q.isLoading);

@@ -13,7 +13,7 @@ export function useRebase(
   return useMutation({
     mutationFn: (newBaseBranch?: string) => {
       if (!attemptId) return Promise.resolve();
-      
+
       const data: RebaseTaskAttemptRequest = {
         new_base_branch: newBaseBranch || null,
       };
@@ -22,12 +22,14 @@ export function useRebase(
     onSuccess: () => {
       // Refresh branch status immediately
       queryClient.invalidateQueries({ queryKey: ['branchStatus', attemptId] });
-      
+
       // Refresh branch list used by PR dialog
       if (projectId) {
-        queryClient.invalidateQueries({ queryKey: ['projectBranches', projectId] });
+        queryClient.invalidateQueries({
+          queryKey: ['projectBranches', projectId],
+        });
       }
-      
+
       onSuccess?.();
     },
     onError: (err) => {

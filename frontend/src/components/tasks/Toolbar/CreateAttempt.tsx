@@ -328,7 +328,10 @@ function CreateAttempt({
             <Button
               onClick={handleCreateAttempt}
               disabled={
-                !selectedProfile || !createAttemptBranch || isAttemptRunning || isCreating
+                !selectedProfile ||
+                !createAttemptBranch ||
+                isAttemptRunning ||
+                isCreating
               }
               size="sm"
               className={

@@ -125,7 +125,6 @@ export function TaskDetailsPanel({
               }
             >
               <div className={getTaskPanelInnerClasses()}>
-
                 {!inIframe() && (
                   <TaskDetailsHeader
                     task={task}
@@ -141,7 +140,9 @@ export function TaskDetailsPanel({
                 {isFullScreen ? (
                   <div className="flex-1 min-h-0 flex">
                     {/* Sidebar */}
-                    <aside className={`w-[28rem] shrink-0 border-r overflow-y-auto ${inIframe() ? 'hidden' : ''}`}>
+                    <aside
+                      className={`w-[28rem] shrink-0 border-r overflow-y-auto ${inIframe() ? 'hidden' : ''}`}
+                    >
                       {/* Fullscreen sidebar shows title and description above edit/delete */}
                       <div className="space-y-2 p-3">
                         <TaskTitleDescription task={task} />
@@ -157,7 +158,7 @@ export function TaskDetailsPanel({
                         attempts={attempts}
                         selectedAttempt={selectedAttempt}
                         setSelectedAttempt={setSelectedAttempt}
-                      // hide actions in sidebar; moved to header in fullscreen
+                        // hide actions in sidebar; moved to header in fullscreen
                       />
 
                       {/* Task Breakdown (TODOs) */}
@@ -202,7 +203,7 @@ export function TaskDetailsPanel({
                         attempts={attempts}
                         selectedAttempt={selectedAttempt}
                         setSelectedAttempt={setSelectedAttempt}
-                      // hide actions in sidebar; moved to header in fullscreen
+                        // hide actions in sidebar; moved to header in fullscreen
                       />
                     ) : (
                       <>
@@ -218,7 +219,6 @@ export function TaskDetailsPanel({
                           // }}
                           onJumpToDiffFullScreen={jumpToDiffFullScreen}
                         />
-
 
                         <LogsTab selectedAttempt={selectedAttempt} />
 

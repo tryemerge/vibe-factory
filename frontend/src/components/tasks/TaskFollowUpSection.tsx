@@ -1,4 +1,10 @@
-import { AlertCircle, Send, ChevronDown, ImageIcon, StopCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  Send,
+  ChevronDown,
+  ImageIcon,
+  StopCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageUploadSection } from '@/components/ui/ImageUploadSection';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -6,9 +12,7 @@ import { FileSearchTextarea } from '@/components/ui/file-search-textarea';
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { attemptsApi, imagesApi } from '@/lib/api.ts';
 import type { ImageResponse, TaskWithAttemptStatus } from 'shared/types';
-import {
-  useBranchStatus,
-} from '@/hooks';
+import { useBranchStatus } from '@/hooks';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { Loader } from '@/components/ui/loader';
 import { useUserSystem } from '@/components/config-provider';
@@ -34,7 +38,13 @@ export function TaskFollowUpSection({
   selectedAttemptId,
   selectedAttemptProfile,
 }: TaskFollowUpSectionProps) {
-  const { attemptData, isAttemptRunning, stopExecution, isStopping, processes } = useAttemptExecution(selectedAttemptId, task.id);
+  const {
+    attemptData,
+    isAttemptRunning,
+    stopExecution,
+    isStopping,
+    processes,
+  } = useAttemptExecution(selectedAttemptId, task.id);
   const { data: branchStatus } = useBranchStatus(selectedAttemptId);
   const { profiles } = useUserSystem();
 
@@ -60,7 +70,7 @@ export function TaskFollowUpSection({
     if (latestProfile?.variant) {
       return latestProfile.variant;
     } else if (latestProfile) {
-      return null
+      return null;
     } else if (selectedAttemptProfile && profiles) {
       // No processes yet, check if profile has default variant
       const profile = profiles.find((p) => p.label === selectedAttemptProfile);

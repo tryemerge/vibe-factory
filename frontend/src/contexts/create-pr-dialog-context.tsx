@@ -27,7 +27,9 @@ interface CreatePRDialogProviderProps {
   children: ReactNode;
 }
 
-export function CreatePRDialogProvider({ children }: CreatePRDialogProviderProps) {
+export function CreatePRDialogProvider({
+  children,
+}: CreatePRDialogProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<CreatePRDialogData | null>(null);
 
