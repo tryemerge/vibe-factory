@@ -43,7 +43,12 @@ function isEdit(
   return change?.action === 'edit';
 }
 
-const FileChangeRenderer = ({ path, change, expansionKey, onOpenFile }: Props) => {
+const FileChangeRenderer = ({
+  path,
+  change,
+  expansionKey,
+  onOpenFile,
+}: Props) => {
   const { config } = useConfig();
   const [expanded, setExpanded] = useExpandable(expansionKey, false);
 
@@ -75,8 +80,13 @@ const FileChangeRenderer = ({ path, change, expansionKey, onOpenFile }: Props) =
         titleNode: (
           <p className={commonTitleClass} style={commonTitleStyle}>
             <Trash2 className="h-3 w-3 inline mr-1.5" aria-hidden />
-            Delete {onOpenFile ? (
-              <ClickableFilePath path={path} onClick={onOpenFile} className="ml-1" />
+            Delete{' '}
+            {onOpenFile ? (
+              <ClickableFilePath
+                path={path}
+                onClick={onOpenFile}
+                className="ml-1"
+              />
             ) : (
               <span className="ml-1">{path}</span>
             )}
@@ -91,8 +101,13 @@ const FileChangeRenderer = ({ path, change, expansionKey, onOpenFile }: Props) =
         titleNode: (
           <p className={commonTitleClass} style={commonTitleStyle}>
             <ArrowLeftRight className="h-3 w-3 inline mr-1.5" aria-hidden />
-            Rename {onOpenFile ? (
-              <ClickableFilePath path={path} onClick={onOpenFile} className="ml-1" />
+            Rename{' '}
+            {onOpenFile ? (
+              <ClickableFilePath
+                path={path}
+                onClick={onOpenFile}
+                className="ml-1"
+              />
             ) : (
               <span className="ml-1">{path}</span>
             )}{' '}
@@ -112,8 +127,13 @@ const FileChangeRenderer = ({ path, change, expansionKey, onOpenFile }: Props) =
       return {
         titleNode: (
           <p className={commonTitleClass} style={commonTitleStyle}>
-            Write to {onOpenFile ? (
-              <ClickableFilePath path={path} onClick={onOpenFile} className="ml-1" />
+            Write to{' '}
+            {onOpenFile ? (
+              <ClickableFilePath
+                path={path}
+                onClick={onOpenFile}
+                className="ml-1"
+              />
             ) : (
               <span className="ml-1">{path}</span>
             )}

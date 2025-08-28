@@ -101,21 +101,21 @@ export default function DiffCard({
       {label && <span className="mr-2">{label}</span>}
       {diff.change === 'renamed' && oldName ? (
         <span className="inline-flex items-center gap-2">
-          <ClickableFilePath 
-            path={oldName} 
+          <ClickableFilePath
+            path={oldName}
             onClick={onOpenFile}
             className="text-xs font-mono"
           />
           <span aria-hidden>→</span>
-          <ClickableFilePath 
-            path={newName} 
+          <ClickableFilePath
+            path={newName}
             onClick={onOpenFile}
             className="text-xs font-mono"
           />
         </span>
       ) : (
-        <ClickableFilePath 
-          path={newName} 
+        <ClickableFilePath
+          path={newName}
           onClick={onOpenFile}
           disabled={diff.change === 'deleted'}
           className="text-xs font-mono"

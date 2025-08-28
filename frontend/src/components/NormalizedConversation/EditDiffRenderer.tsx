@@ -113,7 +113,11 @@ function EditDiffRenderer({
           style={{ color: 'hsl(var(--muted-foreground) / 0.7)' }}
         >
           {onOpenFile ? (
-            <ClickableFilePath path={path} onClick={onOpenFile} className="text-xs font-mono" />
+            <ClickableFilePath
+              path={path}
+              onClick={onOpenFile}
+              className="text-xs font-mono"
+            />
           ) : (
             path
           )}{' '}

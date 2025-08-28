@@ -23,9 +23,9 @@ export function ClickableFilePath({
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (disabled || loading) return;
-    
+
     try {
       setLoading(true);
       await onClick(path, line);
@@ -51,11 +51,11 @@ export function ClickableFilePath({
         className
       )}
       title={
-        disabled 
-          ? 'File no longer exists' 
-          : loading 
-          ? 'Opening...' 
-          : 'Click to open in IDE'
+        disabled
+          ? 'File no longer exists'
+          : loading
+            ? 'Opening...'
+            : 'Click to open in IDE'
       }
     >
       {loading ? (

@@ -81,9 +81,13 @@ export function TaskDetailsPanel({
         console.warn('No selected attempt to open file');
         return;
       }
-      
+
       try {
-        await attemptsApi.openEditor(selectedAttempt.id, undefined, relativePath);
+        await attemptsApi.openEditor(
+          selectedAttempt.id,
+          undefined,
+          relativePath
+        );
       } catch (error) {
         console.error('Failed to open file in IDE:', error);
         throw error; // Re-throw so ClickableFilePath can handle it
@@ -194,9 +198,15 @@ export function TaskDetailsPanel({
 
                       <div className="flex-1 flex flex-col min-h-0">
                         {activeTab === 'diffs' ? (
-                          <DiffTab selectedAttempt={selectedAttempt} onOpenFile={onOpenFile} />
+                          <DiffTab
+                            selectedAttempt={selectedAttempt}
+                            onOpenFile={onOpenFile}
+                          />
                         ) : activeTab === 'processes' ? (
-                          <ProcessesTab attemptId={selectedAttempt?.id} onOpenFile={onOpenFile} />
+                          <ProcessesTab
+                            attemptId={selectedAttempt?.id}
+                            onOpenFile={onOpenFile}
+                          />
                         ) : (
                           <LogsTab selectedAttempt={selectedAttempt} />
                         )}
