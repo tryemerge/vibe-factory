@@ -12,12 +12,14 @@ import { useConfig } from '@/components/config-provider';
 import { getHighLightLanguageFromPath } from '@/utils/extToLanguage';
 import '@/styles/diff-style-overrides.css';
 import '@/styles/edit-diff-overrides.css';
+import { ClickableFilePath } from '@/components/ui/ClickableFilePath';
 
 type Props = {
   path: string;
   unifiedDiff: string;
   hasLineNumbers: boolean;
   expansionKey: string;
+  onOpenFile?: (path: string, line?: number) => void;
 };
 
 /**
@@ -63,6 +65,7 @@ function EditDiffRenderer({
   unifiedDiff,
   hasLineNumbers,
   expansionKey,
+  onOpenFile,
 }: Props) {
   const { config } = useConfig();
   const [expanded, setExpanded] = useExpandable(expansionKey, false);
@@ -109,7 +112,11 @@ function EditDiffRenderer({
           className="text-xs font-mono overflow-x-auto flex-1"
           style={{ color: 'hsl(var(--muted-foreground) / 0.7)' }}
         >
-          {path}{' '}
+          {onOpenFile ? (
+            <ClickableFilePath path={path} onClick={onOpenFile} className="text-xs font-mono" />
+          ) : (
+            path
+          )}{' '}
           <span style={{ color: 'hsl(var(--console-success))' }}>
             +{additions}
           </span>{' '}

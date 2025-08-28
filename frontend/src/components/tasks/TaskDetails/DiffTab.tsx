@@ -8,9 +8,10 @@ import type { TaskAttempt } from 'shared/types';
 
 interface DiffTabProps {
   selectedAttempt: TaskAttempt | null;
+  onOpenFile: (path: string, line?: number) => void;
 }
 
-function DiffTab({ selectedAttempt }: DiffTabProps) {
+function DiffTab({ selectedAttempt, onOpenFile }: DiffTabProps) {
   const [loading, setLoading] = useState(true);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const { diffs, error } = useDiffEntries(selectedAttempt?.id ?? null, true);
@@ -113,7 +114,7 @@ function DiffTab({ selectedAttempt }: DiffTabProps) {
               diff={diff}
               expanded={!collapsedIds.has(id)}
               onToggle={() => toggle(id)}
-              selectedAttempt={selectedAttempt}
+              onOpenFile={onOpenFile}
             />
           );
         })}

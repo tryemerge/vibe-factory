@@ -16,14 +16,13 @@ import {
   Key,
 } from 'lucide-react';
 import '@/styles/diff-style-overrides.css';
-import { attemptsApi } from '@/lib/api';
-import type { TaskAttempt } from 'shared/types';
+import { ClickableFilePath } from '@/components/ui/ClickableFilePath';
 
 type Props = {
   diff: Diff;
   expanded: boolean;
   onToggle: () => void;
-  selectedAttempt: TaskAttempt | null;
+  onOpenFile: (path: string, line?: number) => void;
 };
 
 function labelAndIcon(diff: Diff) {
@@ -42,7 +41,7 @@ export default function DiffCard({
   diff,
   expanded,
   onToggle,
-  selectedAttempt,
+  onOpenFile,
 }: Props) {
   const { config } = useConfig();
   const theme = config?.theme === ThemeMode.DARK ? 'dark' : 'light';
@@ -102,12 +101,25 @@ export default function DiffCard({
       {label && <span className="mr-2">{label}</span>}
       {diff.change === 'renamed' && oldName ? (
         <span className="inline-flex items-center gap-2">
-          <span>{oldName}</span>
+          <ClickableFilePath 
+            path={oldName} 
+            onClick={onOpenFile}
+            className="text-xs font-mono"
+          />
           <span aria-hidden>→</span>
-          <span>{newName}</span>
+          <ClickableFilePath 
+            path={newName} 
+            onClick={onOpenFile}
+            className="text-xs font-mono"
+          />
         </span>
       ) : (
-        <span>{newName}</span>
+        <ClickableFilePath 
+          path={newName} 
+          onClick={onOpenFile}
+          disabled={diff.change === 'deleted'}
+          className="text-xs font-mono"
+        />
       )}
       <span className="ml-3" style={{ color: 'hsl(var(--console-success))' }}>
         +{add}
@@ -119,16 +131,9 @@ export default function DiffCard({
   );
 
   const handleOpenInIDE = async () => {
-    if (!selectedAttempt?.id) return;
-    try {
-      const openPath = newName || oldName;
-      await attemptsApi.openEditor(
-        selectedAttempt.id,
-        undefined,
-        openPath || undefined
-      );
-    } catch (err) {
-      console.error('Failed to open file in IDE:', err);
+    const openPath = newName || oldName;
+    if (openPath) {
+      onOpenFile(openPath);
     }
   };
 

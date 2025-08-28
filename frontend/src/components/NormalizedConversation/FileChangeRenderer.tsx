@@ -13,11 +13,13 @@ import EditDiffRenderer from './EditDiffRenderer';
 import FileContentView from './FileContentView';
 import '@/styles/diff-style-overrides.css';
 import { useExpandable } from '@/stores/useExpandableStore';
+import { ClickableFilePath } from '@/components/ui/ClickableFilePath';
 
 type Props = {
   path: string;
   change: FileChange;
   expansionKey: string;
+  onOpenFile?: (path: string, line?: number) => void;
 };
 
 function isWrite(
@@ -41,7 +43,7 @@ function isEdit(
   return change?.action === 'edit';
 }
 
-const FileChangeRenderer = ({ path, change, expansionKey }: Props) => {
+const FileChangeRenderer = ({ path, change, expansionKey, onOpenFile }: Props) => {
   const { config } = useConfig();
   const [expanded, setExpanded] = useExpandable(expansionKey, false);
 
@@ -56,6 +58,7 @@ const FileChangeRenderer = ({ path, change, expansionKey }: Props) => {
         unifiedDiff={change.unified_diff}
         hasLineNumbers={change.has_line_numbers}
         expansionKey={expansionKey}
+        onOpenFile={onOpenFile}
       />
     );
   }
@@ -72,7 +75,11 @@ const FileChangeRenderer = ({ path, change, expansionKey }: Props) => {
         titleNode: (
           <p className={commonTitleClass} style={commonTitleStyle}>
             <Trash2 className="h-3 w-3 inline mr-1.5" aria-hidden />
-            Delete <span className="ml-1">{path}</span>
+            Delete {onOpenFile ? (
+              <ClickableFilePath path={path} onClick={onOpenFile} className="ml-1" />
+            ) : (
+              <span className="ml-1">{path}</span>
+            )}
           </p>
         ),
         expandable: false,
@@ -84,9 +91,17 @@ const FileChangeRenderer = ({ path, change, expansionKey }: Props) => {
         titleNode: (
           <p className={commonTitleClass} style={commonTitleStyle}>
             <ArrowLeftRight className="h-3 w-3 inline mr-1.5" aria-hidden />
-            Rename <span className="ml-1">{path}</span>{' '}
+            Rename {onOpenFile ? (
+              <ClickableFilePath path={path} onClick={onOpenFile} className="ml-1" />
+            ) : (
+              <span className="ml-1">{path}</span>
+            )}{' '}
             <ArrowRight className="h-3 w-3 inline mx-1" aria-hidden />{' '}
-            <span>{change.new_path}</span>
+            {onOpenFile ? (
+              <ClickableFilePath path={change.new_path} onClick={onOpenFile} />
+            ) : (
+              <span>{change.new_path}</span>
+            )}
           </p>
         ),
         expandable: false,
@@ -97,7 +112,11 @@ const FileChangeRenderer = ({ path, change, expansionKey }: Props) => {
       return {
         titleNode: (
           <p className={commonTitleClass} style={commonTitleStyle}>
-            Write to <span className="ml-1">{path}</span>
+            Write to {onOpenFile ? (
+              <ClickableFilePath path={path} onClick={onOpenFile} className="ml-1" />
+            ) : (
+              <span className="ml-1">{path}</span>
+            )}
           </p>
         ),
         expandable: true,

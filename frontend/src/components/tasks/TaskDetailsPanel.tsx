@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import TaskDetailsHeader from './TaskDetailsHeader';
 import { TaskFollowUpSection } from './TaskFollowUpSection';
 import { EditorSelectionDialog } from './EditorSelectionDialog';
@@ -22,6 +22,7 @@ import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
 import { AttemptHeaderCard } from './AttemptHeaderCard';
 import { inIframe } from '@/vscode/bridge';
+import { attemptsApi } from '@/lib/api';
 
 interface TaskDetailsPanelProps {
   task: TaskWithAttemptStatus | null;
@@ -72,6 +73,24 @@ export function TaskDetailsPanel({
 
   // Tab and collapsible state
   const [activeTab, setActiveTab] = useState<TabType>('logs');
+
+  // Handler for opening files in IDE
+  const onOpenFile = useCallback(
+    async (relativePath: string) => {
+      if (!selectedAttempt?.id) {
+        console.warn('No selected attempt to open file');
+        return;
+      }
+      
+      try {
+        await attemptsApi.openEditor(selectedAttempt.id, undefined, relativePath);
+      } catch (error) {
+        console.error('Failed to open file in IDE:', error);
+        throw error; // Re-throw so ClickableFilePath can handle it
+      }
+    },
+    [selectedAttempt?.id]
+  );
 
   // Handler for jumping to diff tab in full screen
   const jumpToDiffFullScreen = () => {
@@ -175,9 +194,9 @@ export function TaskDetailsPanel({
 
                       <div className="flex-1 flex flex-col min-h-0">
                         {activeTab === 'diffs' ? (
-                          <DiffTab selectedAttempt={selectedAttempt} />
+                          <DiffTab selectedAttempt={selectedAttempt} onOpenFile={onOpenFile} />
                         ) : activeTab === 'processes' ? (
-                          <ProcessesTab attemptId={selectedAttempt?.id} />
+                          <ProcessesTab attemptId={selectedAttempt?.id} onOpenFile={onOpenFile} />
                         ) : (
                           <LogsTab selectedAttempt={selectedAttempt} />
                         )}

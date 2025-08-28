@@ -17,9 +17,12 @@ import { useProcessSelection } from '@/contexts/ProcessSelectionContext';
 
 interface ProcessesTabProps {
   attemptId?: string;
+  onOpenFile: (path: string, line?: number) => void;
 }
 
-function ProcessesTab({ attemptId }: ProcessesTabProps) {
+function ProcessesTab({ attemptId, onOpenFile }: ProcessesTabProps) {
+  // Note: onOpenFile is currently unused but kept for future enhancements
+  void onOpenFile; // Suppress unused parameter warning
   const { attemptData } = useAttemptExecution(attemptId);
   const { selectedProcessId, setSelectedProcessId } = useProcessSelection();
   const [loadingProcessId, setLoadingProcessId] = useState<string | null>(null);
