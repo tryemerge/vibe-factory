@@ -336,6 +336,61 @@ impl EditorConfig {
     }
 
     pub fn open_file(&self, path: &str) -> Result<(), std::io::Error> {
+        let path_obj = std::path::Path::new(path);
+        
+        // For VS Code and Cursor, use smart window reuse when opening files
+        if self.supports_smart_window_reuse() && path_obj.is_file() {
+            if let Some(parent) = path_obj.parent() {
+                return self.open_worktree_with_file(parent, Some(path_obj));
+            }
+        }
+        
+        // For directories or other editors, use the original logic
+        self.open_path_simple(path)
+    }
+
+    pub fn supports_smart_window_reuse(&self) -> bool {
+        matches!(self.editor_type, EditorType::VsCode | EditorType::Cursor)
+    }
+
+    pub fn open_worktree_with_file(&self, worktree_path: &std::path::Path, file_path: Option<&std::path::Path>) -> Result<(), std::io::Error> {
+        let mut command = self.get_command();
+
+        if command.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "No editor command configured",
+            ));
+        }
+
+        if cfg!(windows) {
+            command[0] =
+                utils::shell::resolve_executable_path(&command[0]).ok_or(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Editor command '{}' not found", command[0]),
+                ))?;
+        }
+
+        let mut cmd = std::process::Command::new(&command[0]);
+        for arg in &command[1..] {
+            cmd.arg(arg);
+        }
+        
+        // Add --reuse-window flag and worktree path
+        cmd.arg("--reuse-window");
+        cmd.arg(worktree_path);
+        
+        // If opening a specific file, add --goto flag
+        if let Some(file) = file_path {
+            cmd.arg("--goto");
+            cmd.arg(file);
+        }
+        
+        cmd.spawn()?;
+        Ok(())
+    }
+
+    fn open_path_simple(&self, path: &str) -> Result<(), std::io::Error> {
         let mut command = self.get_command();
 
         if command.is_empty() {

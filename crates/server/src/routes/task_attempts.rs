@@ -547,25 +547,39 @@ pub async fn open_task_attempt_in_editor(
         ))
     })?;
 
-    // If a specific file path is provided, use it; otherwise use the base path
-    let path = if let Some(file_path) = payload.as_ref().and_then(|req| req.file_path.as_ref()) {
-        std::path::Path::new(base_path).join(file_path)
-    } else {
-        std::path::PathBuf::from(base_path)
-    };
-
     let editor_config = {
         let config = deployment.config().read().await;
         let editor_type_str = payload.as_ref().and_then(|req| req.editor_type.as_deref());
         config.editor.with_override(editor_type_str)
     };
 
-    match editor_config.open_file(&path.to_string_lossy()) {
+    // Use smart window reuse for VS Code/Cursor when opening files, fallback for others
+    let result = if let Some(file_path) = payload.as_ref().and_then(|req| req.file_path.as_ref()) {
+        let worktree_path = std::path::Path::new(base_path);
+        let full_file_path = worktree_path.join(file_path);
+        
+        // For VS Code/Cursor, use smart window reuse; for others, use simple path opening  
+        if editor_config.supports_smart_window_reuse() {
+            editor_config.open_worktree_with_file(worktree_path, Some(&full_file_path))
+        } else {
+            editor_config.open_file(&full_file_path.to_string_lossy())
+        }
+    } else {
+        // Open worktree only (existing "Open in IDE" button behavior)
+        editor_config.open_file(base_path)
+    };
+
+    match result {
         Ok(_) => {
+            let log_path = if let Some(file_path) = payload.as_ref().and_then(|req| req.file_path.as_ref()) {
+                format!("{} -> {}", base_path, file_path)
+            } else {
+                base_path.to_string()
+            };
             tracing::info!(
                 "Opened editor for task attempt {} at path: {}",
                 task_attempt.id,
-                path.display()
+                log_path
             );
             Ok(ResponseJson(ApiResponse::success(())))
         }
