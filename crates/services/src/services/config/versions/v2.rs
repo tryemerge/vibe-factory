@@ -337,20 +337,24 @@ impl EditorConfig {
 
     pub fn open_file(&self, path: &str) -> Result<(), std::io::Error> {
         let path_obj = std::path::Path::new(path);
-        
+
         if path_obj.is_file() {
             // For files, extract the parent directory as worktree and pass the file
             if let Some(parent) = path_obj.parent() {
                 return self.open(parent, Some(path_obj));
             }
         }
-        
+
         // For directories, just open the path as worktree
         self.open(path_obj, None)
     }
 
     /// Unified method to open a worktree with optional file
-    pub fn open(&self, worktree: &std::path::Path, file: Option<&std::path::Path>) -> Result<(), std::io::Error> {
+    pub fn open(
+        &self,
+        worktree: &std::path::Path,
+        file: Option<&std::path::Path>,
+    ) -> Result<(), std::io::Error> {
         let mut cmd = self.build_base_command()?;
         self.add_editor_specific_args(&mut cmd, worktree, file);
         cmd.spawn()?;
@@ -374,8 +378,8 @@ impl EditorConfig {
 
         // Resolve executable path on Windows
         if cfg!(windows) {
-            command_parts[0] =
-                utils::shell::resolve_executable_path(&command_parts[0]).ok_or_else(|| {
+            command_parts[0] = utils::shell::resolve_executable_path(&command_parts[0])
+                .ok_or_else(|| {
                     std::io::Error::new(
                         std::io::ErrorKind::NotFound,
                         format!("Editor command '{}' not found", command_parts[0]),

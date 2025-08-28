@@ -564,11 +564,12 @@ pub async fn open_task_attempt_in_editor(
 
     match result {
         Ok(_) => {
-            let log_path = if let Some(file_path) = payload.as_ref().and_then(|req| req.file_path.as_ref()) {
-                format!("{} -> {}", base_path, file_path)
-            } else {
-                base_path.to_string()
-            };
+            let log_path =
+                if let Some(file_path) = payload.as_ref().and_then(|req| req.file_path.as_ref()) {
+                    format!("{} -> {}", base_path, file_path)
+                } else {
+                    base_path.to_string()
+                };
             tracing::info!(
                 "Opened editor for task attempt {} at path: {}",
                 task_attempt.id,
