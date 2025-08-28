@@ -553,21 +553,14 @@ pub async fn open_task_attempt_in_editor(
         config.editor.with_override(editor_type_str)
     };
 
-    // Use smart window reuse for VS Code/Cursor when opening files, fallback for others
-    let result = if let Some(file_path) = payload.as_ref().and_then(|req| req.file_path.as_ref()) {
-        let worktree_path = std::path::Path::new(base_path);
-        let full_file_path = worktree_path.join(file_path);
-        
-        // For VS Code/Cursor, use smart window reuse; for others, use simple path opening  
-        if editor_config.supports_smart_window_reuse() {
-            editor_config.open_worktree_with_file(worktree_path, Some(&full_file_path))
-        } else {
-            editor_config.open_file(&full_file_path.to_string_lossy())
-        }
-    } else {
-        // Open worktree only (existing "Open in IDE" button behavior)
-        editor_config.open_file(base_path)
-    };
+    // Use the unified open API - much cleaner!
+    let worktree_path = std::path::Path::new(base_path);
+    let maybe_file = payload
+        .as_ref()
+        .and_then(|req| req.file_path.as_ref())
+        .map(|p| worktree_path.join(p));
+
+    let result = editor_config.open(worktree_path, maybe_file.as_deref());
 
     match result {
         Ok(_) => {

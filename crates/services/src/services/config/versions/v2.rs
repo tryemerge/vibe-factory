@@ -338,83 +338,77 @@ impl EditorConfig {
     pub fn open_file(&self, path: &str) -> Result<(), std::io::Error> {
         let path_obj = std::path::Path::new(path);
         
-        // For VS Code and Cursor, use smart window reuse when opening files
-        if self.supports_smart_window_reuse() && path_obj.is_file() {
+        if path_obj.is_file() {
+            // For files, extract the parent directory as worktree and pass the file
             if let Some(parent) = path_obj.parent() {
-                return self.open_worktree_with_file(parent, Some(path_obj));
+                return self.open(parent, Some(path_obj));
             }
         }
         
-        // For directories or other editors, use the original logic
-        self.open_path_simple(path)
+        // For directories, just open the path as worktree
+        self.open(path_obj, None)
+    }
+
+    /// Unified method to open a worktree with optional file
+    pub fn open(&self, worktree: &std::path::Path, file: Option<&std::path::Path>) -> Result<(), std::io::Error> {
+        let mut cmd = self.build_base_command()?;
+        self.add_editor_specific_args(&mut cmd, worktree, file);
+        cmd.spawn()?;
+        Ok(())
     }
 
     pub fn supports_smart_window_reuse(&self) -> bool {
         matches!(self.editor_type, EditorType::VsCode | EditorType::Cursor)
     }
 
-    pub fn open_worktree_with_file(&self, worktree_path: &std::path::Path, file_path: Option<&std::path::Path>) -> Result<(), std::io::Error> {
-        let mut command = self.get_command();
+    /// Helper method to build the base command with common setup
+    fn build_base_command(&self) -> Result<std::process::Command, std::io::Error> {
+        let mut command_parts = self.get_command();
 
-        if command.is_empty() {
+        if command_parts.is_empty() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "No editor command configured",
             ));
         }
 
+        // Resolve executable path on Windows
         if cfg!(windows) {
-            command[0] =
-                utils::shell::resolve_executable_path(&command[0]).ok_or(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Editor command '{}' not found", command[0]),
-                ))?;
+            command_parts[0] =
+                utils::shell::resolve_executable_path(&command_parts[0]).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!("Editor command '{}' not found", command_parts[0]),
+                    )
+                })?;
         }
 
-        let mut cmd = std::process::Command::new(&command[0]);
-        for arg in &command[1..] {
+        let mut cmd = std::process::Command::new(&command_parts[0]);
+        for arg in &command_parts[1..] {
             cmd.arg(arg);
         }
-        
-        // Add --reuse-window flag and worktree path
-        cmd.arg("--reuse-window");
-        cmd.arg(worktree_path);
-        
-        // If opening a specific file, add --goto flag
-        if let Some(file) = file_path {
-            cmd.arg("--goto");
-            cmd.arg(file);
-        }
-        
-        cmd.spawn()?;
-        Ok(())
+        Ok(cmd)
     }
 
-    fn open_path_simple(&self, path: &str) -> Result<(), std::io::Error> {
-        let mut command = self.get_command();
-
-        if command.is_empty() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "No editor command configured",
-            ));
+    /// Add editor-specific arguments based on editor type
+    fn add_editor_specific_args(
+        &self,
+        cmd: &mut std::process::Command,
+        worktree: &std::path::Path,
+        file: Option<&std::path::Path>,
+    ) {
+        match self.editor_type {
+            EditorType::VsCode | EditorType::Cursor => {
+                cmd.arg("--reuse-window").arg(worktree);
+                if let Some(f) = file {
+                    cmd.arg("--goto").arg(f);
+                }
+            }
+            _ => {
+                // For other editors, open the file directly if provided, otherwise the worktree
+                cmd.arg(file.unwrap_or(worktree));
+            }
         }
-
-        if cfg!(windows) {
-            command[0] =
-                utils::shell::resolve_executable_path(&command[0]).ok_or(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Editor command '{}' not found", command[0]),
-                ))?;
-        }
-
-        let mut cmd = std::process::Command::new(&command[0]);
-        for arg in &command[1..] {
-            cmd.arg(arg);
-        }
-        cmd.arg(path);
-        cmd.spawn()?;
-        Ok(())
     }
 
     pub fn with_override(&self, editor_type_str: Option<&str>) -> Self {
