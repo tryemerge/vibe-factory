@@ -3,7 +3,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { Cog } from 'lucide-react';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { useProcessesLogs } from '@/hooks/useProcessesLogs';
-import LogEntryRow from '@/components/logs/LogEntryRow';
+import ProcessGroup from '@/components/logs/ProcessGroup';
 import {
   shouldShowInLogs,
   isAutoCollapsibleProcess,
@@ -13,8 +13,8 @@ import {
   PROCESS_STATUSES,
 } from '@/constants/processes';
 import type { ExecutionProcessStatus, TaskAttempt } from 'shared/types';
+import type { UnifiedLogEntry, ProcessStartPayload } from '@/types/logs';
 
-// Helper functions
 function addAll<T>(set: Set<T>, items: T[]): Set<T> {
   items.forEach((i: T) => set.add(i));
   return set;
@@ -196,7 +196,12 @@ function LogsTab({ selectedAttempt }: Props) {
     if (toExpand.length > 0) {
       dispatch({ type: 'AUTO_EXPAND', ids: toExpand });
     }
-  }, [filteredProcesses, state.userCollapsed, state.autoCollapsed]);
+  }, [
+    filteredProcesses,
+    state.userCollapsed,
+    state.autoCollapsed,
+    state.prevStatus,
+  ]);
 
   // Effect #3: Handle coding agent succession logic
   useEffect(() => {
@@ -229,29 +234,55 @@ function LogsTab({ selectedAttempt }: Props) {
     state.autoCollapsed,
   ]);
 
-  // Filter entries to hide logs from collapsed processes
-  const visibleEntries = useMemo(() => {
-    return entries.filter((entry) =>
-      entry.channel === 'process_start'
-        ? true
-        : !allCollapsedProcesses.has(entry.processId)
-    );
-  }, [entries, allCollapsedProcesses]);
+  const groups = useMemo(() => {
+    const map = new Map<
+      string,
+      { header?: ProcessStartPayload; entries: UnifiedLogEntry[] }
+    >();
 
-  // Memoized item content to prevent flickering
+    filteredProcesses.forEach((p) => {
+      map.set(p.id, { header: undefined, entries: [] });
+    });
+
+    entries.forEach((e: UnifiedLogEntry) => {
+      const bucket = map.get(e.processId);
+      if (!bucket) return;
+
+      if (e.channel === 'process_start') {
+        bucket.header = e.payload as ProcessStartPayload;
+        return;
+      }
+
+      // Always store entries; whether they show is decided by group collapse
+      bucket.entries.push(e);
+    });
+
+    return filteredProcesses
+      .map((p) => ({
+        processId: p.id,
+        ...(map.get(p.id) || { entries: [] }),
+      }))
+      .filter((g) => g.header) as Array<{
+      processId: string;
+      header: ProcessStartPayload;
+      entries: UnifiedLogEntry[];
+    }>;
+  }, [filteredProcesses, entries]);
+
   const itemContent = useCallback(
-    (index: number, entry: any) => (
-      <LogEntryRow
-        entry={entry}
-        index={index}
-        isCollapsed={
-          entry.channel === 'process_start'
-            ? allCollapsedProcesses.has(entry.payload.processId)
-            : undefined
-        }
-        onToggleCollapse={
-          entry.channel === 'process_start' ? toggleProcessCollapse : undefined
-        }
+    (
+      index: number,
+      group: {
+        processId: string;
+        header: ProcessStartPayload;
+        entries: UnifiedLogEntry[];
+      }
+    ) => (
+      <ProcessGroup
+        header={group.header}
+        entries={group.entries}
+        isCollapsed={allCollapsedProcesses.has(group.processId)}
+        onToggle={toggleProcessCollapse}
       />
     ),
     [allCollapsedProcesses, toggleProcessCollapse]
@@ -274,18 +305,16 @@ function LogsTab({ selectedAttempt }: Props) {
         <Virtuoso
           ref={virtuosoRef}
           style={{ height: '100%' }}
-          data={visibleEntries}
+          data={groups}
           itemContent={itemContent}
-          followOutput={true}
+          followOutput
           increaseViewportBy={200}
           overscan={5}
-          components={{
-            Footer: () => <div className="pb-4" />,
-          }}
+          components={{ Footer: () => <div className="pb-4" /> }}
         />
       </div>
     </div>
   );
 }
 
-export default LogsTab;
+export default LogsTab; // Filter entries to hide logs from collapsed processes
