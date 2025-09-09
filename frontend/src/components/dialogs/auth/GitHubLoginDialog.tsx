@@ -59,8 +59,6 @@ const GitHubLoginDialog = NiceModal.create(() => {
               setDeviceState(null);
               setError(null);
               await reloadSystem();
-              modal.resolve(true);
-              modal.hide();
               break;
             case DevicePollStatus.AUTHORIZATION_PENDING:
               timer = setTimeout(poll, deviceState.interval * 1000);
@@ -125,7 +123,15 @@ const GitHubLoginDialog = NiceModal.create(() => {
   };
 
   return (
-    <Dialog open={modal.visible} onOpenChange={(open) => !open && modal.hide()}>
+    <Dialog
+      open={modal.visible}
+      onOpenChange={(open) => {
+        if (!open) {
+          modal.resolve(isAuthenticated ? true : false);
+          modal.hide();
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-3">
