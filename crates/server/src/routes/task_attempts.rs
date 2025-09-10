@@ -34,6 +34,7 @@ use git2::BranchType;
 use serde::{Deserialize, Serialize};
 use services::services::{
     container::ContainerService,
+    git::ConflictOp,
     github_service::{CreatePrRequest, GitHubService, GitHubServiceError},
     image::ImageService,
 };
@@ -1315,6 +1316,12 @@ pub struct BranchStatus {
     pub remote_commits_behind: Option<usize>,
     pub remote_commits_ahead: Option<usize>,
     pub merges: Vec<Merge>,
+    /// True if a `git rebase` is currently in progress in this worktree
+    pub is_rebase_in_progress: bool,
+    /// Current conflict operation if any
+    pub conflict_op: Option<ConflictOp>,
+    /// List of files currently in conflicted (unmerged) state
+    pub conflicted_files: Vec<String>,
 }
 
 pub async fn get_task_attempt_branch_status(
@@ -1341,6 +1348,25 @@ pub async fn get_task_attempt_branch_status(
             .await?;
         let wt = std::path::Path::new(&container_ref);
         deployment.git().get_head_info(wt).ok().map(|h| h.oid)
+    };
+    // Detect conflicts and operation in progress (best-effort)
+    let (is_rebase_in_progress, conflicted_files, conflict_op) = {
+        let container_ref = deployment
+            .container()
+            .ensure_container_exists(&task_attempt)
+            .await?;
+        let wt = std::path::Path::new(&container_ref);
+        let in_rebase = deployment.git().is_rebase_in_progress(wt).unwrap_or(false);
+        let conflicts = deployment
+            .git()
+            .get_conflicted_files(wt)
+            .unwrap_or_default();
+        let op = if conflicts.is_empty() {
+            None
+        } else {
+            deployment.git().detect_conflict_op(wt).unwrap_or(None)
+        };
+        (in_rebase, conflicts, op)
     };
     let (uncommitted_count, untracked_count) = {
         let container_ref = deployment
@@ -1387,6 +1413,9 @@ pub async fn get_task_attempt_branch_status(
         remote_commits_behind: None,
         merges,
         base_branch_name: task_attempt.base_branch.clone(),
+        is_rebase_in_progress,
+        conflict_op,
+        conflicted_files,
     };
     let has_open_pr = branch_status.merges.first().is_some_and(|m| {
         matches!(
@@ -1471,6 +1500,23 @@ pub async fn rebase_task_attempt(
         TaskAttempt::update_base_branch(&deployment.db().pool, task_attempt.id, new_base_branch)
             .await?;
     }
+
+    Ok(ResponseJson(ApiResponse::success(())))
+}
+
+#[axum::debug_handler]
+pub async fn abort_conflicts_task_attempt(
+    Extension(task_attempt): Extension<TaskAttempt>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    // Resolve worktree path for this attempt
+    let container_ref = deployment
+        .container()
+        .ensure_container_exists(&task_attempt)
+        .await?;
+    let worktree_path = std::path::Path::new(&container_ref);
+
+    deployment.git().abort_conflicts(worktree_path)?;
 
     Ok(ResponseJson(ApiResponse::success(())))
 }
@@ -1628,6 +1674,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .route("/merge", post(merge_task_attempt))
         .route("/push", post(push_task_attempt_branch))
         .route("/rebase", post(rebase_task_attempt))
+        .route("/conflicts/abort", post(abort_conflicts_task_attempt))
         .route("/pr", post(create_github_pr))
         .route("/open-editor", post(open_task_attempt_in_editor))
         .route("/delete-file", post(delete_task_attempt_file))

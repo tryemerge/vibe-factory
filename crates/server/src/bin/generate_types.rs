@@ -92,6 +92,7 @@ fn generate_types_content() -> String {
         server::routes::task_attempts::CommitInfo::decl(),
         server::routes::task_attempts::CommitCompareResult::decl(),
         server::routes::task_attempts::BranchStatus::decl(),
+        services::services::git::ConflictOp::decl(),
         db::models::task_attempt::TaskAttempt::decl(),
         db::models::execution_process::ExecutionProcess::decl(),
         db::models::execution_process::ExecutionProcessStatus::decl(),

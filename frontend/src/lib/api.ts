@@ -435,7 +435,7 @@ export const attemptsApi = {
     editorType?: EditorType,
     filePath?: string
   ): Promise<void> => {
-    const requestBody: any = {};
+    const requestBody: { editor_type?: EditorType; file_path?: string } = {};
     if (editorType) requestBody.editor_type = editorType;
     if (filePath) requestBody.file_path = filePath;
 
@@ -484,6 +484,16 @@ export const attemptsApi = {
       {
         method: 'POST',
         body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<void>(response);
+  },
+
+  abortConflicts: async (attemptId: string): Promise<void> => {
+    const response = await makeRequest(
+      `/api/task-attempts/${attemptId}/conflicts/abort`,
+      {
+        method: 'POST',
       }
     );
     return handleApiResponse<void>(response);

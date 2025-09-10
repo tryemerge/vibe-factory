@@ -34,6 +34,8 @@ export function useRebase(
     },
     onError: (err) => {
       console.error('Failed to rebase:', err);
+      // Even on failure (likely conflicts), re-fetch branch status immediately to show rebase-in-progress
+      queryClient.invalidateQueries({ queryKey: ['branchStatus', attemptId] });
       onError?.(err);
     },
   });
