@@ -27,15 +27,15 @@ i18n
     fallbackLng: 'en',
     defaultNS: 'common',
     debug: import.meta.env.DEV,
-    
+
     interpolation: {
       escapeValue: false, // React already escapes
     },
-    
+
     react: {
       useSuspense: false, // Avoid suspense for now to simplify initial setup
     },
-    
+
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],

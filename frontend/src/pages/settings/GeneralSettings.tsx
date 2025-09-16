@@ -158,7 +158,9 @@ export function GeneralSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="theme">{t('settings.general.appearance.theme.label')}</Label>
+            <Label htmlFor="theme">
+              {t('settings.general.appearance.theme.label')}
+            </Label>
             <Select
               value={config.theme}
               onValueChange={(value: ThemeMode) =>
@@ -166,7 +168,11 @@ export function GeneralSettings() {
               }
             >
               <SelectTrigger id="theme">
-                <SelectValue placeholder={t('settings.general.appearance.theme.placeholder')} />
+                <SelectValue
+                  placeholder={t(
+                    'settings.general.appearance.theme.placeholder'
+                  )}
+                />
               </SelectTrigger>
               <SelectContent>
                 {Object.values(ThemeMode).map((theme) => (
@@ -192,7 +198,9 @@ export function GeneralSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="executor">{t('settings.general.taskExecution.executor.label')}</Label>
+            <Label htmlFor="executor">
+              {t('settings.general.taskExecution.executor.label')}
+            </Label>
             <div className="grid grid-cols-2 gap-2">
               <Select
                 value={config.executor_profile?.executor ?? ''}

@@ -28,7 +28,9 @@ export function SettingsLayout() {
         {/* Sidebar Navigation */}
         <aside className="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-8 lg:h-fit lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
           <div className="space-y-1">
-            <h2 className="px-3 py-2 text-lg font-semibold">{t('settings.layout.nav.title')}</h2>
+            <h2 className="px-3 py-2 text-lg font-semibold">
+              {t('settings.layout.nav.title')}
+            </h2>
             <div className="px-3 py-2">
               <LanguageSwitcher />
             </div>
@@ -52,7 +54,9 @@ export function SettingsLayout() {
                   >
                     <Icon className="h-4 w-4 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium">{t(`settings.layout.nav.${item.path}`)}</div>
+                      <div className="font-medium">
+                        {t(`settings.layout.nav.${item.path}`)}
+                      </div>
                       <div>{t(`settings.layout.nav.${item.path}Desc`)}</div>
                     </div>
                   </NavLink>
