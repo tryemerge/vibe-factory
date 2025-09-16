@@ -171,12 +171,13 @@ export const useConversationHistory = ({
     if (runningProcesses.length > 1) {
       console.warn(
         'Expected at most one running agent process but found',
-        runningProcesses.map(p => p.id),
+        runningProcesses.map((p) => p.id),
         '. Using the most recently updated process for streaming.'
       );
       // Deterministic choice: most recently updated
       runningProcesses.sort(
-        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
     }
 
