@@ -1,0 +1,128 @@
+{
+  "settings": {
+    "layout": {
+      "nav": {
+        "title": "Settings",
+        "general": "General",
+        "generalDesc": "Theme, notifications, and preferences",
+        "agents": "Agents",
+        "agentsDesc": "Coding agent configurations",
+        "mcp": "MCP Servers",
+        "mcpDesc": "Model Context Protocol servers"
+      }
+    },
+    "general": {
+      "loading": "Loading settings...",
+      "loadError": "Failed to load configuration.",
+      "save": {
+        "button": "Save Settings",
+        "success": "✓ Settings saved successfully!",
+        "error": "Failed to save configuration"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "description": "Customize how the application looks and feels.",
+        "theme": {
+          "label": "Theme",
+          "placeholder": "Select theme",
+          "helper": "Choose your preferred color scheme."
+        }
+      },
+      "taskExecution": {
+        "title": "Task Execution",
+        "description": "Configure how tasks are executed and processed.",
+        "executor": {
+          "label": "Default Agent Configuration",
+          "placeholder": "Select profile",
+          "helper": "Choose the default agent configuration to use when creating a task attempt."
+        },
+        "variant": "DEFAULT"
+      },
+      "editor": {
+        "title": "Editor",
+        "description": "Configure your code editing experience.",
+        "type": {
+          "label": "Editor Type",
+          "placeholder": "Select editor",
+          "helper": "Choose your preferred code editor interface."
+        }
+      },
+      "github": {
+        "title": "GitHub Integration",
+        "connected": "Connected as {{username}}",
+        "connectButton": "Connect GitHub Account",
+        "manage": "Manage",
+        "disconnect": "Disconnect",
+        "helper": "Connect your GitHub account to access private repositories and enable advanced Git operations."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Control when and how you receive notifications.",
+        "sound": {
+          "label": "Sound Notifications",
+          "helper": "Play a sound when task attempts finish running.",
+          "fileLabel": "Sound",
+          "filePlaceholder": "Select sound",
+          "fileHelper": "Choose the sound to play when tasks complete. Click the volume button to preview."
+        },
+        "push": {
+          "label": "Push Notifications",
+          "helper": "Show system notifications when task attempts finish running."
+        }
+      },
+      "privacy": {
+        "title": "Privacy",
+        "description": "Help improve Vibe-Kanban by sharing anonymous usage data.",
+        "telemetry": {
+          "label": "Enable Telemetry",
+          "helper": "Enables anonymous usage events tracking to help improve the application. No prompts or project information are collected."
+        }
+      },
+      "taskTemplates": {
+        "title": "Task Templates",
+        "description": "Manage global task templates that can be used across all projects."
+      },
+      "safety": {
+        "title": "Safety & Disclaimers",
+        "description": "Reset acknowledgments for safety warnings and onboarding.",
+        "disclaimer": {
+          "title": "Disclaimer Acknowledgment",
+          "description": "Reset the safety disclaimer.",
+          "button": "Reset"
+        },
+        "onboarding": {
+          "title": "Onboarding",
+          "description": "Reset the onboarding flow.",
+          "button": "Reset"
+        }
+      }
+    },
+    "agents": {
+      "title": "Coding Agent Configurations",
+      "description": "Customize the behavior of coding agents with different configurations.",
+      "loading": "Loading agent configurations...",
+      "save": {
+        "button": "Save Agent Configurations",
+        "success": "✓ Executor configurations saved successfully!"
+      },
+      "editor": {
+        "formLabel": "Edit JSON",
+        "agentLabel": "Agent",
+        "agentPlaceholder": "Select executor type",
+        "configLabel": "Configuration",
+        "configPlaceholder": "Select configuration",
+        "createNew": "Create new...",
+        "deleteTitle": "Cannot delete the last configuration",
+        "deleteButton": "Delete {{name}}",
+        "jsonLabel": "Agent Configuration (JSON)",
+        "jsonPlaceholder": "Loading profiles...",
+        "pathLabel": "Configuration file location:"
+      }
+    },
+    "mcp": {
+      "title": "MCP Server Configuration",
+      "loading": "Loading MCP configuration...",
+      "applying": "Applying configuration..."
+    }
+  }
+}

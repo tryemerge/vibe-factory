@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -39,6 +40,7 @@ import { TaskTemplateManager } from '@/components/TaskTemplateManager';
 import NiceModal from '@ebay/nice-modal-react';
 
 export function GeneralSettings() {
+  const { t } = useTranslation('settings');
   const {
     config,
     updateConfig,
@@ -116,7 +118,7 @@ export function GeneralSettings() {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading settings...</span>
+        <span className="ml-2">{t('settings.general.loading')}</span>
       </div>
     );
   }
@@ -125,7 +127,7 @@ export function GeneralSettings() {
     return (
       <div className="py-8">
         <Alert variant="destructive">
-          <AlertDescription>Failed to load configuration.</AlertDescription>
+          <AlertDescription>{t('settings.general.loadError')}</AlertDescription>
         </Alert>
       </div>
     );
@@ -142,21 +144,21 @@ export function GeneralSettings() {
       {success && (
         <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
           <AlertDescription className="font-medium">
-            ✓ Settings saved successfully!
+            {t('settings.general.save.success')}
           </AlertDescription>
         </Alert>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
+          <CardTitle>{t('settings.general.appearance.title')}</CardTitle>
           <CardDescription>
-            Customize how the application looks and feels.
+            {t('settings.general.appearance.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="theme">Theme</Label>
+            <Label htmlFor="theme">{t('settings.general.appearance.theme.label')}</Label>
             <Select
               value={config.theme}
               onValueChange={(value: ThemeMode) =>
@@ -164,7 +166,7 @@ export function GeneralSettings() {
               }
             >
               <SelectTrigger id="theme">
-                <SelectValue placeholder="Select theme" />
+                <SelectValue placeholder={t('settings.general.appearance.theme.placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {Object.values(ThemeMode).map((theme) => (
@@ -175,7 +177,7 @@ export function GeneralSettings() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Choose your preferred color scheme.
+              {t('settings.general.appearance.theme.helper')}
             </p>
           </div>
         </CardContent>
@@ -183,14 +185,14 @@ export function GeneralSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Task Execution</CardTitle>
+          <CardTitle>{t('settings.general.taskExecution.title')}</CardTitle>
           <CardDescription>
-            Configure how tasks are executed and processed.
+            {t('settings.general.taskExecution.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="executor">Default Agent Configuration</Label>
+            <Label htmlFor="executor">{t('settings.general.taskExecution.executor.label')}</Label>
             <div className="grid grid-cols-2 gap-2">
               <Select
                 value={config.executor_profile?.executor ?? ''}
@@ -568,7 +570,7 @@ export function GeneralSettings() {
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Settings
+            {t('settings.general.save.button')}
           </Button>
         </div>
       </div>
