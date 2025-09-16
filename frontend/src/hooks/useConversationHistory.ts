@@ -157,15 +157,31 @@ export const useConversationHistory = ({
   };
 
   const getRunningExecutionProcesses = (): ExecutionProcess | null => {
+    if (!executionProcesses?.current) return null;
+
     // Filter for running processes, excluding dev server and other non-agent processes
-    const runningProcesses = executionProcesses?.current.filter(
+    const runningProcesses = executionProcesses.current.filter(
       (p) => p.status === 'running' && p.run_reason !== 'devserver'
     );
-    // Only throw error if there are multiple agent processes running
+
+    // No running agent process
+    if (runningProcesses.length === 0) return null;
+
+    // More than one – warn, but don't blow up the UI
     if (runningProcesses.length > 1) {
-      throw new Error('More than one running execution process found');
+      console.warn(
+        'Expected at most one running agent process but found',
+        runningProcesses.map(p => p.id),
+        '. Using the most recently updated process for streaming.'
+      );
+      // Deterministic choice: most recently updated
+      runningProcesses.sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
     }
-    return runningProcesses[0] || null;
+
+    // Return the chosen process
+    return runningProcesses[0];
   };
 
   const flattenEntries = (
