@@ -169,7 +169,10 @@ export const useConversationHistory = ({
 
     // More than one – warn, but don't blow up the UI
     if (runningProcesses.length > 1) {
-      console.warn('Multiple running processes found:', runningProcesses.map((p) => p.id));
+      console.warn(
+        'Multiple running processes found:',
+        runningProcesses.map((p) => p.id)
+      );
       // Deterministic choice: most recently updated
       runningProcesses.sort(
         (a, b) =>
