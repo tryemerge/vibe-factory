@@ -122,7 +122,12 @@
     "mcp": {
       "title": "MCPサーバー設定",
       "loading": "MCP設定を読み込み中...",
-      "applying": "設定を適用中..."
+      "applying": "設定を適用中...",
+      "save": {
+        "button": "MCP設定を保存",
+        "success": "設定が保存されました！",
+        "loading": "現在のMCPサーバー設定を読み込み中..."
+      }
     }
   }
 }

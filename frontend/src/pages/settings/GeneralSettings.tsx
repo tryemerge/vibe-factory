@@ -305,8 +305,7 @@ export function GeneralSettings() {
               })()}
             </div>
             <p className="text-sm text-muted-foreground">
-              Choose the default agent configuration to use when creating a task
-              attempt.
+              {t('settings.general.taskExecution.executor.helper')}
             </p>
           </div>
         </CardContent>
@@ -314,14 +313,14 @@ export function GeneralSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Editor</CardTitle>
+          <CardTitle>{t('settings.general.editor.title')}</CardTitle>
           <CardDescription>
-            Configure your code editing experience.
+            {t('settings.general.editor.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="editor-type">Editor Type</Label>
+            <Label htmlFor="editor-type">{t('settings.general.editor.type.label')}</Label>
             <Select
               value={config.editor.editor_type}
               onValueChange={(value: EditorType) =>
@@ -331,7 +330,7 @@ export function GeneralSettings() {
               }
             >
               <SelectTrigger id="editor-type">
-                <SelectValue placeholder="Select editor" />
+                <SelectValue placeholder={t('settings.general.editor.type.placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {Object.values(EditorType).map((editor) => (
@@ -342,7 +341,7 @@ export function GeneralSettings() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Choose your preferred code editor interface.
+              {t('settings.general.editor.type.helper')}
             </p>
           </div>
         </CardContent>
@@ -352,7 +351,7 @@ export function GeneralSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
-            GitHub Integration
+            {t('settings.general.github.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -361,7 +360,7 @@ export function GeneralSettings() {
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                   <p className="font-medium">
-                    Connected as {config.github.username}
+                    {t('settings.general.github.connected', { username: config.github.username })}
                   </p>
                   {config.github.primary_email && (
                     <p className="text-sm text-muted-foreground">
@@ -372,12 +371,12 @@ export function GeneralSettings() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      Manage <ChevronDown className="ml-1 h-4 w-4" />
+                      {t('settings.general.github.manage')} <ChevronDown className="ml-1 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={handleLogout}>
-                      Disconnect
+                      {t('settings.general.github.disconnect')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -386,8 +385,7 @@ export function GeneralSettings() {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Connect your GitHub account to access private repositories and
-                enable advanced Git operations.
+                {t('settings.general.github.helper')}
               </p>
               <Button
                 onClick={() =>
@@ -396,7 +394,7 @@ export function GeneralSettings() {
                   )
                 }
               >
-                Connect GitHub Account
+                {t('settings.general.github.connectButton')}
               </Button>
             </div>
           )}
@@ -405,9 +403,9 @@ export function GeneralSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Notifications</CardTitle>
+          <CardTitle>{t('settings.general.notifications.title')}</CardTitle>
           <CardDescription>
-            Control when and how you receive notifications.
+            {t('settings.general.notifications.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -426,16 +424,16 @@ export function GeneralSettings() {
             />
             <div className="space-y-0.5">
               <Label htmlFor="sound-enabled" className="cursor-pointer">
-                Sound Notifications
+                {t('settings.general.notifications.sound.label')}
               </Label>
               <p className="text-sm text-muted-foreground">
-                Play a sound when task attempts finish running.
+                {t('settings.general.notifications.sound.helper')}
               </p>
             </div>
           </div>
           {config.notifications.sound_enabled && (
             <div className="ml-6 space-y-2">
-              <Label htmlFor="sound-file">Sound</Label>
+              <Label htmlFor="sound-file">{t('settings.general.notifications.sound.fileLabel')}</Label>
               <div className="flex gap-2">
                 <Select
                   value={config.notifications.sound_file}
@@ -449,7 +447,7 @@ export function GeneralSettings() {
                   }
                 >
                   <SelectTrigger id="sound-file" className="flex-1">
-                    <SelectValue placeholder="Select sound" />
+                    <SelectValue placeholder={t('settings.general.notifications.sound.filePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(SoundFile).map((soundFile) => (
@@ -469,8 +467,7 @@ export function GeneralSettings() {
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Choose the sound to play when tasks complete. Click the volume
-                button to preview.
+                {t('settings.general.notifications.sound.fileHelper')}
               </p>
             </div>
           )}
@@ -489,10 +486,10 @@ export function GeneralSettings() {
             />
             <div className="space-y-0.5">
               <Label htmlFor="push-notifications" className="cursor-pointer">
-                Push Notifications
+                {t('settings.general.notifications.push.label')}
               </Label>
               <p className="text-sm text-muted-foreground">
-                Show system notifications when task attempts finish running.
+                {t('settings.general.notifications.push.helper')}
               </p>
             </div>
           </div>
@@ -501,9 +498,9 @@ export function GeneralSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Privacy</CardTitle>
+          <CardTitle>{t('settings.general.privacy.title')}</CardTitle>
           <CardDescription>
-            Help improve Vibe-Kanban by sharing anonymous usage data.
+            {t('settings.general.privacy.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -517,11 +514,10 @@ export function GeneralSettings() {
             />
             <div className="space-y-0.5">
               <Label htmlFor="analytics-enabled" className="cursor-pointer">
-                Enable Telemetry
+                {t('settings.general.privacy.telemetry.label')}
               </Label>
               <p className="text-sm text-muted-foreground">
-                Enables anonymous usage events tracking to help improve the
-                application. No prompts or project information are collected.
+                {t('settings.general.privacy.telemetry.helper')}
               </p>
             </div>
           </div>
@@ -530,9 +526,9 @@ export function GeneralSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Task Templates</CardTitle>
+          <CardTitle>{t('settings.general.taskTemplates.title')}</CardTitle>
           <CardDescription>
-            Manage global task templates that can be used across all projects.
+            {t('settings.general.taskTemplates.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -542,32 +538,32 @@ export function GeneralSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Safety & Disclaimers</CardTitle>
+          <CardTitle>{t('settings.general.safety.title')}</CardTitle>
           <CardDescription>
-            Reset acknowledgments for safety warnings and onboarding.
+            {t('settings.general.safety.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Disclaimer Acknowledgment</p>
+              <p className="font-medium">{t('settings.general.safety.disclaimer.title')}</p>
               <p className="text-sm text-muted-foreground">
-                Reset the safety disclaimer.
+                {t('settings.general.safety.disclaimer.description')}
               </p>
             </div>
             <Button variant="outline" onClick={resetDisclaimer}>
-              Reset
+              {t('settings.general.safety.disclaimer.button')}
             </Button>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Onboarding</p>
+              <p className="font-medium">{t('settings.general.safety.onboarding.title')}</p>
               <p className="text-sm text-muted-foreground">
-                Reset the onboarding flow.
+                {t('settings.general.safety.onboarding.description')}
               </p>
             </div>
             <Button variant="outline" onClick={resetOnboarding}>
-              Reset
+              {t('settings.general.safety.onboarding.button')}
             </Button>
           </div>
         </CardContent>

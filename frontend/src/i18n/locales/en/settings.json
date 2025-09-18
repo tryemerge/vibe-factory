@@ -122,7 +122,12 @@
     "mcp": {
       "title": "MCP Server Configuration",
       "loading": "Loading MCP configuration...",
-      "applying": "Applying configuration..."
+      "applying": "Applying configuration...",
+      "save": {
+        "button": "Save MCP Configuration",
+        "success": "Settings Saved!",
+        "loading": "Loading current MCP server configuration..."
+      }
     }
   }
 }

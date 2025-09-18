@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -32,6 +33,7 @@ import { mcpServersApi } from '@/lib/api';
 import { McpConfigStrategyGeneral } from '@/lib/mcp-strategies';
 
 export function McpSettings() {
+  const { t } = useTranslation('settings');
   const { config, profiles } = useUserSystem();
   const [mcpServers, setMcpServers] = useState('{}');
   const [mcpConfig, setMcpConfig] = useState<McpConfig | null>(null);
@@ -244,7 +246,7 @@ export function McpSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>MCP Server Configuration</CardTitle>
+          <CardTitle>{t('settings.mcp.title')}</CardTitle>
           <CardDescription>
             Configure Model Context Protocol servers to extend coding agent
             capabilities with custom tools and resources.
@@ -310,7 +312,7 @@ export function McpSettings() {
                 id="mcp-servers"
                 placeholder={
                   mcpLoading
-                    ? 'Loading current configuration...'
+                    ? t('settings.mcp.save.loading')
                     : '{\n  "server-name": {\n    "type": "stdio",\n    "command": "your-command",\n    "args": ["arg1", "arg2"]\n  }\n}'
                 }
                 value={mcpLoading ? 'Loading...' : mcpServers}
@@ -325,7 +327,7 @@ export function McpSettings() {
               )}
               <div className="text-sm text-muted-foreground">
                 {mcpLoading ? (
-                  'Loading current MCP server configuration...'
+                  t('settings.mcp.save.loading')
                 ) : (
                   <span>
                     Changes will be saved to:
@@ -430,7 +432,7 @@ export function McpSettings() {
           >
             {mcpApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {success && <span className="mr-2">✓</span>}
-            {success ? 'Settings Saved!' : 'Save MCP Configuration'}
+            {success ? t('settings.mcp.save.success') : t('settings.mcp.save.button')}
           </Button>
         </div>
       </div>
