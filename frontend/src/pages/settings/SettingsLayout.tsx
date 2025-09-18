@@ -2,7 +2,6 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Settings, Cpu, Server } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const settingsNavigation = [
   {
@@ -31,9 +30,6 @@ export function SettingsLayout() {
             <h2 className="px-3 py-2 text-lg font-semibold">
               {t('settings.layout.nav.title')}
             </h2>
-            <div className="px-3 py-2">
-              <LanguageSwitcher />
-            </div>
             <nav className="space-y-1">
               {settingsNavigation.map((item) => {
                 const Icon = item.icon;

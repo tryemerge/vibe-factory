@@ -9,37 +9,51 @@ import jaCommon from './locales/ja/common.json';
 import jaSettings from './locales/ja/settings.json';
 
 const resources = {
-  en: {
-    common: enCommon,
-    settings: enSettings,
-  },
-  ja: {
-    common: jaCommon,
-    settings: jaSettings,
-  },
+en: {
+common: enCommon,
+settings: enSettings,
+},
+ja: {
+common: jaCommon,
+settings: jaSettings,
+},
 };
 
 i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: 'en',
-    defaultNS: 'common',
-    debug: import.meta.env.DEV,
+.use(LanguageDetector)
+.use(initReactI18next)
+.init({
+resources,
+fallbackLng: 'en',
+defaultNS: 'common',
+debug: import.meta.env.DEV,
 
-    interpolation: {
-      escapeValue: false, // React already escapes
-    },
+interpolation: {
+escapeValue: false, // React already escapes
+},
 
-    react: {
-      useSuspense: false, // Avoid suspense for now to simplify initial setup
-    },
+react: {
+useSuspense: false, // Avoid suspense for now to simplify initial setup
+},
 
-    detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: ['localStorage'],
-    },
-  });
+detection: {
+order: ['navigator', 'htmlTag'],
+caches: [], // Disable localStorage cache - we'll handle this via config
+},
+});
+
+// Function to update language from config
+export const updateLanguageFromConfig = (configLanguage: string) => {
+  if (configLanguage === 'BROWSER') {
+    // Use browser detection
+    const detected = i18n.services.languageDetector?.detect();
+    const detectedLang = Array.isArray(detected) ? detected[0] : detected;
+    i18n.changeLanguage(detectedLang || 'en');
+  } else {
+    // Use explicit language selection
+    const langCode = configLanguage.toLowerCase();
+    i18n.changeLanguage(langCode);
+  }
+};
 
 export default i18n;

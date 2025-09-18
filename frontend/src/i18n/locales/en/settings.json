@@ -26,6 +26,11 @@
           "label": "Theme",
           "placeholder": "Select theme",
           "helper": "Choose your preferred color scheme."
+        },
+        "language": {
+          "label": "Language",
+          "placeholder": "Select language",
+          "helper": "Choose your preferred language. Browser Default follows your system language."
         }
       },
       "taskExecution": {

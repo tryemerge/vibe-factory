@@ -31,6 +31,7 @@ import {
   ExecutorProfileId,
   SoundFile,
   ThemeMode,
+  UiLanguage,
 } from 'shared/types';
 
 import { toPrettyCase } from '@/utils/string';
@@ -184,6 +185,28 @@ export function GeneralSettings() {
             </Select>
             <p className="text-sm text-muted-foreground">
               {t('settings.general.appearance.theme.helper')}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="language">{t('settings.general.appearance.language.label')}</Label>
+            <Select
+              value={config.language}
+              onValueChange={(value: UiLanguage) =>
+                updateConfig({ language: value })
+              }
+            >
+              <SelectTrigger id="language">
+                <SelectValue placeholder={t('settings.general.appearance.language.placeholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BROWSER">{t('language.browserDefault')}</SelectItem>
+                <SelectItem value="EN">{t('language.en')}</SelectItem>
+                <SelectItem value="JA">{t('language.ja')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {t('settings.general.appearance.language.helper')}
             </p>
           </div>
         </CardContent>
