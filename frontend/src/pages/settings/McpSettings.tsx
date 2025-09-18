@@ -122,7 +122,11 @@ export function McpSettings() {
         if (err instanceof SyntaxError) {
           setMcpError(t('settings.mcp.errors.invalidJson'));
         } else {
-          setMcpError(err instanceof Error ? err.message : t('settings.mcp.errors.validationError'));
+          setMcpError(
+            err instanceof Error
+              ? err.message
+              : t('settings.mcp.errors.validationError')
+          );
         }
       }
     }
@@ -220,7 +224,9 @@ export function McpSettings() {
     return (
       <div className="py-8">
         <Alert variant="destructive">
-          <AlertDescription>{t('settings.mcp.errors.loadFailed')}</AlertDescription>
+          <AlertDescription>
+            {t('settings.mcp.errors.loadFailed')}
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -247,13 +253,13 @@ export function McpSettings() {
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.mcp.title')}</CardTitle>
-          <CardDescription>
-            {t('settings.mcp.description')}
-          </CardDescription>
+          <CardDescription>{t('settings.mcp.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="mcp-executor">{t('settings.mcp.labels.agent')}</Label>
+            <Label htmlFor="mcp-executor">
+              {t('settings.mcp.labels.agent')}
+            </Label>
             <Select
               value={
                 selectedProfile
@@ -268,7 +274,9 @@ export function McpSettings() {
               }}
             >
               <SelectTrigger id="mcp-executor">
-                <SelectValue placeholder={t('settings.mcp.labels.agentPlaceholder')} />
+                <SelectValue
+                  placeholder={t('settings.mcp.labels.agentPlaceholder')}
+                />
               </SelectTrigger>
               <SelectContent>
                 {profiles &&
@@ -304,7 +312,9 @@ export function McpSettings() {
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="mcp-servers">{t('settings.mcp.labels.serverConfig')}</Label>
+              <Label htmlFor="mcp-servers">
+                {t('settings.mcp.labels.serverConfig')}
+              </Label>
               <JSONEditor
                 id="mcp-servers"
                 placeholder={
@@ -312,7 +322,9 @@ export function McpSettings() {
                     ? t('settings.mcp.save.loading')
                     : '{\n  "server-name": {\n    "type": "stdio",\n    "command": "your-command",\n    "args": ["arg1", "arg2"]\n  }\n}'
                 }
-                value={mcpLoading ? t('settings.mcp.loading.jsonEditor') : mcpServers}
+                value={
+                  mcpLoading ? t('settings.mcp.loading.jsonEditor') : mcpServers
+                }
                 onChange={handleMcpServersChange}
                 disabled={mcpLoading}
                 minHeight={300}
