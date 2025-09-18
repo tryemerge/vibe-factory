@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# i18n regression check script
+# Compares i18next/no-literal-string violations between PR and main branch
+# Initial implementation: This script will show high violation counts until enforcement is enabled
 set -eo pipefail
 
 WORKTREE_BASE="$(mktemp -d)"
