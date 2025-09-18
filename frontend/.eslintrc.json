@@ -8,6 +8,7 @@
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:react-hooks/recommended",
+    "plugin:i18next/recommended",
     "prettier"
   ],
   "ignorePatterns": [
@@ -18,7 +19,8 @@
   "plugins": [
     "react-refresh",
     "@typescript-eslint",
-    "unused-imports"
+    "unused-imports",
+    "i18next"
   ],
   "parserOptions": {
     "ecmaVersion": "latest",
@@ -35,6 +37,32 @@
         "ignoreRestSiblings": false
       }
     ],
-    "@typescript-eslint/no-explicit-any": "warn"
-  }
+    "@typescript-eslint/no-explicit-any": "warn",
+    "i18next/no-literal-string": [
+      "warn",
+      {
+        "markupOnly": true,
+        "ignoreAttribute": [
+          "data-testid",
+          "to",
+          "href", 
+          "id",
+          "key",
+          "type",
+          "role",
+          "className",
+          "style",
+          "aria-describedby"
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.{ts,tsx}", "**/*.stories.{ts,tsx}"],
+      "rules": {
+        "i18next/no-literal-string": "off"
+      }
+    }
+  ]
 }
