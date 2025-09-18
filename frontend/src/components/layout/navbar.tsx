@@ -15,7 +15,6 @@ import {
   Menu,
   Plus,
 } from 'lucide-react';
-import { Logo } from '@/components/logo';
 import { SearchBar } from '@/components/search-bar';
 import { useSearch } from '@/contexts/search-context';
 import { openTaskForm } from '@/lib/openTaskForm';
@@ -70,11 +69,7 @@ export function Navbar() {
     <div className="border-b bg-background">
       <div className="w-full px-3">
         <div className="flex items-center h-12 py-2">
-          <div className="flex-1">
-            <Link to="/projects">
-              <Logo />
-            </Link>
-          </div>
+          <div className="flex-1" aria-hidden="true" />
 
           <SearchBar
             className="hidden sm:flex"
