@@ -320,7 +320,9 @@ export function GeneralSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="editor-type">{t('settings.general.editor.type.label')}</Label>
+            <Label htmlFor="editor-type">
+              {t('settings.general.editor.type.label')}
+            </Label>
             <Select
               value={config.editor.editor_type}
               onValueChange={(value: EditorType) =>
@@ -330,7 +332,9 @@ export function GeneralSettings() {
               }
             >
               <SelectTrigger id="editor-type">
-                <SelectValue placeholder={t('settings.general.editor.type.placeholder')} />
+                <SelectValue
+                  placeholder={t('settings.general.editor.type.placeholder')}
+                />
               </SelectTrigger>
               <SelectContent>
                 {Object.values(EditorType).map((editor) => (
@@ -360,7 +364,9 @@ export function GeneralSettings() {
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                   <p className="font-medium">
-                    {t('settings.general.github.connected', { username: config.github.username })}
+                    {t('settings.general.github.connected', {
+                      username: config.github.username,
+                    })}
                   </p>
                   {config.github.primary_email && (
                     <p className="text-sm text-muted-foreground">
@@ -371,7 +377,8 @@ export function GeneralSettings() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      {t('settings.general.github.manage')} <ChevronDown className="ml-1 h-4 w-4" />
+                      {t('settings.general.github.manage')}{' '}
+                      <ChevronDown className="ml-1 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -433,7 +440,9 @@ export function GeneralSettings() {
           </div>
           {config.notifications.sound_enabled && (
             <div className="ml-6 space-y-2">
-              <Label htmlFor="sound-file">{t('settings.general.notifications.sound.fileLabel')}</Label>
+              <Label htmlFor="sound-file">
+                {t('settings.general.notifications.sound.fileLabel')}
+              </Label>
               <div className="flex gap-2">
                 <Select
                   value={config.notifications.sound_file}
@@ -447,7 +456,11 @@ export function GeneralSettings() {
                   }
                 >
                   <SelectTrigger id="sound-file" className="flex-1">
-                    <SelectValue placeholder={t('settings.general.notifications.sound.filePlaceholder')} />
+                    <SelectValue
+                      placeholder={t(
+                        'settings.general.notifications.sound.filePlaceholder'
+                      )}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(SoundFile).map((soundFile) => (
@@ -546,7 +559,9 @@ export function GeneralSettings() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">{t('settings.general.safety.disclaimer.title')}</p>
+              <p className="font-medium">
+                {t('settings.general.safety.disclaimer.title')}
+              </p>
               <p className="text-sm text-muted-foreground">
                 {t('settings.general.safety.disclaimer.description')}
               </p>
@@ -557,7 +572,9 @@ export function GeneralSettings() {
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">{t('settings.general.safety.onboarding.title')}</p>
+              <p className="font-medium">
+                {t('settings.general.safety.onboarding.title')}
+              </p>
               <p className="text-sm text-muted-foreground">
                 {t('settings.general.safety.onboarding.description')}
               </p>

@@ -383,9 +383,7 @@ export function AgentSettings() {
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.agents.title')}</CardTitle>
-          <CardDescription>
-            {t('settings.agents.description')}
-          </CardDescription>
+          <CardDescription>{t('settings.agents.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Editor type toggle */}
@@ -396,7 +394,9 @@ export function AgentSettings() {
               onCheckedChange={(checked) => setUseFormEditor(!checked)}
               disabled={profilesLoading || !localParsedProfiles}
             />
-            <Label htmlFor="use-form-editor">{t('settings.agents.editor.formLabel')}</Label>
+            <Label htmlFor="use-form-editor">
+              {t('settings.agents.editor.formLabel')}
+            </Label>
           </div>
 
           {useFormEditor &&
@@ -406,7 +406,9 @@ export function AgentSettings() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="executor-type">{t('settings.agents.editor.agentLabel')}</Label>
+                  <Label htmlFor="executor-type">
+                    {t('settings.agents.editor.agentLabel')}
+                  </Label>
                   <Select
                     value={selectedExecutorType}
                     onValueChange={(value) => {
@@ -416,7 +418,11 @@ export function AgentSettings() {
                     }}
                   >
                     <SelectTrigger id="executor-type">
-                      <SelectValue placeholder={t('settings.agents.editor.agentPlaceholder')} />
+                      <SelectValue
+                        placeholder={t(
+                          'settings.agents.editor.agentPlaceholder'
+                        )}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.keys(localParsedProfiles.executors).map(
@@ -431,7 +437,9 @@ export function AgentSettings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="configuration">{t('settings.agents.editor.configLabel')}</Label>
+                  <Label htmlFor="configuration">
+                    {t('settings.agents.editor.configLabel')}
+                  </Label>
                   <div className="flex gap-2">
                     <Select
                       value={selectedConfiguration}
@@ -447,7 +455,11 @@ export function AgentSettings() {
                       }
                     >
                       <SelectTrigger id="configuration">
-                        <SelectValue placeholder={t('settings.agents.editor.configPlaceholder')} />
+                        <SelectValue
+                          placeholder={t(
+                            'settings.agents.editor.configPlaceholder'
+                          )}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.keys(
@@ -482,7 +494,9 @@ export function AgentSettings() {
                             {}
                         ).length <= 1
                           ? t('settings.agents.editor.deleteTitle')
-                          : t('settings.agents.editor.deleteButton', { name: selectedConfiguration })
+                          : t('settings.agents.editor.deleteButton', {
+                              name: selectedConfiguration,
+                            })
                       }
                     >
                       Delete

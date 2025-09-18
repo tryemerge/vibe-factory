@@ -432,7 +432,9 @@ export function McpSettings() {
           >
             {mcpApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {success && <span className="mr-2">✓</span>}
-            {success ? t('settings.mcp.save.success') : t('settings.mcp.save.button')}
+            {success
+              ? t('settings.mcp.save.success')
+              : t('settings.mcp.save.button')}
           </Button>
         </div>
       </div>
