@@ -495,8 +495,8 @@ impl EventService {
                                     let patch = execution_process_patch::remove(*process_id);
                                     msg_store_for_hook.push_patch(patch);
 
-                                    if let Some(task_attempt_id) = task_attempt_id {
-                                        if let Err(err) =
+                                    if let Some(task_attempt_id) = task_attempt_id
+                                        && let Err(err) =
                                             EventService::push_task_update_for_attempt(
                                                 &db.pool,
                                                 msg_store_for_hook.clone(),
@@ -509,7 +509,6 @@ impl EventService {
                                                 err
                                             );
                                         }
-                                    }
 
                                     return;
                                 }
