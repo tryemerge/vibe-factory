@@ -9,8 +9,8 @@ PATTERN="src/**/*.{ts,tsx}"
 lint_count() {
   local dir=$1
   ( cd "$dir/frontend"
-    # Run ESLint and count violations for the specific rule
-    npx eslint "$PATTERN" -f json 2>/dev/null \
+    # Use the dedicated i18n lint script
+    npm run lint:i18n -- -f json 2>/dev/null \
       | jq --arg RULE "$RULE" '[.[] | .messages[] | select(.ruleId == $RULE)] | length' \
       || echo "0"
   )
