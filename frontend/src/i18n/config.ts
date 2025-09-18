@@ -20,27 +20,27 @@ const resources = {
 };
 
 i18n
-.use(LanguageDetector)
-.use(initReactI18next)
-.init({
-resources,
-fallbackLng: 'en',
-defaultNS: 'common',
-debug: import.meta.env.DEV,
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: 'en',
+    defaultNS: 'common',
+    debug: import.meta.env.DEV,
 
-interpolation: {
-escapeValue: false, // React already escapes
-},
+    interpolation: {
+      escapeValue: false, // React already escapes
+    },
 
-react: {
-useSuspense: false, // Avoid suspense for now to simplify initial setup
-},
+    react: {
+      useSuspense: false, // Avoid suspense for now to simplify initial setup
+    },
 
-detection: {
-order: ['navigator', 'htmlTag'],
-caches: [], // Disable localStorage cache - we'll handle this via config
-},
-});
+    detection: {
+      order: ['navigator', 'htmlTag'],
+      caches: [], // Disable localStorage cache - we'll handle this via config
+    },
+  });
 
 // Debug logging in development
 if (import.meta.env.DEV) {
