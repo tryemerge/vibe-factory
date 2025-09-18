@@ -227,7 +227,7 @@ export function AgentSettings() {
         reloadSystem();
       } catch (saveError: unknown) {
         console.error('Failed to save deletion to backend:', saveError);
-        setSaveError('Failed to delete configuration. Please try again.');
+        setSaveError(t('settings.agents.errors.deleteFailed'));
       }
     } catch (error) {
       console.error('Error deleting configuration:', error);
@@ -274,7 +274,7 @@ export function AgentSettings() {
       reloadSystem();
     } catch (err: unknown) {
       console.error('Failed to save profiles:', err);
-      setSaveError('Failed to save agent configurations. Please try again.');
+      setSaveError(t('settings.agents.errors.saveFailed'));
     }
   };
 
@@ -341,7 +341,7 @@ export function AgentSettings() {
       reloadSystem();
     } catch (err: unknown) {
       console.error('Failed to save profiles:', err);
-      setSaveError('Failed to save configuration. Please try again.');
+      setSaveError(t('settings.agents.errors.saveConfigFailed'));
     }
   };
 
@@ -499,7 +499,7 @@ export function AgentSettings() {
                             })
                       }
                     >
-                      Delete
+                      {t('settings.agents.editor.deleteText')}
                     </Button>
                   </div>
                 </div>
@@ -539,7 +539,7 @@ export function AgentSettings() {
                 <JSONEditor
                   id="profiles-editor"
                   placeholder={t('settings.agents.editor.jsonPlaceholder')}
-                  value={profilesLoading ? 'Loading...' : localProfilesContent}
+                  value={profilesLoading ? t('settings.agents.editor.jsonLoading') : localProfilesContent}
                   onChange={handleProfilesChange}
                   disabled={profilesLoading}
                   minHeight={300}
