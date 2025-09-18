@@ -41,7 +41,7 @@ import { TaskTemplateManager } from '@/components/TaskTemplateManager';
 import NiceModal from '@ebay/nice-modal-react';
 
 export function GeneralSettings() {
-  const { t } = useTranslation('settings');
+  const { t } = useTranslation(['settings', 'common']);
   const {
     config,
     updateConfig,
