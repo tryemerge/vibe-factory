@@ -189,7 +189,9 @@ export function GeneralSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="language">{t('settings.general.appearance.language.label')}</Label>
+            <Label htmlFor="language">
+              {t('settings.general.appearance.language.label')}
+            </Label>
             <Select
               value={config.language}
               onValueChange={(value: UiLanguage) =>
@@ -197,10 +199,16 @@ export function GeneralSettings() {
               }
             >
               <SelectTrigger id="language">
-                <SelectValue placeholder={t('settings.general.appearance.language.placeholder')} />
+                <SelectValue
+                  placeholder={t(
+                    'settings.general.appearance.language.placeholder'
+                  )}
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="BROWSER">{t('language.browserDefault')}</SelectItem>
+                <SelectItem value="BROWSER">
+                  {t('language.browserDefault')}
+                </SelectItem>
                 <SelectItem value="EN">{t('language.en')}</SelectItem>
                 <SelectItem value="JA">{t('language.ja')}</SelectItem>
               </SelectContent>
