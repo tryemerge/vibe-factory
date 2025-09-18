@@ -207,10 +207,14 @@ export function GeneralSettings() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="BROWSER">
-                  {t('language.browserDefault')}
+                  {t('language.browserDefault', { ns: 'common', defaultValue: 'Browser Default' })}
                 </SelectItem>
-                <SelectItem value="EN">{t('language.en')}</SelectItem>
-                <SelectItem value="JA">{t('language.ja')}</SelectItem>
+                <SelectItem value="EN">
+                  {t('language.en', { ns: 'common', defaultValue: 'English' })}
+                </SelectItem>
+                <SelectItem value="JA">
+                  {t('language.ja', { ns: 'common', defaultValue: '日本語' })}
+                </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">

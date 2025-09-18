@@ -20,27 +20,35 @@ const resources = {
 };
 
 i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: 'en',
-    defaultNS: 'common',
-    debug: import.meta.env.DEV,
+.use(LanguageDetector)
+.use(initReactI18next)
+.init({
+resources,
+fallbackLng: 'en',
+defaultNS: 'common',
+debug: import.meta.env.DEV,
 
-    interpolation: {
-      escapeValue: false, // React already escapes
-    },
+interpolation: {
+escapeValue: false, // React already escapes
+},
 
-    react: {
-      useSuspense: false, // Avoid suspense for now to simplify initial setup
-    },
+react: {
+useSuspense: false, // Avoid suspense for now to simplify initial setup
+},
 
-    detection: {
-      order: ['navigator', 'htmlTag'],
-      caches: [], // Disable localStorage cache - we'll handle this via config
-    },
-  });
+detection: {
+order: ['navigator', 'htmlTag'],
+caches: [], // Disable localStorage cache - we'll handle this via config
+},
+});
+
+// Debug logging in development
+if (import.meta.env.DEV) {
+  console.log('i18n initialized:', i18n.isInitialized);
+  console.log('i18n language:', i18n.language);
+  console.log('i18n namespaces:', i18n.options.ns);
+  console.log('Common bundle loaded:', i18n.hasResourceBundle('en', 'common'));
+}
 
 // Function to update language from config
 export const updateLanguageFromConfig = (configLanguage: string) => {
