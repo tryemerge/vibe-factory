@@ -2,7 +2,7 @@ name: Test
 
 on:
   pull_request:
-    branches: [ main, vk/b1d3-introduce ]
+    branches: [ main ]
   workflow_dispatch:
 
 concurrency:
