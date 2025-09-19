@@ -13,50 +13,32 @@ lint_count() {
   local tmp
   tmp=$(mktemp)
   
-  echo "🔍 DEBUG: lint_count called with dir=$dir" >&2
-  echo "🔍 DEBUG: Checking if $dir/frontend exists..." >&2
-  ls -la "$dir/" >&2 || echo "🔍 DEBUG: Failed to list $dir/" >&2
-  
   trap 'rm -f "$tmp"' RETURN
   
   (
     set -eo pipefail
     cd "$REPO_ROOT/frontend"
-    echo "🔍 DEBUG: Running ESLint from main workspace at $(pwd)" >&2
-    echo "🔍 DEBUG: Linting files in $dir/frontend" >&2
-    
     # Use ESLint from main workspace but lint files in the target directory
     LINT_I18N=true npx eslint "$dir/frontend" \
       --ext ts,tsx \
       --format json \
       --output-file "$tmp" \
       --no-error-on-unmatched-pattern \
-      > /dev/null 2>&1 || echo "🔍 DEBUG: ESLint command failed with exit code $?" >&2
+      > /dev/null 2>&1 || true  # Don't fail on violations
   )
   
-  echo "🔍 DEBUG: ESLint output file size: $(wc -c < "$tmp")" >&2
-  echo "🔍 DEBUG: ESLint output preview:" >&2
-  head -200 "$tmp" >&2 || echo "🔍 DEBUG: Failed to read tmp file" >&2
-  
   # Parse the clean JSON file
-  local result
-  result=$(jq --arg RULE "$RULE" \
+  jq --arg RULE "$RULE" \
      '[.[].messages[] | select(.ruleId == $RULE)] | length' "$tmp" \
-     2>/dev/null || echo "0")
-  echo "🔍 DEBUG: jq result: $result" >&2
-  echo "$result"
+     || echo "0"
 }
 
 echo "▶️  Counting literal strings in PR branch..."
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-echo "🔍 DEBUG: REPO_ROOT=$REPO_ROOT" >&2
-echo "🔍 DEBUG: Current working directory: $(pwd)" >&2
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PR_COUNT=$(lint_count "$REPO_ROOT")
-echo "🔍 DEBUG: PR_COUNT=$PR_COUNT" >&2
 
 BASE_REF="${GITHUB_BASE_REF:-main}"
 echo "▶️  Checking out $BASE_REF for baseline..."
-echo "🔍 DEBUG: BASE_REF=$BASE_REF" >&2
 git fetch --depth=1 origin "$BASE_REF" 2>/dev/null || git fetch --depth=1 origin "$BASE_REF"
 git worktree add "$WORKTREE_BASE" "origin/$BASE_REF" 2>/dev/null || {
   echo "Could not create worktree, falling back to direct checkout"
@@ -69,17 +51,12 @@ git worktree add "$WORKTREE_BASE" "origin/$BASE_REF" 2>/dev/null || {
 
 # Get base count from worktree if it was created successfully
 if [ -d "$WORKTREE_BASE" ]; then
-  echo "🔍 DEBUG: Using worktree at $WORKTREE_BASE" >&2
   BASE_COUNT=$(lint_count "$WORKTREE_BASE")
-  echo "🔍 DEBUG: BASE_COUNT from worktree: $BASE_COUNT" >&2
   git worktree remove "$WORKTREE_BASE" 2>/dev/null || rm -rf "$WORKTREE_BASE"
-else
-  echo "🔍 DEBUG: No worktree created, BASE_COUNT may be from fallback" >&2
 fi
 
 # Ensure BASE_COUNT has a value
 BASE_COUNT="${BASE_COUNT:-0}"
-echo "🔍 DEBUG: Final BASE_COUNT=$BASE_COUNT" >&2
 
 echo ""
 echo "📊 I18n Violation Summary:"
