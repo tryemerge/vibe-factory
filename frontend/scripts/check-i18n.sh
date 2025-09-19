@@ -23,6 +23,17 @@ lint_count() {
     set -eo pipefail
     cd "$dir/frontend"
     echo "🔍 DEBUG: Changed to $(pwd)" >&2
+    
+    # Install dependencies if node_modules doesn't exist
+    if [ ! -d "node_modules" ]; then
+      echo "🔍 DEBUG: Installing dependencies in worktree..." >&2
+      cd "$dir" && pnpm install --frozen-lockfile --silent > /dev/null 2>&1 || {
+        echo "🔍 DEBUG: pnpm install failed, trying npm..." >&2
+        npm install --silent > /dev/null 2>&1 || echo "🔍 DEBUG: npm install also failed" >&2
+      }
+      cd "$dir/frontend"
+    fi
+    
     echo "🔍 DEBUG: Running ESLint..." >&2
     # Use npx directly and output to file to avoid npm banners
     LINT_I18N=true npx eslint . \
