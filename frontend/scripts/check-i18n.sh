@@ -38,7 +38,7 @@ PR_COUNT=$(lint_count "$PWD/..")
 
 BASE_REF="${GITHUB_BASE_REF:-main}"
 echo "▶️  Checking out $BASE_REF for baseline..."
-git fetch --depth=1 origin "$BASE_REF" 2>/dev/null || git fetch --depth=1 origin main
+git fetch --depth=1 origin "$BASE_REF" 2>/dev/null || git fetch --depth=1 origin "$BASE_REF"
 git worktree add "$WORKTREE_BASE" "origin/$BASE_REF" 2>/dev/null || {
   echo "Could not create worktree, falling back to direct checkout"
   TEMP_BRANCH="temp-i18n-check-$$"
