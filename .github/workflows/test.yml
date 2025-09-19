@@ -30,7 +30,6 @@ jobs:
         run: cd frontend && npm run lint
 
       - name: Check i18n regressions
-        continue-on-error: true  # Allow bootstrap - remove after initial merge
         env:
           GITHUB_BASE_REF: ${{ github.base_ref || 'main' }}
         run: ./scripts/check-i18n.sh
