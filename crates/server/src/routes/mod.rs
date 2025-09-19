@@ -1,7 +1,10 @@
 use axum::{
     Router,
+    http::{
+        Method,
+        header::{AUTHORIZATION, CONTENT_TYPE},
+    },
     routing::{IntoMakeService, get},
-    http::{Method, header::{AUTHORIZATION, CONTENT_TYPE}},
 };
 use tower_http::cors::{Any, CorsLayer};
 
