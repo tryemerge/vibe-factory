@@ -112,13 +112,18 @@ export type GitBranch = { name: string, is_current: boolean, is_remote: boolean,
 
 export type Diff = { change: DiffChangeKind, oldPath: string | null, newPath: string | null, oldContent: string | null, newContent: string | null, 
 /**
- * True when file contents are intentionally omitted (e.g., too large)
- */
-contentOmitted: boolean, 
-/**
  * Optional precomputed stats for omitted content
  */
-additions: number | null, deletions: number | null, };
+additions: number | null, deletions: number | null, 
+/**
+ * Optional unified diff payload when full contents are omitted.
+ *
+ * When present, the frontend can render this using @git-diff-view/react's
+ * `data={{ hunks: [unifiedDiff], oldFile, newFile }}` API. This string should
+ * contain a valid unified diff including the file header (---/+++ lines) and
+ * one or more @@ hunks.
+ */
+unifiedDiff: string | null, };
 
 export type DiffChangeKind = "added" | "deleted" | "modified" | "renamed" | "copied" | "permissionChange";
 

@@ -56,7 +56,7 @@ use services::services::{
 use tokio::{sync::RwLock, task::JoinHandle};
 use tokio_util::io::ReaderStream;
 use utils::{
-    diff::create_unified_diff_hunk,
+    diff::create_unified_diff_with_stats,
     log_msg::LogMsg,
     msg_store::MsgStore,
     text::{git_branch_id, short_uuid},
@@ -78,7 +78,7 @@ pub struct LocalContainerService {
 
 impl LocalContainerService {
     // Max cumulative content bytes allowed per diff stream
-    const MAX_CUMULATIVE_DIFF_BYTES: usize = 50 * 1024; // 50KB
+    const MAX_CUMULATIVE_DIFF_BYTES: usize = 150 * 1024; // 150KB
 
     // Apply stream-level omit policy based on cumulative bytes.
     // If adding this diff's contents exceeds the cap, strip contents and set stats.
@@ -104,28 +104,19 @@ impl LocalContainerService {
         if current.saturating_add(size) > Self::MAX_CUMULATIVE_DIFF_BYTES {
             // We will omit content for this diff. If we still have both sides loaded
             // (i.e., not already omitted by file-size guards), compute stats for UI.
-            if diff.additions.is_none() && diff.deletions.is_none() {
-                let old = diff.old_content.as_deref().unwrap_or("");
-                let new = diff.new_content.as_deref().unwrap_or("");
-                let hunk = create_unified_diff_hunk(old, new);
-                let mut add = 0usize;
-                let mut del = 0usize;
-                for line in hunk.lines() {
-                    if let Some(first) = line.chars().next() {
-                        if first == '+' {
-                            add += 1;
-                        } else if first == '-' {
-                            del += 1;
-                        }
-                    }
-                }
-                diff.additions = Some(add);
-                diff.deletions = Some(del);
-            }
-
+            let old = diff.old_content.as_deref().unwrap_or("");
+            let new = diff.new_content.as_deref().unwrap_or("");
+            let file_path = diff
+                .new_path
+                .clone()
+                .or_else(|| diff.old_path.clone())
+                .unwrap_or_default();
+            let (unified, add, del) = create_unified_diff_with_stats(&file_path, old, new);
+            diff.additions = Some(add);
+            diff.deletions = Some(del);
+            diff.unified_diff = Some(unified);
             diff.old_content = None;
             diff.new_content = None;
-            diff.content_omitted = true;
         } else {
             // safe to include; account for it
             let _ = sent_bytes.fetch_add(size, Ordering::Relaxed);
@@ -673,7 +664,7 @@ impl LocalContainerService {
         {
             let mut guard = full_sent.write().unwrap();
             for d in &initial_diffs {
-                if !d.content_omitted {
+                if d.old_content.is_some() || d.new_content.is_some() {
                     let p = GitService::diff_path(d);
                     guard.insert(p);
                 }
@@ -810,37 +801,30 @@ impl LocalContainerService {
                     if current.saturating_add(size)
                         > LocalContainerService::MAX_CUMULATIVE_DIFF_BYTES
                     {
-                        if diff.additions.is_none() && diff.deletions.is_none() {
-                            let old = diff.old_content.as_deref().unwrap_or("");
-                            let new = diff.new_content.as_deref().unwrap_or("");
-                            let hunk = create_unified_diff_hunk(old, new);
-                            let mut add = 0usize;
-                            let mut del = 0usize;
-                            for line in hunk.lines() {
-                                if let Some(first) = line.chars().next() {
-                                    if first == '+' {
-                                        add += 1;
-                                    } else if first == '-' {
-                                        del += 1;
-                                    }
-                                }
-                            }
-                            diff.additions = Some(add);
-                            diff.deletions = Some(del);
-                        }
+                        let old = diff.old_content.as_deref().unwrap_or("");
+                        let new = diff.new_content.as_deref().unwrap_or("");
+                        let file_path = diff
+                            .new_path
+                            .clone()
+                            .or_else(|| diff.old_path.clone())
+                            .unwrap_or_default();
+                        let (unified, add, del) =
+                            create_unified_diff_with_stats(&file_path, old, new);
+                        diff.additions = Some(add);
+                        diff.deletions = Some(del);
+                        diff.unified_diff = Some(unified);
                         diff.old_content = None;
                         diff.new_content = None;
-                        diff.content_omitted = true;
                     } else {
                         let _ = cumulative_bytes.fetch_add(size, Ordering::Relaxed);
                     }
                 }
             }
 
-            // If this diff would be omitted and we already sent a full-content
+            // If this diff has no inline content and we already sent a full-content
             // version of this path earlier in the stream, skip sending a
             // degrading replacement.
-            if diff.content_omitted {
+            if diff.old_content.is_none() && diff.new_content.is_none() {
                 if full_sent_paths.read().unwrap().contains(&file_path) {
                     continue;
                 }
