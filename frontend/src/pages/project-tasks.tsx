@@ -272,14 +272,13 @@ export function ProjectTasks() {
 
   useKeyOpenDetails(() => {}, { scope: Scope.KANBAN });
 
-  // Fullscreen navigation shortcuts
+  // Task navigation shortcuts (j/k)
   useKeyNavPrevTask(
     () => {
       selectPreviousTask();
     },
     {
       scope: Scope.KANBAN,
-      when: isFullscreen,
       preventDefault: true,
     }
   );
@@ -290,7 +289,6 @@ export function ProjectTasks() {
     },
     {
       scope: Scope.KANBAN,
-      when: isFullscreen,
       preventDefault: true,
     }
   );

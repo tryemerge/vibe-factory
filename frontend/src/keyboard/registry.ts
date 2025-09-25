@@ -142,20 +142,20 @@ export const keyBindings: KeyBinding[] = [
     group: 'Task Details',
   },
 
-  // Fullscreen navigation
+  // Task navigation
   {
     action: Action.NAV_PREV_TASK,
     keys: 'j',
     scopes: [Scope.KANBAN],
-    description: 'Previous task (fullscreen)',
-    group: 'Task Details',
+    description: 'Previous task',
+    group: 'Navigation',
   },
   {
     action: Action.NAV_NEXT_TASK,
     keys: 'k',
     scopes: [Scope.KANBAN],
-    description: 'Next task (fullscreen)',
-    group: 'Task Details',
+    description: 'Next task',
+    group: 'Navigation',
   },
 
   // Task actions
