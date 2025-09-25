@@ -48,11 +48,15 @@ export function TaskCard({
   const localRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen && localRef.current) {
-      localRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      localRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      localRef.current.focus();
-    }
+    if (!isOpen || !localRef.current) return;
+    const el = localRef.current;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'smooth',
+      });
+    });
   }, [isOpen]);
 
   return (
