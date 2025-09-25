@@ -14,8 +14,7 @@ export function useDiffSummary(attemptId: string | null) {
     return diffs.reduce(
       (acc, d) => {
         try {
-          // Prefer precomputed stats when provided (e.g., server-side hunks)
-          if (d.additions != null || d.deletions != null) {
+          if (d.contentOmitted) {
             acc.added += d.additions ?? 0;
             acc.deleted += d.deletions ?? 0;
             return acc;

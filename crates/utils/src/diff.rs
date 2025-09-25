@@ -20,16 +20,11 @@ pub struct Diff {
     pub new_path: Option<String>,
     pub old_content: Option<String>,
     pub new_content: Option<String>,
+    /// True when file contents are intentionally omitted (e.g., too large)
+    pub content_omitted: bool,
     /// Optional precomputed stats for omitted content
     pub additions: Option<usize>,
     pub deletions: Option<usize>,
-    /// Optional unified diff payload when full contents are omitted.
-    ///
-    /// When present, the frontend can render this using @git-diff-view/react's
-    /// `data={{ hunks: [unifiedDiff], oldFile, newFile }}` API. This string should
-    /// contain a valid unified diff including the file header (---/+++ lines) and
-    /// one or more @@ hunks.
-    pub unified_diff: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -72,53 +67,18 @@ pub fn create_unified_diff_hunk(old: &str, new: &str) -> String {
 
     out.push_str(&format!("@@ -1,{old_count} +1,{new_count} @@\n"));
 
-    let max_context = 3;
-    let mut context_lines = 0;
-
     for change in diff.iter_all_changes() {
         let sign = match change.tag() {
             ChangeTag::Equal => ' ',
             ChangeTag::Delete => '-',
             ChangeTag::Insert => '+',
         };
-        if change.tag() == ChangeTag::Equal {
-            if context_lines >= max_context {
-                continue;
-            }
-            context_lines += 1;
-        } else {
-            context_lines = 0;
-        }
         let val = change.value();
         out.push(sign);
         out.push_str(val);
     }
 
     out
-}
-
-pub fn create_unified_diff_hunks(old: &str, new: &str) -> Vec<String> {
-    // Normalize ending line feed to optimize diff output
-    let mut old = old.to_string();
-    let mut new = new.to_string();
-    if !old.ends_with('\n') {
-        old.push('\n');
-    }
-    if !new.ends_with('\n') {
-        new.push('\n');
-    }
-
-    let diff = TextDiff::from_lines(&old, &new);
-    let unified_diff = diff.unified_diff();
-
-    let mut hunks = Vec::new();
-    for hunk in unified_diff.iter_hunks() {
-        let mut hunk_output = String::new();
-        hunk_output.push_str(&hunk.to_string());
-        hunks.push(hunk_output);
-    }
-
-    hunks
 }
 
 /// Creates a full unified diff with the file path in the header.
@@ -266,25 +226,4 @@ pub fn concatenate_diff_hunks(file_path: &str, hunks: &[String]) -> String {
     }
 
     unified_diff
-}
-
-pub fn create_unified_diff_with_stats(
-    file_path: &str,
-    old: &str,
-    new: &str,
-) -> (String, usize, usize) {
-    let hunks = fix_hunk_headers(create_unified_diff_hunks(old, new));
-    let mut add = 0usize;
-    let mut del = 0usize;
-    for line in hunks.iter().flat_map(|hunk| hunk.lines()) {
-        if let Some(first) = line.chars().next() {
-            if first == '+' {
-                add += 1;
-            } else if first == '-' {
-                del += 1;
-            }
-        }
-    }
-    let unified = concatenate_diff_hunks(file_path, &hunks);
-    (unified, add, del)
 }

@@ -42,9 +42,9 @@ pub enum GitServiceError {
 #[derive(Clone)]
 pub struct GitService {}
 
-// Max inline diff size for UI (in bytes). Files larger than this will prefer
-// sending unified diff hunks instead of full contents to avoid UI crashes.
-const MAX_INLINE_DIFF_BYTES: usize = 150 * 1024; // ~150KB
+// Max inline diff size for UI (in bytes). Files larger than this will have
+// their contents omitted from the diff stream to avoid UI crashes.
+const MAX_INLINE_DIFF_BYTES: usize = 50 * 1024; // ~50KB
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -419,30 +419,46 @@ impl GitService {
                 }
 
                 // Only build old/new content if not omitted
-                let (old_path, mut old_content) = if matches!(status, Delta::Added) {
+                let (old_path, old_content) = if matches!(status, Delta::Added) {
                     (None, None)
                 } else {
-                    let details = delta
+                    let path_opt = delta
                         .old_file()
                         .path()
-                        .map(|p| self.create_file_details(p, &delta.old_file().id(), repo));
-                    (
-                        details.as_ref().and_then(|f| f.file_name.clone()),
-                        details.and_then(|f| f.content),
-                    )
+                        .map(|p| p.to_string_lossy().to_string());
+                    if content_omitted {
+                        (path_opt, None)
+                    } else {
+                        let details = delta
+                            .old_file()
+                            .path()
+                            .map(|p| self.create_file_details(p, &delta.old_file().id(), repo));
+                        (
+                            details.as_ref().and_then(|f| f.file_name.clone()),
+                            details.and_then(|f| f.content),
+                        )
+                    }
                 };
 
-                let (new_path, mut new_content) = if matches!(status, Delta::Deleted) {
+                let (new_path, new_content) = if matches!(status, Delta::Deleted) {
                     (None, None)
                 } else {
-                    let details = delta
+                    let path_opt = delta
                         .new_file()
                         .path()
-                        .map(|p| self.create_file_details(p, &delta.new_file().id(), repo));
-                    (
-                        details.as_ref().and_then(|f| f.file_name.clone()),
-                        details.and_then(|f| f.content),
-                    )
+                        .map(|p| p.to_string_lossy().to_string());
+                    if content_omitted {
+                        (path_opt, None)
+                    } else {
+                        let details = delta
+                            .new_file()
+                            .path()
+                            .map(|p| self.create_file_details(p, &delta.new_file().id(), repo));
+                        (
+                            details.as_ref().and_then(|f| f.file_name.clone()),
+                            details.and_then(|f| f.content),
+                        )
+                    }
                 };
 
                 let mut change = match status {
@@ -467,24 +483,14 @@ impl GitService {
                 }
 
                 // If contents are omitted, try to compute line stats via libgit2 Patch
-                // and also build a unified diff for UI rendering.
                 let mut additions: Option<usize> = None;
                 let mut deletions: Option<usize> = None;
-                let mut unified_diff: Option<String> = None;
-                if content_omitted {
-                    let old = old_content.as_deref().unwrap_or("");
-                    let new = new_content.as_deref().unwrap_or("");
-                    let file_path = new_path
-                        .clone()
-                        .or_else(|| old_path.clone())
-                        .unwrap_or_default();
-                    let (unified, add, del) =
-                        utils::diff::create_unified_diff_with_stats(&file_path, old, new);
-                    additions = Some(add);
-                    deletions = Some(del);
-                    unified_diff = Some(unified);
-                    old_content = None;
-                    new_content = None;
+                if content_omitted
+                    && let Ok(Some(patch)) = git2::Patch::from_diff(&diff, delta_index)
+                    && let Ok((_ctx, adds, dels)) = patch.line_stats()
+                {
+                    additions = Some(adds);
+                    deletions = Some(dels);
                 }
 
                 file_diffs.push(Diff {
@@ -493,9 +499,9 @@ impl GitService {
                     new_path,
                     old_content,
                     new_content,
+                    content_omitted,
                     additions,
                     deletions,
-                    unified_diff,
                 });
 
                 delta_index += 1;
@@ -655,7 +661,9 @@ impl GitService {
         }
 
         // Load contents only if not omitted
-        let (mut old_content, mut new_content) = {
+        let (old_content, new_content) = if content_omitted {
+            (None, None)
+        } else {
             // Load old content from base tree if possible
             let old_content = if let Some(ref oldp) = old_path_opt {
                 let rel = std::path::Path::new(oldp);
@@ -689,34 +697,15 @@ impl GitService {
             change = DiffChangeKind::PermissionChange;
         }
 
-        let mut additions: Option<usize> = None;
-        let mut deletions: Option<usize> = None;
-        let mut unified_diff: Option<String> = None;
-        if content_omitted {
-            let old = old_content.as_deref().unwrap_or("");
-            let new = new_content.as_deref().unwrap_or("");
-            let file_path = new_path_opt
-                .clone()
-                .or_else(|| old_path_opt.clone())
-                .unwrap_or_default();
-            let (unified, add, del) =
-                utils::diff::create_unified_diff_with_stats(&file_path, old, new);
-            additions = Some(add);
-            deletions = Some(del);
-            unified_diff = Some(unified);
-            old_content = None;
-            new_content = None;
-        }
-
         Diff {
             change,
             old_path: old_path_opt,
             new_path: new_path_opt,
             old_content,
             new_content,
-            additions,
-            deletions,
-            unified_diff,
+            content_omitted,
+            additions: None,
+            deletions: None,
         }
     }
 

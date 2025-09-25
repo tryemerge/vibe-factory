@@ -20,7 +20,6 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import '@/styles/diff-style-overrides.css';
-import '@/styles/edit-diff-overrides.css';
 import { attemptsApi } from '@/lib/api';
 import type { TaskAttempt } from 'shared/types';
 import { useReview, type ReviewDraft } from '@/contexts/ReviewProvider';
@@ -86,12 +85,12 @@ export default function DiffCard({
   const newLang =
     getHighLightLanguageFromPath(newName || oldName || '') || 'plaintext';
   const { label, Icon } = labelAndIcon(diff);
+  const isOmitted = !!diff.contentOmitted;
 
   // Build a diff from raw contents so the viewer can expand beyond hunks
   const oldContentSafe = diff.oldContent || '';
   const newContentSafe = diff.newContent || '';
-  const isOmitted = !diff.oldContent && !diff.newContent;
-  const isContentEqual = !isOmitted && oldContentSafe === newContentSafe;
+  const isContentEqual = oldContentSafe === newContentSafe;
 
   const diffFile = useMemo(() => {
     if (isContentEqual || isOmitted) return null;
@@ -123,12 +122,15 @@ export default function DiffCard({
     newContentSafe,
   ]);
 
-  const add = diff.additions ?? diffFile?.additionLength ?? 0;
-  const del = diff.deletions ?? diffFile?.deletionLength ?? 0;
+  const add = isOmitted
+    ? (diff.additions ?? 0)
+    : (diffFile?.additionLength ?? 0);
+  const del = isOmitted
+    ? (diff.deletions ?? 0)
+    : (diffFile?.deletionLength ?? 0);
 
   // Review functionality
   const filePath = newName || oldName || 'unknown';
-  const unifiedDiff = diff.unifiedDiff;
   const commentsForFile = useMemo(
     () => comments.filter((c) => c.filePath === filePath),
     [comments, filePath]
@@ -273,31 +275,7 @@ export default function DiffCard({
         </Button>
       </div>
 
-      {expanded && unifiedDiff && (
-        <div className={'edit-diff-container'}>
-          <DiffView
-            data={{
-              hunks: [unifiedDiff],
-              oldFile: {
-                fileName: filePath,
-                fileLang: getHighLightLanguageFromPath(filePath) || 'plaintext',
-              },
-              newFile: {
-                fileName: filePath,
-                fileLang: getHighLightLanguageFromPath(filePath) || 'plaintext',
-              },
-            }}
-            diffViewWrap={false}
-            diffViewTheme={theme}
-            diffViewHighlight
-            diffViewMode={
-              globalMode === 'split' ? DiffModeEnum.Split : DiffModeEnum.Unified
-            }
-            diffViewFontSize={12}
-          />
-        </div>
-      )}
-      {expanded && !unifiedDiff && diffFile && (
+      {expanded && diffFile && (
         <div>
           <DiffView
             diffFile={diffFile}
@@ -316,18 +294,20 @@ export default function DiffCard({
           />
         </div>
       )}
-      {expanded && !unifiedDiff && !diffFile && (
+      {expanded && !diffFile && (
         <div
           className="px-4 pb-4 text-xs font-mono"
           style={{ color: 'hsl(var(--muted-foreground) / 0.9)' }}
         >
-          {isContentEqual
-            ? diff.change === 'renamed'
-              ? 'File renamed with no content changes.'
-              : diff.change === 'permissionChange'
-                ? 'File permission changed.'
-                : 'No content changes to display.'
-            : 'Diff unavailable for this file.'}
+          {isOmitted
+            ? 'Content omitted due to file size. Open in editor to view.'
+            : isContentEqual
+              ? diff.change === 'renamed'
+                ? 'File renamed with no content changes.'
+                : diff.change === 'permissionChange'
+                  ? 'File permission changed.'
+                  : 'No content changes to display.'
+              : 'Failed to render diff for this file.'}
         </div>
       )}
     </div>
