@@ -52,7 +52,7 @@ export const useKeySubmit = createSemanticHook(Action.SUBMIT);
 export const useKeyFocusSearch = createSemanticHook(Action.FOCUS_SEARCH);
 
 /**
- * Navigation actions - arrow keys
+ * Navigation actions - arrow keys and vim keys (hjkl)
  */
 export const useKeyNavUp = createSemanticHook(Action.NAV_UP);
 export const useKeyNavDown = createSemanticHook(Action.NAV_DOWN);
@@ -84,22 +84,6 @@ export const useKeyShowHelp = createSemanticHook(Action.SHOW_HELP);
 export const useKeyToggleFullscreen = createSemanticHook(
   Action.TOGGLE_FULLSCREEN
 );
-
-/**
- * Navigate to previous task action - typically 'j' key in fullscreen
- *
- * @example
- * useKeyNavPrevTask(() => selectPreviousTask(), { scope: Scope.KANBAN, when: isFullscreen });
- */
-export const useKeyNavPrevTask = createSemanticHook(Action.NAV_PREV_TASK);
-
-/**
- * Navigate to next task action - typically 'k' key in fullscreen
- *
- * @example
- * useKeyNavNextTask(() => selectNextTask(), { scope: Scope.KANBAN, when: isFullscreen });
- */
-export const useKeyNavNextTask = createSemanticHook(Action.NAV_NEXT_TASK);
 
 /**
  * Delete task action - typically 'd' key

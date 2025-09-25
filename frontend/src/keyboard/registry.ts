@@ -18,8 +18,6 @@ export enum Action {
   OPEN_DETAILS = 'open_details',
   SHOW_HELP = 'show_help',
   TOGGLE_FULLSCREEN = 'toggle_fullscreen',
-  NAV_PREV_TASK = 'nav_prev_task',
-  NAV_NEXT_TASK = 'nav_next_task',
   DELETE_TASK = 'delete_task',
 }
 
@@ -90,28 +88,28 @@ export const keyBindings: KeyBinding[] = [
   },
   {
     action: Action.NAV_UP,
-    keys: 'up',
+    keys: ['up', 'k'],
     scopes: [Scope.KANBAN],
     description: 'Move up within column',
     group: 'Navigation',
   },
   {
     action: Action.NAV_DOWN,
-    keys: 'down',
+    keys: ['down', 'j'],
     scopes: [Scope.KANBAN],
     description: 'Move down within column',
     group: 'Navigation',
   },
   {
     action: Action.NAV_LEFT,
-    keys: 'left',
+    keys: ['left', 'h'],
     scopes: [Scope.KANBAN],
     description: 'Move to previous column',
     group: 'Navigation',
   },
   {
     action: Action.NAV_RIGHT,
-    keys: 'right',
+    keys: ['right', 'l'],
     scopes: [Scope.KANBAN],
     description: 'Move to next column',
     group: 'Navigation',
@@ -140,22 +138,6 @@ export const keyBindings: KeyBinding[] = [
     scopes: [Scope.KANBAN],
     description: 'Toggle fullscreen view',
     group: 'Task Details',
-  },
-
-  // Task navigation
-  {
-    action: Action.NAV_NEXT_TASK,
-    keys: 'j',
-    scopes: [Scope.KANBAN],
-    description: 'Next task',
-    group: 'Navigation',
-  },
-  {
-    action: Action.NAV_PREV_TASK,
-    keys: 'k',
-    scopes: [Scope.KANBAN],
-    description: 'Previous task',
-    group: 'Navigation',
   },
 
   // Task actions
