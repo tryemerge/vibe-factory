@@ -22,6 +22,9 @@ import {
   useKeyOpenDetails,
   Scope,
   useKeyToggleFullscreen,
+  useKeyNavPrevTask,
+  useKeyNavNextTask,
+  useKeyDeleteTask,
 } from '@/keyboard';
 
 import {
@@ -268,6 +271,42 @@ export function ProjectTasks() {
   );
 
   useKeyOpenDetails(() => {}, { scope: Scope.KANBAN });
+
+  // Fullscreen navigation shortcuts
+  useKeyNavPrevTask(
+    () => {
+      selectPreviousTask();
+    },
+    {
+      scope: Scope.KANBAN,
+      when: isFullscreen,
+      preventDefault: true,
+    }
+  );
+
+  useKeyNavNextTask(
+    () => {
+      selectNextTask();
+    },
+    {
+      scope: Scope.KANBAN,
+      when: isFullscreen,
+      preventDefault: true,
+    }
+  );
+
+  // Delete task shortcut
+  useKeyDeleteTask(
+    () => {
+      if (selectedTask) {
+        handleDeleteTask(selectedTask.id);
+      }
+    },
+    {
+      scope: Scope.KANBAN,
+      preventDefault: true,
+    }
+  );
 
   // Full screen
 

@@ -84,3 +84,27 @@ export const useKeyShowHelp = createSemanticHook(Action.SHOW_HELP);
 export const useKeyToggleFullscreen = createSemanticHook(
   Action.TOGGLE_FULLSCREEN
 );
+
+/**
+ * Navigate to previous task action - typically 'j' key in fullscreen
+ *
+ * @example
+ * useKeyNavPrevTask(() => selectPreviousTask(), { scope: Scope.KANBAN, when: isFullscreen });
+ */
+export const useKeyNavPrevTask = createSemanticHook(Action.NAV_PREV_TASK);
+
+/**
+ * Navigate to next task action - typically 'k' key in fullscreen
+ *
+ * @example
+ * useKeyNavNextTask(() => selectNextTask(), { scope: Scope.KANBAN, when: isFullscreen });
+ */
+export const useKeyNavNextTask = createSemanticHook(Action.NAV_NEXT_TASK);
+
+/**
+ * Delete task action - typically 'd' key
+ *
+ * @example
+ * useKeyDeleteTask(() => handleDeleteTask(selectedTask), { scope: Scope.KANBAN });
+ */
+export const useKeyDeleteTask = createSemanticHook(Action.DELETE_TASK);

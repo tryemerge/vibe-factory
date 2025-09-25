@@ -18,6 +18,9 @@ export enum Action {
   OPEN_DETAILS = 'open_details',
   SHOW_HELP = 'show_help',
   TOGGLE_FULLSCREEN = 'toggle_fullscreen',
+  NAV_PREV_TASK = 'nav_prev_task',
+  NAV_NEXT_TASK = 'nav_next_task',
+  DELETE_TASK = 'delete_task',
 }
 
 export interface KeyBinding {
@@ -136,6 +139,31 @@ export const keyBindings: KeyBinding[] = [
     keys: 'enter',
     scopes: [Scope.KANBAN],
     description: 'Toggle fullscreen view',
+    group: 'Task Details',
+  },
+
+  // Fullscreen navigation
+  {
+    action: Action.NAV_PREV_TASK,
+    keys: 'j',
+    scopes: [Scope.KANBAN],
+    description: 'Previous task (fullscreen)',
+    group: 'Task Details',
+  },
+  {
+    action: Action.NAV_NEXT_TASK,
+    keys: 'k',
+    scopes: [Scope.KANBAN],
+    description: 'Next task (fullscreen)',
+    group: 'Task Details',
+  },
+
+  // Task actions
+  {
+    action: Action.DELETE_TASK,
+    keys: 'd',
+    scopes: [Scope.KANBAN],
+    description: 'Delete selected task',
     group: 'Task Details',
   },
 ];
