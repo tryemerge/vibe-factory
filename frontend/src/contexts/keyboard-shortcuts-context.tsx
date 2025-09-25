@@ -48,6 +48,17 @@ export function KeyboardShortcutsProvider({
     shortcutsRef.current = shortcuts;
   }, [shortcuts]);
 
+  /**
+   * Create a stable identity for keys to enable content-based conflict detection
+   */
+  function keysIdentity(keys: string | string[]) {
+    if (Array.isArray(keys)) {
+      // normalize: lower-case and sort for a stable order
+      return keys.map(k => k.toLowerCase()).sort().join('|');
+    }
+    return keys.toLowerCase();
+  }
+
   const register = useCallback(
     (config: ShortcutConfig) => {
       const id = `shortcut-${idCounter.current++}`;
@@ -55,11 +66,11 @@ export function KeyboardShortcutsProvider({
 
       // Development-only conflict detection using ref to avoid dependency cycle
       if (import.meta.env.DEV) {
+        const newScope = config.scope || 'global';
+        const newKeysId = keysIdentity(config.keys);
         const conflictingShortcut = shortcutsRef.current.find((existing) => {
-          const sameScope =
-            (existing.scope || 'global') === (config.scope || 'global');
-          const sameKeys =
-            JSON.stringify(existing.keys) === JSON.stringify(config.keys);
+          const sameScope = (existing.scope || 'global') === newScope;
+          const sameKeys = keysIdentity(existing.keys) === newKeysId;
           return sameScope && sameKeys;
         });
 
@@ -68,7 +79,7 @@ export function KeyboardShortcutsProvider({
             `Keyboard shortcut conflict detected!`,
             `\nExisting: ${conflictingShortcut.description} (${conflictingShortcut.keys})`,
             `\nNew: ${config.description} (${config.keys})`,
-            `\nScope: ${config.scope || 'global'}`
+            `\nScope: ${newScope}`
           );
         }
       }

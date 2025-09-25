@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import {
   useKeyboardShortcutsRegistry,
@@ -10,6 +10,17 @@ export interface KeyboardShortcutOptions {
   preventDefault?: boolean;
 }
 
+/**
+ * Create a stable identity for keys to prevent unnecessary re-registrations
+ */
+function keysIdentity(keys: string | string[]) {
+  if (Array.isArray(keys)) {
+    // normalize: lower-case and sort for a stable order
+    return keys.map(k => k.toLowerCase()).sort().join('|');
+  }
+  return keys.toLowerCase();
+}
+
 export function useKeyboardShortcut(
   config: ShortcutConfig,
   options: KeyboardShortcutOptions = {}
@@ -19,6 +30,12 @@ export function useKeyboardShortcut(
 
   const { keys, callback, when = true, description, group, scope } = config;
   const { enableOnContentEditable = false, preventDefault = false } = options;
+
+  // Stable identity for keys
+  const keysId = useMemo(() => keysIdentity(keys), [keys]);
+
+  // Provide a stable array reference for useHotkeys
+  const memoKeys = useMemo(() => keys, [keysId]);
 
   // Keep latest callback/when without forcing re-register
   const callbackRef = useRef(callback);
@@ -51,11 +68,11 @@ export function useKeyboardShortcut(
       unregisterRef.current?.();
       unregisterRef.current = null;
     };
-  }, [register, keys, description, group, scope]);
+  }, [register, keysId, description, group, scope]);
 
   // Bind the actual keyboard handling
   useHotkeys(
-    keys,
+    memoKeys,
     (event) => {
       const w = whenRef.current;
       const enabled = typeof w === 'function' ? !!w() : !!w;
@@ -67,6 +84,6 @@ export function useKeyboardShortcut(
       preventDefault,
       scopes: scope ? [scope] : ['*'],
     },
-    [keys, scope] // handler uses refs; only rebinding when identity changes
+    [keysId, scope] // depend on identity, not array reference
   );
 }
