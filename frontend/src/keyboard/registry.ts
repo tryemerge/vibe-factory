@@ -144,17 +144,17 @@ export const keyBindings: KeyBinding[] = [
 
   // Task navigation
   {
-    action: Action.NAV_PREV_TASK,
+    action: Action.NAV_NEXT_TASK,
     keys: 'j',
     scopes: [Scope.KANBAN],
-    description: 'Previous task',
+    description: 'Next task',
     group: 'Navigation',
   },
   {
-    action: Action.NAV_NEXT_TASK,
+    action: Action.NAV_PREV_TASK,
     keys: 'k',
     scopes: [Scope.KANBAN],
-    description: 'Next task',
+    description: 'Previous task',
     group: 'Navigation',
   },
 
