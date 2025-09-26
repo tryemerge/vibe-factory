@@ -18,8 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { templatesApi, imagesApi, projectsApi, attemptsApi } from '@/lib/api';
+import { imagesApi, attemptsApi } from '@/lib/api';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
+import { useProjectBranches } from '@/hooks/useProjectBranches';
+import { useTemplates } from '@/hooks/useTemplates';
 import { useUserSystem } from '@/components/config-provider';
 import { ExecutorProfileSelector } from '@/components/settings';
 import BranchSelector from '@/components/tasks/BranchSelector';
@@ -27,7 +29,6 @@ import type {
   TaskStatus,
   TaskTemplate,
   ImageResponse,
-  GitBranch,
   ExecutorProfileId,
 } from 'shared/types';
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
@@ -69,21 +70,28 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
     const [status, setStatus] = useState<TaskStatus>('todo');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmittingAndStart, setIsSubmittingAndStart] = useState(false);
-    const [templates, setTemplates] = useState<TaskTemplate[]>([]);
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [showDiscardWarning, setShowDiscardWarning] = useState(false);
     const [images, setImages] = useState<ImageResponse[]>([]);
     const [newlyUploadedImageIds, setNewlyUploadedImageIds] = useState<
       string[]
     >([]);
-    const [branches, setBranches] = useState<GitBranch[]>([]);
     const [selectedBranch, setSelectedBranch] = useState<string>('');
+    const [parentBranch, setParentBranch] = useState<string | null>(null);
     const [selectedExecutorProfile, setSelectedExecutorProfile] =
       useState<ExecutorProfileId | null>(null);
     const [quickstartExpanded, setQuickstartExpanded] =
       useState<boolean>(false);
 
     const isEditMode = Boolean(task);
+
+    const { templates } = useTemplates(projectId, {
+      enabled: modal.visible && !isEditMode,
+    });
+
+    const { branches, pickBranch } = useProjectBranches(projectId, {
+      enabled: modal.visible && !isEditMode,
+    });
 
     // Check if there's any content that would be lost
     const hasUnsavedChanges = useCallback(() => {
@@ -172,40 +180,28 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       system.config?.executor_profile,
     ]);
 
-    // Fetch templates and branches when dialog opens in create mode
     useEffect(() => {
-      if (modal.visible && !isEditMode && projectId) {
-        // Fetch templates and branches
-        Promise.all([
-          templatesApi.listByProject(projectId),
-          templatesApi.listGlobal(),
-          projectsApi.getBranches(projectId),
-        ])
-          .then(([projectTemplates, globalTemplates, projectBranches]) => {
-            // Combine templates with project templates first
-            setTemplates([...projectTemplates, ...globalTemplates]);
-
-            // Set branches and default to initialBaseBranch if provided, otherwise current branch
-            setBranches(projectBranches);
-
-            if (
-              initialBaseBranch &&
-              projectBranches.some((b) => b.name === initialBaseBranch)
-            ) {
-              // Use initialBaseBranch if it exists in the project branches (for spinoff)
-              setSelectedBranch(initialBaseBranch);
-            } else {
-              // Default behavior: use current branch or first available
-              const currentBranch = projectBranches.find((b) => b.is_current);
-              const defaultBranch = currentBranch || projectBranches[0];
-              if (defaultBranch) {
-                setSelectedBranch(defaultBranch.name);
-              }
-            }
-          })
-          .catch(console.error);
+      if (!modal.visible || isEditMode) {
+        return;
       }
-    }, [modal.visible, isEditMode, projectId, initialBaseBranch]);
+
+      const nextBranch = pickBranch(
+        selectedBranch,
+        initialBaseBranch,
+        parentBranch
+      );
+
+      if (nextBranch !== selectedBranch) {
+        setSelectedBranch(nextBranch ?? '');
+      }
+    }, [
+      modal.visible,
+      isEditMode,
+      pickBranch,
+      initialBaseBranch,
+      parentBranch,
+      selectedBranch,
+    ]);
 
     // Fetch parent base branch when parentTaskAttemptId is provided
     useEffect(() => {
@@ -213,28 +209,20 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         modal.visible &&
         !isEditMode &&
         parentTaskAttemptId &&
-        !initialBaseBranch &&
-        branches.length > 0
+        !initialBaseBranch
       ) {
         attemptsApi
           .get(parentTaskAttemptId)
           .then((attempt) => {
-            const parentBranch = attempt.branch || attempt.target_branch;
-            if (parentBranch && branches.some((b) => b.name === parentBranch)) {
-              setSelectedBranch(parentBranch);
-            }
+            setParentBranch(attempt.branch || attempt.target_branch || null);
           })
           .catch(() => {
-            // Silently fail, will use current branch fallback
+            setParentBranch(null);
           });
+      } else {
+        setParentBranch(null);
       }
-    }, [
-      modal.visible,
-      isEditMode,
-      parentTaskAttemptId,
-      initialBaseBranch,
-      branches,
-    ]);
+    }, [modal.visible, isEditMode, parentTaskAttemptId, initialBaseBranch]);
 
     // Set default executor from config (following TaskDetailsToolbar pattern)
     useEffect(() => {

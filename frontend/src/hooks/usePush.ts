@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { attemptsApi } from '@/lib/api';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 
 export function usePush(
   attemptId?: string,
@@ -15,7 +16,9 @@ export function usePush(
     },
     onSuccess: () => {
       // A push only affects remote status; invalidate the same branchStatus
-      queryClient.invalidateQueries({ queryKey: ['branchStatus', attemptId] });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.branchStatus(attemptId!),
+      });
       onSuccess?.();
     },
     onError: (err) => {

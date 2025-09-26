@@ -10,7 +10,6 @@ import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
 import { ExecutorProfileSelector } from '@/components/settings';
 
-import { showModal } from '@/lib/modals';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 
@@ -18,11 +17,10 @@ type Props = {
   task: Task;
   branches: GitBranch[];
   taskAttempts: TaskAttempt[];
-  createAttemptBranch: string | null;
   selectedProfile: ExecutorProfileId | null;
   selectedBranch: string | null;
   setIsInCreateAttemptMode: Dispatch<SetStateAction<boolean>>;
-  setCreateAttemptBranch: (branch: string | null) => void;
+  setSelectedBranch: Dispatch<SetStateAction<string | null>>;
   setSelectedProfile: Dispatch<SetStateAction<ExecutorProfileId | null>>;
   availableProfiles: Record<string, ExecutorConfig> | null;
   selectedAttempt: TaskAttempt | null;
@@ -32,11 +30,10 @@ function CreateAttempt({
   task,
   branches,
   taskAttempts,
-  createAttemptBranch,
   selectedProfile,
   selectedBranch,
   setIsInCreateAttemptMode,
-  setCreateAttemptBranch,
+  setSelectedBranch,
   setSelectedProfile,
   availableProfiles,
   selectedAttempt,
@@ -44,66 +41,27 @@ function CreateAttempt({
   const { isAttemptRunning } = useAttemptExecution(selectedAttempt?.id);
   const { createAttempt, isCreating } = useAttemptCreation(task.id);
 
-  // Create attempt logic
-  const actuallyCreateAttempt = useCallback(
-    async (profile: ExecutorProfileId, baseBranch?: string) => {
-      const effectiveBaseBranch = baseBranch || selectedBranch;
-
-      if (!effectiveBaseBranch) {
-        throw new Error('Base branch is required to create an attempt');
-      }
-
-      await createAttempt({
-        profile,
-        baseBranch: effectiveBaseBranch,
-      });
-    },
-    [createAttempt, selectedBranch]
-  );
-
-  // Handler for Enter key or Start button
-  const onCreateNewAttempt = useCallback(
-    async (
-      profile: ExecutorProfileId,
-      baseBranch?: string,
-      isKeyTriggered?: boolean
-    ) => {
-      if (task.status === 'todo' && isKeyTriggered) {
-        try {
-          const result = await showModal<'confirmed' | 'canceled'>(
-            'create-attempt-confirm',
-            {
-              title: 'Start New Attempt?',
-              message:
-                'Are you sure you want to start a new attempt for this task? This will create a new session and branch.',
-            }
-          );
-
-          if (result === 'confirmed') {
-            await actuallyCreateAttempt(profile, baseBranch);
-            setIsInCreateAttemptMode(false);
-          }
-        } catch (error) {
-          // User cancelled - do nothing
-        }
-      } else {
-        await actuallyCreateAttempt(profile, baseBranch);
-        setIsInCreateAttemptMode(false);
-      }
-    },
-    [task.status, actuallyCreateAttempt, setIsInCreateAttemptMode]
-  );
-
   const handleExitCreateAttemptMode = () => {
     setIsInCreateAttemptMode(false);
   };
 
-  const handleCreateAttempt = () => {
-    if (!selectedProfile) {
+  const handleCreateAttempt = useCallback(async () => {
+    if (!selectedProfile || !selectedBranch) {
       return;
     }
-    onCreateNewAttempt(selectedProfile, createAttemptBranch || undefined);
-  };
+
+    await createAttempt({
+      profile: selectedProfile,
+      baseBranch: selectedBranch,
+    });
+
+    setIsInCreateAttemptMode(false);
+  }, [
+    selectedProfile,
+    selectedBranch,
+    createAttempt,
+    setIsInCreateAttemptMode,
+  ]);
 
   return (
     <div className="">
@@ -150,8 +108,8 @@ function CreateAttempt({
             </Label>
             <BranchSelector
               branches={branches}
-              selectedBranch={createAttemptBranch}
-              onBranchSelect={setCreateAttemptBranch}
+              selectedBranch={selectedBranch}
+              onBranchSelect={(branch) => setSelectedBranch(branch)}
               placeholder="Select branch"
             />
           </div>
@@ -162,14 +120,14 @@ function CreateAttempt({
               onClick={handleCreateAttempt}
               disabled={
                 !selectedProfile ||
-                !createAttemptBranch ||
+                !selectedBranch ||
                 isAttemptRunning ||
                 isCreating
               }
               size="sm"
               className="w-full text-xs gap-2 justify-center bg-black text-white hover:bg-black/90"
               title={
-                !createAttemptBranch
+                !selectedBranch
                   ? 'Base branch is required'
                   : !selectedProfile
                     ? 'Coding agent is required'

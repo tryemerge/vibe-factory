@@ -4,6 +4,7 @@ import { attemptsApi, executionProcessesApi } from '@/lib/api';
 import { useTaskStopping } from '@/stores/useTaskDetailsUiStore';
 import type { AttemptData } from '@/lib/types';
 import type { ExecutionProcess } from 'shared/types';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 
 export function useAttemptExecution(attemptId?: string, taskId?: string) {
   const queryClient = useQueryClient();
@@ -81,7 +82,7 @@ export function useAttemptExecution(attemptId?: string, taskId?: string) {
 
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({
-        queryKey: ['executionProcesses', attemptId],
+        queryKey: QUERY_KEYS.executionProcesses(attemptId!),
       });
     } catch (error) {
       console.error('Failed to stop executions:', error);

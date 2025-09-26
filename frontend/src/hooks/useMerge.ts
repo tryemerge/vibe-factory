@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { attemptsApi } from '@/lib/api';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 
 export function useMerge(
   attemptId?: string,
@@ -15,10 +16,9 @@ export function useMerge(
     },
     onSuccess: () => {
       // Refresh attempt-specific branch information
-      queryClient.invalidateQueries({ queryKey: ['branchStatus', attemptId] });
-
-      // If a merge can change the list of branches shown elsewhere
-      queryClient.invalidateQueries({ queryKey: ['projectBranches'] });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.branchStatus(attemptId!),
+      });
 
       onSuccess?.();
     },

@@ -8,3 +8,5 @@ export { useMerge } from './useMerge';
 export { usePush } from './usePush';
 export { useKeyboardShortcut } from './useKeyboardShortcut';
 export { useAttemptConflicts } from './useAttemptConflicts';
+export { useProjectBranches } from './useProjectBranches';
+export { useTemplates } from './useTemplates';
