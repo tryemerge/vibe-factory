@@ -33,6 +33,7 @@ import { AppWithStyleOverride } from '@/utils/style-override';
 import { WebviewContextMenu } from '@/vscode/ContextMenu';
 import { DevBanner } from '@/components/DevBanner';
 import NiceModal from '@ebay/nice-modal-react';
+import { showModal, hideModal, DialogType } from '@/lib/modals';
 import { OnboardingResult } from './components/dialogs/global/OnboardingDialog';
 
 const SentryRoutes = Sentry.withSentryReactRouterV6Routing(Routes);
@@ -90,35 +91,35 @@ function AppContent() {
       if (!config || cancelled) return;
 
       if (!config.disclaimer_acknowledged) {
-        await NiceModal.show('disclaimer');
+        await showModal(DialogType.Disclaimer);
         await handleDisclaimerAccept();
-        await NiceModal.hide('disclaimer');
+        await hideModal(DialogType.Disclaimer);
       }
 
       if (!config.onboarding_acknowledged) {
         const onboardingResult: OnboardingResult =
-          await NiceModal.show('onboarding');
+          await showModal(DialogType.Onboarding);
         await handleOnboardingComplete(onboardingResult);
-        await NiceModal.hide('onboarding');
+        await hideModal(DialogType.Onboarding);
       }
 
       if (!config.github_login_acknowledged) {
-        await NiceModal.show('github-login');
+        await showModal(DialogType.GitHubLogin);
         await handleGitHubLoginComplete();
-        await NiceModal.hide('github-login');
+        await hideModal(DialogType.GitHubLogin);
       }
 
       if (!config.telemetry_acknowledged) {
         const analyticsEnabled: boolean =
-          await NiceModal.show('privacy-opt-in');
+          await showModal(DialogType.PrivacyOptIn);
         await handleTelemetryOptIn(analyticsEnabled);
-        await NiceModal.hide('privacy-opt-in');
+        await hideModal(DialogType.PrivacyOptIn);
       }
 
       if (config.show_release_notes) {
-        await NiceModal.show('release-notes');
+        await showModal(DialogType.ReleaseNotes);
         await handleReleaseNotesClose();
-        await NiceModal.hide('release-notes');
+        await hideModal(DialogType.ReleaseNotes);
       }
     };
 

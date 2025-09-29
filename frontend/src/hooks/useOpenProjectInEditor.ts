@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { projectsApi } from '@/lib/api';
-import NiceModal from '@ebay/nice-modal-react';
+import { showModal, DialogType } from '@/lib/modals';
 import type { EditorType, Project } from 'shared/types';
 
 export function useOpenProjectInEditor(
@@ -19,9 +19,9 @@ export function useOpenProjectInEditor(
           if (onShowEditorDialog) {
             onShowEditorDialog();
           } else {
-            NiceModal.show('project-editor-selection', {
+            showModal(DialogType.ProjectEditorSelection, {
               selectedProject: project,
-            });
+            } as Record<string, unknown>);
           }
         }
       }

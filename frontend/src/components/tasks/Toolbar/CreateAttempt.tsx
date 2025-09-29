@@ -10,7 +10,7 @@ import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
 import { ExecutorProfileSelector } from '@/components/settings';
 
-import { showModal } from '@/lib/modals';
+import { showModal, DialogType } from '@/lib/modals';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 
@@ -71,7 +71,7 @@ function CreateAttempt({
       if (task.status === 'todo' && isKeyTriggered) {
         try {
           const result = await showModal<'confirmed' | 'canceled'>(
-            'create-attempt-confirm',
+            DialogType.Confirm,
             {
               title: 'Start New Attempt?',
               message:

@@ -43,7 +43,7 @@ import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { useDevServer } from '@/hooks/useDevServer';
 import { useRebase } from '@/hooks/useRebase';
 import { useMerge } from '@/hooks/useMerge';
-import NiceModal from '@ebay/nice-modal-react';
+import { showModal, DialogType } from '@/lib/modals';
 import { Err } from '@/lib/api';
 import type { GitOperationError } from 'shared/types';
 import { displayConflictOpLabel } from '@/lib/conflicts';
@@ -53,7 +53,6 @@ import { useUserSystem } from '@/components/config-provider.tsx';
 import { writeClipboardViaBridge } from '@/vscode/bridge';
 import { useProcessSelection } from '@/contexts/ProcessSelectionContext';
 import { openTaskForm } from '@/lib/openTaskForm';
-import { showModal } from '@/lib/modals';
 
 // Helper function to get the display name for different editor types
 function getEditorDisplayName(editorType: string): string {
@@ -260,11 +259,11 @@ function CurrentAttempt({
       return;
     }
 
-    NiceModal.show('create-pr', {
+    showModal(DialogType.CreatePR, {
       attempt: selectedAttempt,
       task,
       projectId,
-    });
+    } as Record<string, unknown>);
   };
 
   // Refresh branch status when a process completes (e.g., rebase resolved by agent)

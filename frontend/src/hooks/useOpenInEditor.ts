@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { attemptsApi } from '@/lib/api';
-import NiceModal from '@ebay/nice-modal-react';
+import { showModal, DialogType } from '@/lib/modals';
 import type { EditorType, TaskAttempt } from 'shared/types';
 
 export function useOpenInEditor(
@@ -18,7 +18,7 @@ export function useOpenInEditor(
           if (onShowEditorDialog) {
             onShowEditorDialog();
           } else {
-            NiceModal.show('editor-selection', { selectedAttempt: attempt });
+            showModal(DialogType.EditorSelection, { selectedAttempt: attempt } as Record<string, unknown>);
           }
         }
       } catch (err) {
@@ -27,7 +27,7 @@ export function useOpenInEditor(
           if (onShowEditorDialog) {
             onShowEditorDialog();
           } else {
-            NiceModal.show('editor-selection', { selectedAttempt: attempt });
+            showModal(DialogType.EditorSelection, { selectedAttempt: attempt } as Record<string, unknown>);
           }
         }
       }

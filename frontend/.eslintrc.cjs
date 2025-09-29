@@ -53,12 +53,60 @@ module.exports = {
           },
         ]
       : 'off',
+    // Prevent direct NiceModal usage - use lib/modals wrappers instead
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: '@ebay/nice-modal-react',
+            message: 'Use showModal, hideModal, registerModal from @/lib/modals instead of importing NiceModal directly.',
+          },
+        ],
+      },
+    ],
+    'no-restricted-properties': [
+      'error',
+      {
+        object: 'NiceModal',
+        property: 'show',
+        message: 'Use showModal from @/lib/modals instead.',
+      },
+      {
+        object: 'NiceModal',
+        property: 'hide',
+        message: 'Use hideModal from @/lib/modals instead.',
+      },
+      {
+        object: 'NiceModal',
+        property: 'remove',
+        message: 'Use removeModal from @/lib/modals instead.',
+      },
+      {
+        object: 'NiceModal',
+        property: 'register',
+        message: 'Use registerModal from @/lib/modals instead.',
+      },
+    ],
   },
   overrides: [
     {
       files: ['**/*.test.{ts,tsx}', '**/*.stories.{ts,tsx}'],
       rules: {
         'i18next/no-literal-string': 'off',
+      },
+    },
+    // Allow NiceModal imports in specific files that need them
+    {
+      files: [
+        'src/lib/modals.ts',
+        'src/main.tsx', 
+        'src/App.tsx',
+        'src/components/dialogs/**/*.tsx',
+      ],
+      rules: {
+        'no-restricted-imports': 'off',
+        'no-restricted-properties': 'off',
       },
     },
   ],

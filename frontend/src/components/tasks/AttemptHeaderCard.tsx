@@ -16,7 +16,7 @@ import { useDiffSummary } from '@/hooks/useDiffSummary';
 import { useBranchStatus } from '@/hooks';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { useMemo, useState } from 'react';
-import NiceModal from '@ebay/nice-modal-react';
+import { showModal, DialogType } from '@/lib/modals';
 import { OpenInIdeButton } from '@/components/ide/OpenInIdeButton';
 
 interface AttemptHeaderCardProps {
@@ -102,11 +102,11 @@ export function AttemptHeaderCard({
 
   const handleCreatePR = () => {
     if (selectedAttempt) {
-      NiceModal.show('create-pr', {
+      showModal(DialogType.CreatePR, {
         attempt: selectedAttempt,
         task,
         projectId,
-      });
+      } as Record<string, unknown>);
     }
   };
 

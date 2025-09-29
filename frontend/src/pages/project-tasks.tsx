@@ -36,7 +36,7 @@ import type { TaskWithAttemptStatus, Project, TaskAttempt } from 'shared/types';
 import type { DragEndEvent } from '@/components/ui/shadcn-io/kanban';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import NiceModal from '@ebay/nice-modal-react';
+import { showModal, DialogType } from '@/lib/modals';
 import { useHotkeysContext } from 'react-hotkeys-hook';
 
 type Task = TaskWithAttemptStatus;
@@ -302,10 +302,10 @@ export function ProjectTasks() {
     (taskId: string) => {
       const task = tasksById[taskId];
       if (task) {
-        NiceModal.show('delete-task-confirmation', {
+        showModal(DialogType.DeleteTaskConfirmation, {
           task,
           projectId: projectId!,
-        })
+        } as Record<string, unknown>)
           .then(() => {
             // Task was deleted, close panel if this task was selected
             if (selectedTask?.id === taskId) {

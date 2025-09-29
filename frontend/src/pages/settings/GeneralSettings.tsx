@@ -41,7 +41,7 @@ import { toPrettyCase } from '@/utils/string';
 import { useTheme } from '@/components/theme-provider';
 import { useUserSystem } from '@/components/config-provider';
 import { TaskTemplateManager } from '@/components/TaskTemplateManager';
-import NiceModal from '@ebay/nice-modal-react';
+import { showModal, hideModal, DialogType } from '@/lib/modals';
 
 export function GeneralSettings() {
   const { t } = useTranslation(['settings', 'common']);
@@ -488,8 +488,8 @@ export function GeneralSettings() {
               </p>
               <Button
                 onClick={() =>
-                  NiceModal.show('github-login').finally(() =>
-                    NiceModal.hide('github-login')
+                  showModal(DialogType.GitHubLogin).finally(() =>
+                    hideModal(DialogType.GitHubLogin)
                   )
                 }
               >

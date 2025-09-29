@@ -8,13 +8,51 @@ import type {
 } from '@/components/dialogs';
 
 /**
+ * Dialog type constants for type-safe modal management
+ */
+export const DialogType = {
+  // Authentication dialogs
+  GitHubLogin: 'github-login',
+  ProvidePat: 'provide-pat',
+  
+  // Global/Onboarding dialogs
+  Disclaimer: 'disclaimer',
+  Onboarding: 'onboarding',
+  PrivacyOptIn: 'privacy-opt-in',
+  ReleaseNotes: 'release-notes',
+  
+  // Task dialogs
+  TaskForm: 'task-form',
+  CreatePR: 'create-pr',
+  DeleteTaskConfirmation: 'delete-task-confirmation',
+  EditorSelection: 'editor-selection',
+  TaskTemplateEdit: 'task-template-edit',
+  Rebase: 'rebase-dialog',
+  RestoreLogs: 'restore-logs',
+  
+  // Project dialogs
+  ProjectForm: 'project-form',
+  ProjectEditorSelection: 'project-editor-selection',
+  
+  // Settings dialogs
+  CreateConfiguration: 'create-configuration',
+  DeleteConfiguration: 'delete-configuration',
+  
+  // Shared dialogs
+  Confirm: 'confirm',
+  FolderPicker: 'folder-picker',
+} as const;
+
+export type DialogId = typeof DialogType[keyof typeof DialogType];
+
+/**
  * Typed wrapper around NiceModal.show with better TypeScript support
- * @param modal - Modal ID (string) or component reference
+ * @param modal - Modal ID from DialogType constants
  * @param props - Props to pass to the modal
  * @returns Promise that resolves with the modal's result
  */
 export function showModal<T = void>(
-  modal: string,
+  modal: DialogId,
   props: Record<string, unknown> = {}
 ): Promise<T> {
   return NiceModal.show<T>(modal, props) as Promise<T>;
@@ -29,7 +67,7 @@ export function showFolderPicker(
   props: FolderPickerDialogProps = {}
 ): Promise<string | null> {
   return showModal<string | null>(
-    'folder-picker',
+    DialogType.FolderPicker,
     props as Record<string, unknown>
   );
 }
@@ -43,7 +81,7 @@ export function showTaskTemplateEdit(
   props: TaskTemplateEditDialogProps
 ): Promise<TaskTemplateEditResult> {
   return showModal<TaskTemplateEditResult>(
-    'task-template-edit',
+    DialogType.TaskTemplateEdit,
     props as Record<string, unknown>
   );
 }
@@ -57,22 +95,31 @@ export function showProjectForm(
   props: ProjectFormDialogProps = {}
 ): Promise<ProjectFormDialogResult> {
   return showModal<ProjectFormDialogResult>(
-    'project-form',
+    DialogType.ProjectForm,
     props as Record<string, unknown>
   );
 }
 
 /**
+ * Register a modal with NiceModal
+ * @param id - Modal ID from DialogType constants
+ * @param component - Modal component to register
+ */
+export function registerModal(id: DialogId, component: any): void {
+  NiceModal.register(id, component);
+}
+
+/**
  * Hide a modal by ID
  */
-export function hideModal(modal: string): void {
+export function hideModal(modal: DialogId): void {
   NiceModal.hide(modal);
 }
 
 /**
  * Remove a modal by ID
  */
-export function removeModal(modal: string): void {
+export function removeModal(modal: DialogId): void {
   NiceModal.remove(modal);
 }
 

@@ -24,6 +24,7 @@ import {
 import { projectsApi } from '@/lib/api.ts';
 import { Loader2 } from 'lucide-react';
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
+import { showModal, DialogType } from '@/lib/modals';
 const CreatePrDialog = NiceModal.create(() => {
   const modal = useModal();
   const data = modal.args as
@@ -92,16 +93,16 @@ const CreatePrDialog = NiceModal.create(() => {
         modal.hide();
         switch (result.error) {
           case GitHubServiceError.TOKEN_INVALID:
-            NiceModal.show('github-login');
+            showModal(DialogType.GitHubLogin);
             break;
           case GitHubServiceError.INSUFFICIENT_PERMISSIONS:
-            NiceModal.show('provide-pat');
+            showModal(DialogType.ProvidePat);
             break;
           case GitHubServiceError.REPO_NOT_FOUND_OR_NO_ACCESS:
-            NiceModal.show('provide-pat', {
+            showModal(DialogType.ProvidePat, {
               errorMessage:
                 'Your token does not have access to this repository, or the repository does not exist. Please check the repository URL and/or provide a Personal Access Token with access.',
-            });
+            } as Record<string, unknown>);
             break;
         }
       } else if (result.message) {
