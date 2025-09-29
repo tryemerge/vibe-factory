@@ -14,13 +14,13 @@ export const DialogType = {
   // Authentication dialogs
   GitHubLogin: 'github-login',
   ProvidePat: 'provide-pat',
-  
+
   // Global/Onboarding dialogs
   Disclaimer: 'disclaimer',
   Onboarding: 'onboarding',
   PrivacyOptIn: 'privacy-opt-in',
   ReleaseNotes: 'release-notes',
-  
+
   // Task dialogs
   TaskForm: 'task-form',
   CreatePR: 'create-pr',
@@ -29,21 +29,21 @@ export const DialogType = {
   TaskTemplateEdit: 'task-template-edit',
   Rebase: 'rebase-dialog',
   RestoreLogs: 'restore-logs',
-  
+
   // Project dialogs
   ProjectForm: 'project-form',
   ProjectEditorSelection: 'project-editor-selection',
-  
+
   // Settings dialogs
   CreateConfiguration: 'create-configuration',
   DeleteConfiguration: 'delete-configuration',
-  
+
   // Shared dialogs
   Confirm: 'confirm',
   FolderPicker: 'folder-picker',
 } as const;
 
-export type DialogId = typeof DialogType[keyof typeof DialogType];
+export type DialogId = (typeof DialogType)[keyof typeof DialogType];
 
 /**
  * Typed wrapper around NiceModal.show with better TypeScript support

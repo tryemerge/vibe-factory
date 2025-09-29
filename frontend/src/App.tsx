@@ -97,8 +97,9 @@ function AppContent() {
       }
 
       if (!config.onboarding_acknowledged) {
-        const onboardingResult: OnboardingResult =
-          await showModal(DialogType.Onboarding);
+        const onboardingResult: OnboardingResult = await showModal(
+          DialogType.Onboarding
+        );
         await handleOnboardingComplete(onboardingResult);
         await hideModal(DialogType.Onboarding);
       }
@@ -110,8 +111,9 @@ function AppContent() {
       }
 
       if (!config.telemetry_acknowledged) {
-        const analyticsEnabled: boolean =
-          await showModal(DialogType.PrivacyOptIn);
+        const analyticsEnabled: boolean = await showModal(
+          DialogType.PrivacyOptIn
+        );
         await handleTelemetryOptIn(analyticsEnabled);
         await hideModal(DialogType.PrivacyOptIn);
       }

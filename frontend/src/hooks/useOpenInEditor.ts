@@ -18,7 +18,9 @@ export function useOpenInEditor(
           if (onShowEditorDialog) {
             onShowEditorDialog();
           } else {
-            showModal(DialogType.EditorSelection, { selectedAttempt: attempt } as Record<string, unknown>);
+            showModal(DialogType.EditorSelection, {
+              selectedAttempt: attempt,
+            } as Record<string, unknown>);
           }
         }
       } catch (err) {
@@ -27,7 +29,9 @@ export function useOpenInEditor(
           if (onShowEditorDialog) {
             onShowEditorDialog();
           } else {
-            showModal(DialogType.EditorSelection, { selectedAttempt: attempt } as Record<string, unknown>);
+            showModal(DialogType.EditorSelection, {
+              selectedAttempt: attempt,
+            } as Record<string, unknown>);
           }
         }
       }
