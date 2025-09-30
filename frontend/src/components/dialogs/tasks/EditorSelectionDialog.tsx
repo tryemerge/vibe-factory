@@ -20,7 +20,7 @@ import { useOpenInEditor } from '@/hooks/useOpenInEditor';
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
 
 export interface EditorSelectionDialogProps {
-  selectedAttemptId?: string;
+  selectedAttemptId: string;
   filePath?: string;
 }
 

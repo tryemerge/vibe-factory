@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projectsApi } from '@/lib/api';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 import type { Project } from 'shared/types';
 
 interface ProjectContextValue {
@@ -28,7 +29,7 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
   }, [location.pathname]);
 
   const query = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: QUERY_KEYS.project(projectId!),
     queryFn: () => projectsApi.getById(projectId!),
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutes

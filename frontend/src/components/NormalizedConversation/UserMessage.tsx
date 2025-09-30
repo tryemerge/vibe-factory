@@ -16,20 +16,17 @@ const UserMessage = ({
 }: {
   content: string;
   executionProcessId?: string;
-  taskAttempt?: TaskAttempt;
+  taskAttempt: TaskAttempt;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const retryHook = useProcessRetry(taskAttempt);
+  const retryHook = useProcessRetry(taskAttempt.id);
   const { capabilities } = useUserSystem();
   const attemptId = taskAttempt?.id;
   const { retryDraft } = useDraftStream(attemptId);
   const { activeRetryProcessId, isProcessGreyed } = useRetryUi();
 
-  const canFork = !!(
-    taskAttempt?.executor &&
-    capabilities?.[taskAttempt.executor]?.includes(
-      'SESSION_FORK' as BaseAgentCapability
-    )
+  const canFork = !!capabilities?.[taskAttempt.executor]?.includes(
+    'SESSION_FORK' as BaseAgentCapability
   );
 
   // Enter retry mode: create retry draft; actual editor will render inline

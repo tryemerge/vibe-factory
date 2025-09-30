@@ -5,8 +5,8 @@ import type { GitOperationError } from 'shared/types';
 import { QUERY_KEYS } from '@/lib/queryKeys';
 
 export function useRebase(
-  attemptId: string | undefined,
-  projectId: string | undefined,
+  attemptId: string,
+  projectId: string,
   onSuccess?: () => void,
   onError?: (err: Result<void, GitOperationError>) => void
 ) {
@@ -20,7 +20,6 @@ export function useRebase(
   return useMutation<void, Result<void, GitOperationError>, RebaseMutationArgs>(
     {
       mutationFn: (args) => {
-        if (!attemptId) return Promise.resolve();
         const { newBaseBranch, oldBaseBranch } = args ?? {};
 
         const data: RebaseTaskAttemptRequest = {
@@ -38,15 +37,13 @@ export function useRebase(
       onSuccess: () => {
         // Refresh branch status immediately
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.branchStatus(attemptId!),
+          queryKey: QUERY_KEYS.branchStatus(attemptId),
         });
 
         // Refresh branch list used by PR dialog
-        if (projectId) {
-          queryClient.invalidateQueries({
-            queryKey: QUERY_KEYS.projectBranches(projectId),
-          });
-        }
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.projectBranches(projectId),
+        });
 
         onSuccess?.();
       },
@@ -54,7 +51,7 @@ export function useRebase(
         console.error('Failed to rebase:', err);
         // Even on failure (likely conflicts), re-fetch branch status immediately to show rebase-in-progress
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.branchStatus(attemptId!),
+          queryKey: QUERY_KEYS.branchStatus(attemptId),
         });
         onError?.(err);
       },

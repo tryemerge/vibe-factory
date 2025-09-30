@@ -37,7 +37,7 @@ type Props = {
   expansionKey: string;
   diffDeletable?: boolean;
   executionProcessId?: string;
-  taskAttempt?: TaskAttempt;
+  taskAttempt: TaskAttempt;
 };
 
 type FileEditAction = Extract<ActionType, { action: 'file_edit' }>;

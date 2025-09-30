@@ -9,13 +9,11 @@ type OpenEditorOptions = {
 };
 
 export function useOpenInEditor(
-  attemptId?: string,
+  attemptId: string,
   onShowEditorDialog?: () => void
 ) {
   return useCallback(
     async (options?: OpenEditorOptions): Promise<void> => {
-      if (!attemptId) return;
-
       const { editorType, filePath } = options ?? {};
 
       try {

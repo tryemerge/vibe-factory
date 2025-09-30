@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { attemptsApi, executionProcessesApi } from '@/lib/api';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 import type { ExecutionProcess } from 'shared/types';
 
 interface UseDevServerOptions {
@@ -11,10 +12,7 @@ interface UseDevServerOptions {
   onStopError?: (err: unknown) => void;
 }
 
-export function useDevServer(
-  attemptId: string | undefined,
-  options?: UseDevServerOptions
-) {
+export function useDevServer(attemptId: string, options?: UseDevServerOptions) {
   const queryClient = useQueryClient();
   const { attemptData } = useAttemptExecution(attemptId);
 
@@ -40,12 +38,11 @@ export function useDevServer(
   const startMutation = useMutation({
     mutationKey: ['startDevServer', attemptId],
     mutationFn: async () => {
-      if (!attemptId) return;
       await attemptsApi.startDevServer(attemptId);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['executionProcesses', attemptId],
+        queryKey: QUERY_KEYS.executionProcesses(attemptId),
       });
       options?.onStartSuccess?.();
     },
@@ -63,16 +60,23 @@ export function useDevServer(
       await executionProcessesApi.stopExecutionProcess(runningDevServer.id);
     },
     onSuccess: async () => {
-      await Promise.all([
+      const invalidations = [];
+
+      invalidations.push(
         queryClient.invalidateQueries({
-          queryKey: ['executionProcesses', attemptId],
-        }),
-        runningDevServer
-          ? queryClient.invalidateQueries({
-              queryKey: ['processDetails', runningDevServer.id],
-            })
-          : Promise.resolve(),
-      ]);
+          queryKey: QUERY_KEYS.executionProcesses(attemptId),
+        })
+      );
+
+      if (runningDevServer) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.processDetails(runningDevServer.id),
+          })
+        );
+      }
+
+      await Promise.all(invalidations);
       options?.onStopSuccess?.();
     },
     onError: (err) => {

@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { useBranchStatus } from '@/hooks/useBranchStatus';
 import { attemptsApi, executionProcessesApi } from '@/lib/api';
-import type { ExecutionProcess, TaskAttempt } from 'shared/types';
+import type { ExecutionProcess } from 'shared/types';
 
 /**
  * Reusable hook to retry a process given its executionProcessId and a new prompt.
@@ -13,9 +13,7 @@ import type { ExecutionProcess, TaskAttempt } from 'shared/types';
  *  - Variant extraction for coding-agent processes
  *  - Refetching attempt + branch data after replace
  */
-export function useProcessRetry(attempt: TaskAttempt | undefined) {
-  const attemptId = attempt?.id;
-
+export function useProcessRetry(attemptId: string) {
   // Fetch attempt + branch state the same way your component did
   const { attemptData } = useAttemptExecution(attemptId);
   useBranchStatus(attemptId);
@@ -59,7 +57,6 @@ export function useProcessRetry(attempt: TaskAttempt | undefined) {
   // Initialize retry mode by creating a retry draft populated from the process
   const startRetry = useCallback(
     async (executionProcessId: string, newPrompt: string) => {
-      if (!attemptId) return;
       const proc = getProcessById(executionProcessId);
       if (!proc) return;
       const { disabled } = getRetryDisabledState(executionProcessId);

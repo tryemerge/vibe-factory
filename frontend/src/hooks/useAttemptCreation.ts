@@ -27,18 +27,18 @@ export function useAttemptCreation(taskId: string) {
     onSuccess: (newAttempt: TaskAttempt) => {
       // Optimistically add to cache to prevent UI flicker
       queryClient.setQueryData(
-        ['taskAttempts', taskId],
+        QUERY_KEYS.taskAttempts(taskId),
         (old: TaskAttempt[] = []) => [newAttempt, ...old]
       );
 
       // Navigate to new attempt (triggers polling switch)
       if (projectId) {
         navigateToAttempt(projectId, taskId, newAttempt.id);
+        // Refresh project branches as a new attempt creates a new branch
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.projectBranches(projectId),
+        });
       }
-      // Refresh project branches as a new attempt creates a new branch
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.projectBranches(projectId!),
-      });
     },
   });
 

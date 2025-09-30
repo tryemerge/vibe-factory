@@ -37,7 +37,7 @@ import NiceModal, { useModal } from '@ebay/nice-modal-react';
 
 export interface TaskFormDialogProps {
   task?: Task | null; // Optional for create mode
-  projectId?: string; // For file search functionality
+  projectId: string; // For file search functionality
   initialTemplate?: TaskTemplate | null; // For pre-filling from template
   initialTask?: Task | null; // For duplicating an existing task
   initialBaseBranch?: string; // For pre-selecting base branch in spinoff

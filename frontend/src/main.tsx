@@ -12,7 +12,7 @@ import './types/modals';
 // Import and register modals
 import {
   GitHubLoginDialog,
-  CreatePRDialog,
+  CreatePrDialog,
   ConfirmDialog,
   DisclaimerDialog,
   OnboardingDialog,
@@ -35,7 +35,7 @@ import {
 
 // Register modals
 NiceModal.register('github-login', GitHubLoginDialog);
-NiceModal.register('create-pr', CreatePRDialog);
+NiceModal.register('create-pr', CreatePrDialog);
 NiceModal.register('confirm', ConfirmDialog);
 NiceModal.register('disclaimer', DisclaimerDialog);
 NiceModal.register('onboarding', OnboardingDialog);

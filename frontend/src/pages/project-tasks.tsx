@@ -7,6 +7,7 @@ import { AlertTriangle, Plus } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 import { projectsApi, tasksApi, attemptsApi } from '@/lib/api';
 import { openTaskForm } from '@/lib/openTaskForm';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 
 import { useSearch } from '@/contexts/search-context';
 import { useQuery } from '@tanstack/react-query';
@@ -92,7 +93,7 @@ export function ProjectTasks() {
 
   // Attempts fetching (only when task is selected)
   const { data: attempts = [] } = useQuery({
-    queryKey: ['taskAttempts', selectedTask?.id],
+    queryKey: QUERY_KEYS.taskAttempts(selectedTask!.id),
     queryFn: () => attemptsApi.getAll(selectedTask!.id),
     enabled: !!selectedTask?.id,
     refetchInterval: 5000,

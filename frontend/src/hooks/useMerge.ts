@@ -3,21 +3,18 @@ import { attemptsApi } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/queryKeys';
 
 export function useMerge(
-  attemptId?: string,
+  attemptId: string,
   onSuccess?: () => void,
   onError?: (err: unknown) => void
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => {
-      if (!attemptId) return Promise.resolve();
-      return attemptsApi.merge(attemptId);
-    },
+    mutationFn: () => attemptsApi.merge(attemptId),
     onSuccess: () => {
       // Refresh attempt-specific branch information
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.branchStatus(attemptId!),
+        queryKey: QUERY_KEYS.branchStatus(attemptId),
       });
 
       onSuccess?.();

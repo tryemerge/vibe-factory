@@ -17,7 +17,7 @@ export function useAttemptExecution(attemptId?: string, taskId?: string) {
     isFetching: processesFetching,
     refetch,
   } = useQuery({
-    queryKey: ['executionProcesses', attemptId],
+    queryKey: QUERY_KEYS.executionProcesses(attemptId!),
     queryFn: () => executionProcessesApi.getExecutionProcesses(attemptId!),
     enabled: !!attemptId,
     refetchInterval: 5000,
@@ -44,7 +44,7 @@ export function useAttemptExecution(attemptId?: string, taskId?: string) {
   // Fetch details for setup processes
   const processDetailQueries = useQueries({
     queries: setupProcesses.map((process) => ({
-      queryKey: ['processDetails', process.id],
+      queryKey: QUERY_KEYS.processDetails(process.id),
       queryFn: () => executionProcessesApi.getDetails(process.id),
       enabled: !!process.id,
     })),
@@ -74,11 +74,11 @@ export function useAttemptExecution(attemptId?: string, taskId?: string) {
 
   // Stop execution function
   const stopExecution = useCallback(async () => {
-    if (!attemptId || !executionData?.isAttemptRunning || isStopping) return;
+    if (!executionData?.isAttemptRunning || isStopping) return;
 
     try {
       setIsStopping(true);
-      await attemptsApi.stop(attemptId);
+      await attemptsApi.stop(attemptId!);
 
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({

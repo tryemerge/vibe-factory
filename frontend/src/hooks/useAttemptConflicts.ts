@@ -1,15 +1,15 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { attemptsApi } from '@/lib/api';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 
-export function useAttemptConflicts(attemptId?: string) {
+export function useAttemptConflicts(attemptId: string) {
   const queryClient = useQueryClient();
 
   const abortConflicts = useCallback(async () => {
-    if (!attemptId) return;
     await attemptsApi.abortConflicts(attemptId);
     await queryClient.invalidateQueries({
-      queryKey: ['branchStatus', attemptId],
+      queryKey: QUERY_KEYS.branchStatus(attemptId),
     });
   }, [attemptId, queryClient]);
 

@@ -10,30 +10,26 @@ import type {
 } from 'shared/types';
 import { QUERY_KEYS } from '@/lib/queryKeys';
 
-export function useTaskMutations(projectId?: string) {
+export function useTaskMutations(projectId: string) {
   const queryClient = useQueryClient();
   const { navigateToTask } = useTaskViewManager();
 
-  const invalidateQueries = (taskId?: string) => {
-    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-    if (taskId) {
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-    }
-    if (projectId) {
-      // Refresh project branches as a new attempt creates a new branch
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.projectBranches(projectId!),
-      });
-    }
+  const invalidateQueries = (taskId: string) => {
+    queryClient.invalidateQueries({
+      queryKey: QUERY_KEYS.projectTasks(projectId),
+    });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.task(taskId) });
+    // Refresh project branches as a new attempt creates a new branch
+    queryClient.invalidateQueries({
+      queryKey: QUERY_KEYS.projectBranches(projectId),
+    });
   };
 
   const createTask = useMutation({
     mutationFn: (data: CreateTask) => tasksApi.create(data),
     onSuccess: (createdTask: Task) => {
-      invalidateQueries();
-      if (projectId) {
-        navigateToTask(projectId, createdTask.id);
-      }
+      invalidateQueries(createdTask.id);
+      navigateToTask(projectId, createdTask.id);
     },
     onError: (err) => {
       console.error('Failed to create task:', err);
@@ -44,10 +40,8 @@ export function useTaskMutations(projectId?: string) {
     mutationFn: (data: CreateAndStartTaskRequest) =>
       tasksApi.createAndStart(data),
     onSuccess: (createdTask: TaskWithAttemptStatus) => {
-      invalidateQueries();
-      if (projectId) {
-        navigateToTask(projectId, createdTask.id);
-      }
+      invalidateQueries(createdTask.id);
+      navigateToTask(projectId, createdTask.id);
     },
     onError: (err) => {
       console.error('Failed to create and start task:', err);

@@ -5,7 +5,7 @@ import { useAttemptConflicts } from '@/hooks/useAttemptConflicts';
 import type { BranchStatus } from 'shared/types';
 
 type Props = {
-  selectedAttemptId?: string;
+  selectedAttemptId: string;
   attemptBranch: string | null;
   branchStatus: BranchStatus;
   isEditable: boolean;
@@ -51,12 +51,10 @@ export function FollowUpConflictSection({
         onResolve={onResolve}
         enableResolve={enableResolve && !aborting}
         onOpenEditor={() => {
-          if (!selectedAttemptId) return;
           const first = branchStatus.conflicted_files?.[0];
           openInEditor(first ? { filePath: first } : undefined);
         }}
         onAbort={async () => {
-          if (!selectedAttemptId) return;
           if (!enableAbort || abortingRef.current) return;
           try {
             setAborting(true);

@@ -28,7 +28,7 @@ export {
   type TaskFormDialogProps,
 } from './tasks/TaskFormDialog';
 
-export { CreatePRDialog } from './tasks/CreatePRDialog';
+export { CreatePrDialog } from './tasks/CreatePRDialog';
 export {
   EditorSelectionDialog,
   type EditorSelectionDialogProps,

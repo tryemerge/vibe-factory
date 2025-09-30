@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 interface AttemptHeaderCardProps {
   attemptNumber: number;
   totalAttempts: number;
-  selectedAttempt: TaskAttempt | null;
+  selectedAttempt: TaskAttempt;
   task: TaskWithAttemptStatus;
   projectId: string;
   // onCreateNewAttempt?: () => void;
@@ -43,20 +43,15 @@ export function AttemptHeaderCard({
     start: startDevServer,
     stop: stopDevServer,
     runningDevServer,
-  } = useDevServer(selectedAttempt?.id);
-  const rebaseMutation = useRebase(selectedAttempt?.id, projectId);
-  const mergeMutation = useMerge(selectedAttempt?.id);
-  const openInEditor = useOpenInEditor(selectedAttempt?.id);
-  const { fileCount, added, deleted } = useDiffSummary(
-    selectedAttempt?.id ?? null
-  );
+  } = useDevServer(selectedAttempt.id);
+  const rebaseMutation = useRebase(selectedAttempt.id, projectId);
+  const mergeMutation = useMerge(selectedAttempt.id);
+  const openInEditor = useOpenInEditor(selectedAttempt.id);
+  const { fileCount, added, deleted } = useDiffSummary(selectedAttempt.id);
 
   // Branch status and execution state
-  const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
-  const { isAttemptRunning } = useAttemptExecution(
-    selectedAttempt?.id,
-    task.id
-  );
+  const { data: branchStatus } = useBranchStatus(selectedAttempt.id);
+  const { isAttemptRunning } = useAttemptExecution(selectedAttempt.id, task.id);
 
   // Loading states
   const [rebasing, setRebasing] = useState(false);
@@ -103,13 +98,11 @@ export function AttemptHeaderCard({
   }, [branchStatus?.merges]);
 
   const handleCreatePR = () => {
-    if (selectedAttempt) {
-      NiceModal.show('create-pr', {
-        attempt: selectedAttempt,
-        task,
-        projectId,
-      });
-    }
+    NiceModal.show('create-pr', {
+      attempt: selectedAttempt,
+      task,
+      projectId,
+    });
   };
 
   const handleRebaseClick = async () => {
@@ -147,16 +140,14 @@ export function AttemptHeaderCard({
           <span className="text-secondary-foreground">
             {t('attempt.labels.agent')} &middot;{' '}
           </span>
-          {selectedAttempt?.executor}
+          {selectedAttempt.executor}
         </p>
-        {selectedAttempt?.branch && (
-          <p className="flex-1 min-w-0 truncate">
-            <span className="text-secondary-foreground">
-              {t('attempt.labels.branch')} &middot;{' '}
-            </span>
-            {selectedAttempt.branch}
-          </p>
-        )}
+        <p className="flex-1 min-w-0 truncate">
+          <span className="text-secondary-foreground">
+            {t('attempt.labels.branch')} &middot;{' '}
+          </span>
+          {selectedAttempt.branch}
+        </p>
         {fileCount > 0 && (
           <p className="shrink-0 text-secondary-foreground whitespace-nowrap">
             <Button
@@ -176,7 +167,6 @@ export function AttemptHeaderCard({
       <div className="flex items-center gap-1 px-3 flex-none">
         <OpenInIdeButton
           onClick={() => openInEditor()}
-          disabled={!selectedAttempt}
           className="h-10 w-10 p-0 shrink-0"
         />
         <DropdownMenu>
@@ -191,25 +181,20 @@ export function AttemptHeaderCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => openInEditor()}
-              disabled={!selectedAttempt}
-            >
+            <DropdownMenuItem onClick={() => openInEditor()}>
               {t('attempt.actions.openInIde')}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
                 runningDevServer ? stopDevServer() : startDevServer()
               }
-              disabled={!selectedAttempt}
               className={runningDevServer ? 'text-destructive' : ''}
             >
               {runningDevServer
                 ? t('attempt.actions.stopDevServer')
                 : t('attempt.actions.startDevServer')}
             </DropdownMenuItem>
-            {selectedAttempt &&
-              branchStatus &&
+            {branchStatus &&
               !mergeInfo.hasMergedPR &&
               (branchStatus.commits_behind ?? 0) > 0 && (
                 <DropdownMenuItem
@@ -221,13 +206,10 @@ export function AttemptHeaderCard({
                     : t('rebase.common.action')}
                 </DropdownMenuItem>
               )}
-            <DropdownMenuItem
-              onClick={handleCreatePR}
-              disabled={!selectedAttempt}
-            >
+            <DropdownMenuItem onClick={handleCreatePR}>
               {t('git.states.createPr')}
             </DropdownMenuItem>
-            {selectedAttempt && branchStatus && !mergeInfo.hasMergedPR && (
+            {branchStatus && !mergeInfo.hasMergedPR && (
               <DropdownMenuItem
                 onClick={handleMergeClick}
                 disabled={

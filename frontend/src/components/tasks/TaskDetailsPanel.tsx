@@ -209,31 +209,33 @@ export function TaskDetailsPanel({
                             selectedAttempt={selectedAttempt}
                           />
                         ) : (
-                          <>
-                            <AttemptHeaderCard
-                              attemptNumber={attemptNumber}
-                              totalAttempts={attempts.length}
-                              selectedAttempt={selectedAttempt}
-                              task={task}
-                              projectId={projectId}
-                              // onCreateNewAttempt={() => {
-                              //   // TODO: Implement create new attempt
-                              //   console.log('Create new attempt');
-                              // }}
-                              onJumpToDiffFullScreen={jumpToDiffFullScreen}
-                            />
+                          selectedAttempt && (
+                            <>
+                              <AttemptHeaderCard
+                                attemptNumber={attemptNumber}
+                                totalAttempts={attempts.length}
+                                selectedAttempt={selectedAttempt}
+                                task={task}
+                                projectId={projectId}
+                                // onCreateNewAttempt={() => {
+                                //   // TODO: Implement create new attempt
+                                //   console.log('Create new attempt');
+                                // }}
+                                onJumpToDiffFullScreen={jumpToDiffFullScreen}
+                              />
 
-                            {selectedAttempt && (
                               <RetryUiProvider attemptId={selectedAttempt.id}>
-                                <LogsTab selectedAttempt={selectedAttempt} />
-                                <TaskFollowUpSection
-                                  task={task}
-                                  selectedAttemptId={selectedAttempt.id}
-                                  jumpToLogsTab={jumpToLogsTab}
-                                />
+                                <>
+                                  <LogsTab selectedAttempt={selectedAttempt} />
+                                  <TaskFollowUpSection
+                                    task={task}
+                                    selectedAttemptId={selectedAttempt.id}
+                                    jumpToLogsTab={jumpToLogsTab}
+                                  />
+                                </>
                               </RetryUiProvider>
-                            )}
-                          </>
+                            </>
+                          )
                         )}
                       </>
                     )}

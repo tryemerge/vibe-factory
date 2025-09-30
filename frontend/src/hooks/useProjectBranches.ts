@@ -9,7 +9,7 @@ interface UseProjectBranchesOptions {
 }
 
 export function useProjectBranches(
-  projectId?: string,
+  projectId: string,
   options: UseProjectBranchesOptions = {}
 ): {
   branches: GitBranch[];
@@ -21,15 +21,13 @@ export function useProjectBranches(
   currentBranchName: string | null;
 } {
   const { enabled = true } = options;
-  const canFetch = Boolean(projectId) && enabled;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: QUERY_KEYS.projectBranches(projectId!),
+    queryKey: QUERY_KEYS.projectBranches(projectId),
     queryFn: async () => {
-      if (!projectId) return [];
       return await projectsApi.getBranches(projectId);
     },
-    enabled: canFetch,
+    enabled: enabled,
     staleTime: 5000,
   });
 

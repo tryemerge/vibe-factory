@@ -3,21 +3,18 @@ import { attemptsApi } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/queryKeys';
 
 export function usePush(
-  attemptId?: string,
+  attemptId: string,
   onSuccess?: () => void,
   onError?: (err: unknown) => void
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => {
-      if (!attemptId) return Promise.resolve();
-      return attemptsApi.push(attemptId);
-    },
+    mutationFn: () => attemptsApi.push(attemptId),
     onSuccess: () => {
       // A push only affects remote status; invalidate the same branchStatus
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.branchStatus(attemptId!),
+        queryKey: QUERY_KEYS.branchStatus(attemptId),
       });
       onSuccess?.();
     },
