@@ -8,6 +8,7 @@ type OpenInIdeButtonProps = {
   onClick: () => void;
   disabled?: boolean;
   className?: string;
+  showLabel?: boolean;
 };
 
 function getIdeName(editorType: EditorType | undefined | null): string {
@@ -35,6 +36,7 @@ export function OpenInIdeButton({
   onClick,
   disabled = false,
   className,
+  showLabel = false,
 }: OpenInIdeButtonProps) {
   const { config } = useUserSystem();
   const editorType = config?.editor?.editor_type ?? null;
@@ -48,14 +50,20 @@ export function OpenInIdeButton({
     <Button
       variant="ghost"
       size="sm"
-      className={`h-10 w-10 p-0 hover:opacity-70 transition-opacity ${className ?? ''}`}
+      className={
+        showLabel
+          ? `hover:opacity-70 transition-opacity ${className ?? ''}`
+          : `h-10 w-10 p-0 hover:opacity-70 transition-opacity ${
+              className ?? ''
+            }`
+      }
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
       title={label}
     >
       <IdeIcon editorType={editorType} className="h-4 w-4" />
-      <span className="sr-only">{label}</span>
+      {showLabel && <span className="ml-2">{label}</span>}
     </Button>
   );
 }

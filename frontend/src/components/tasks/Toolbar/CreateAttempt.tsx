@@ -1,12 +1,14 @@
-import { Dispatch, SetStateAction, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button.tsx';
 import { X } from 'lucide-react';
-import type { GitBranch, Task } from 'shared/types';
-import type { ExecutorConfig } from 'shared/types';
+import type { Task } from 'shared/types';
 import type { ExecutorProfileId } from 'shared/types';
 import type { TaskAttempt } from 'shared/types';
 import { useAttemptCreation } from '@/hooks/useAttemptCreation';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
+import { useAttemptBranch } from '@/hooks/useAttemptBranch';
+import { useProjectBranches } from '@/hooks/useProjectBranches';
+import { useUserSystem } from '@/components/config-provider';
 import BranchSelector from '@/components/tasks/BranchSelector.tsx';
 import { ExecutorProfileSelector } from '@/components/settings';
 
@@ -15,35 +17,67 @@ import { Label } from '@/components/ui/label';
 
 type Props = {
   task: Task;
-  branches: GitBranch[];
   taskAttempts: TaskAttempt[];
-  selectedProfile: ExecutorProfileId | null;
-  selectedBranch: string | null;
-  setIsInCreateAttemptMode: Dispatch<SetStateAction<boolean>>;
-  setSelectedBranch: Dispatch<SetStateAction<string | null>>;
-  setSelectedProfile: Dispatch<SetStateAction<ExecutorProfileId | null>>;
-  availableProfiles: Record<string, ExecutorConfig> | null;
+  onExitCreateMode: () => void;
   selectedAttempt: TaskAttempt | null;
 };
 
 function CreateAttempt({
   task,
-  branches,
   taskAttempts,
-  selectedProfile,
-  selectedBranch,
-  setIsInCreateAttemptMode,
-  setSelectedBranch,
-  setSelectedProfile,
-  availableProfiles,
+  onExitCreateMode,
   selectedAttempt,
 }: Props) {
   const { isAttemptRunning } = useAttemptExecution(selectedAttempt?.id);
   const { createAttempt, isCreating } = useAttemptCreation(task.id);
+  // Data state
+  const { branches, pickBranch } = useProjectBranches(task.project_id, {
+    enabled: true,
+  });
+  const { branch: parentBranch, isLoading: isLoadingParentBranch } =
+    useAttemptBranch(task.parent_task_attempt);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] =
+    useState<ExecutorProfileId | null>(null);
+  const { system, profiles } = useUserSystem();
 
-  const handleExitCreateAttemptMode = () => {
-    setIsInCreateAttemptMode(false);
-  };
+  // Memoize latest attempt calculation
+  const latestAttempt = useMemo(() => {
+    if (taskAttempts.length === 0) return null;
+    return taskAttempts.reduce((latest, current) =>
+      new Date(current.created_at) > new Date(latest.created_at)
+        ? current
+        : latest
+    );
+  }, [taskAttempts]);
+
+  // Set default executor from config
+  useEffect(() => {
+    if (system.config?.executor_profile) {
+      setSelectedProfile(system.config.executor_profile);
+    }
+  }, [system.config?.executor_profile]);
+
+  useEffect(() => {
+    setSelectedBranch(null); // Force re-initialization
+  }, [task.id]);
+
+  useEffect(() => {
+    if (selectedBranch !== null || isLoadingParentBranch) {
+      return;
+    }
+    const next = pickBranch(latestAttempt?.target_branch, parentBranch);
+
+    if (next) {
+      setSelectedBranch(next);
+    }
+  }, [
+    pickBranch,
+    latestAttempt?.target_branch,
+    parentBranch,
+    selectedBranch,
+    isLoadingParentBranch,
+  ]);
 
   const handleCreateAttempt = useCallback(async () => {
     if (!selectedProfile || !selectedBranch) {
@@ -55,13 +89,8 @@ function CreateAttempt({
       baseBranch: selectedBranch,
     });
 
-    setIsInCreateAttemptMode(false);
-  }, [
-    selectedProfile,
-    selectedBranch,
-    createAttempt,
-    setIsInCreateAttemptMode,
-  ]);
+    onExitCreateMode();
+  }, [selectedProfile, selectedBranch, createAttempt, onExitCreateMode]);
 
   return (
     <div className="">
@@ -71,11 +100,7 @@ function CreateAttempt({
       <div className="space-y-3 p-3">
         <div className="flex items-center justify-between">
           {taskAttempts.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleExitCreateAttemptMode}
-            >
+            <Button variant="ghost" size="sm" onClick={onExitCreateMode}>
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -90,10 +115,10 @@ function CreateAttempt({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
           {/* Top Row: Executor Profile and Variant (spans 2 columns) */}
-          {availableProfiles && (
+          {profiles && (
             <div className="col-span-1 sm:col-span-2">
               <ExecutorProfileSelector
-                profiles={availableProfiles}
+                profiles={profiles}
                 selectedProfile={selectedProfile}
                 onProfileSelect={setSelectedProfile}
                 showLabel={true}
@@ -109,7 +134,7 @@ function CreateAttempt({
             <BranchSelector
               branches={branches}
               selectedBranch={selectedBranch}
-              onBranchSelect={(branch) => setSelectedBranch(branch)}
+              onBranchSelect={setSelectedBranch}
               placeholder="Select branch"
             />
           </div>

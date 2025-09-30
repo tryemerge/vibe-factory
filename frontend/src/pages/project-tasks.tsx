@@ -32,7 +32,7 @@ import {
 
 import TaskKanbanBoard from '@/components/tasks/TaskKanbanBoard';
 import { TaskDetailsPanel } from '@/components/tasks/TaskDetailsPanel';
-import type { TaskWithAttemptStatus, Project, TaskAttempt } from 'shared/types';
+import type { TaskWithAttemptStatus, Project } from 'shared/types';
 import type { DragEndEvent } from '@/components/ui/shadcn-io/kanban';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -107,20 +107,6 @@ export function ProjectTasks() {
     }
     return attempts[0] || null; // Most recent fallback
   }, [attempts, attemptId]);
-
-  // Navigation callback for attempt selection
-  const setSelectedAttempt = useCallback(
-    (attempt: TaskAttempt | null) => {
-      if (!selectedTask) return;
-
-      if (attempt) {
-        navigateToAttempt(projectId!, selectedTask.id, attempt.id);
-      } else {
-        navigateToTask(projectId!, selectedTask.id);
-      }
-    },
-    [navigateToTask, navigateToAttempt, projectId, selectedTask]
-  );
 
   // Stream tasks for this project
   const {
@@ -565,7 +551,6 @@ export function ProjectTasks() {
             isFullScreen={isFullscreen}
             selectedAttempt={selectedAttempt}
             attempts={attempts}
-            setSelectedAttempt={setSelectedAttempt}
             tasksById={tasksById}
           />
         )}

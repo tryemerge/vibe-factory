@@ -1,5 +1,4 @@
 import {
-  ExternalLink,
   GitFork,
   History,
   Play,
@@ -24,68 +23,43 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import type { TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 import { useBranchStatus, useOpenInEditor } from '@/hooks';
 import { useAttemptExecution } from '@/hooks/useAttemptExecution';
+import { useTaskViewManager } from '@/hooks/useTaskViewManager';
 import { useDevServer } from '@/hooks/useDevServer';
-import { useUserSystem } from '@/components/config-provider.tsx';
+import { OpenInIdeButton } from '@/components/ide/OpenInIdeButton.tsx';
 
 import { writeClipboardViaBridge } from '@/vscode/bridge';
 import { useProcessSelection } from '@/contexts/ProcessSelectionContext';
 import { openTaskForm } from '@/lib/openTaskForm';
 
-// Helper function to get the display name for different editor types
-function getEditorDisplayName(editorType: string): string {
-  switch (editorType) {
-    case 'VS_CODE':
-      return 'Visual Studio Code';
-    case 'CURSOR':
-      return 'Cursor';
-    case 'WINDSURF':
-      return 'Windsurf';
-    case 'INTELLI_J':
-      return 'IntelliJ IDEA';
-    case 'ZED':
-      return 'Zed';
-    case 'XCODE':
-      return 'Xcode';
-    case 'CUSTOM':
-      return 'Editor';
-    default:
-      return 'Editor';
-  }
-}
-
 type Props = {
   task: TaskWithAttemptStatus;
-  projectId: string;
   projectHasDevScript: boolean;
   selectedAttempt: TaskAttempt;
   taskAttempts: TaskAttempt[];
   handleEnterCreateAttemptMode: () => void;
-  setSelectedAttempt: (attempt: TaskAttempt | null) => void;
 };
 
 function CurrentAttempt({
   task,
-  projectId,
   projectHasDevScript,
   selectedAttempt,
   taskAttempts,
   handleEnterCreateAttemptMode,
-  setSelectedAttempt,
 }: Props) {
-  const { config } = useUserSystem();
   const { isAttemptRunning, stopExecution, isStopping } = useAttemptExecution(
-    selectedAttempt?.id,
+    selectedAttempt.id,
     task.id
   );
   const { data: branchStatus, refetch: refetchBranchStatus } = useBranchStatus(
-    selectedAttempt?.id
+    selectedAttempt.id
   );
   const hasConflicts = useMemo(
     () => Boolean((branchStatus?.conflicted_files?.length ?? 0) > 0),
     [branchStatus?.conflicted_files]
   );
-  const handleOpenInEditor = useOpenInEditor(selectedAttempt?.id);
+
   const { jumpToProcess } = useProcessSelection();
+  const openInEditor = useOpenInEditor(selectedAttempt.id);
 
   // Attempt action hooks
   const {
@@ -94,7 +68,7 @@ function CurrentAttempt({
     isStarting: isStartingDevServer,
     runningDevServer,
     latestDevServerProcess,
-  } = useDevServer(selectedAttempt?.id);
+  } = useDevServer(selectedAttempt.id);
 
   const [copied, setCopied] = useState(false);
 
@@ -106,37 +80,28 @@ function CurrentAttempt({
 
   const handleCreateSubtaskClick = () => {
     openTaskForm({
-      projectId,
-      initialBaseBranch:
-        selectedAttempt.branch || selectedAttempt.target_branch,
+      projectId: task.project_id,
+      initialBaseBranch: selectedAttempt.branch,
       parentTaskAttemptId: selectedAttempt.id,
     });
   };
 
-  // Use the stopExecution function from the hook
-
+  const { navigateToAttempt } = useTaskViewManager();
   const handleAttemptChange = useCallback(
     (attempt: TaskAttempt) => {
-      setSelectedAttempt(attempt);
-      // React Query will handle refetching when attemptId changes
+      navigateToAttempt(task.project_id, task.id, attempt.id);
     },
-    [setSelectedAttempt]
+    [navigateToAttempt, task]
   );
 
   // Refresh branch status when a process completes (e.g., rebase resolved by agent)
   const prevRunningRef = useRef<boolean>(isAttemptRunning);
   useEffect(() => {
-    if (prevRunningRef.current && !isAttemptRunning && selectedAttempt?.id) {
+    if (prevRunningRef.current && !isAttemptRunning) {
       refetchBranchStatus();
     }
     prevRunningRef.current = isAttemptRunning;
-  }, [isAttemptRunning, selectedAttempt?.id, refetchBranchStatus]);
-
-  // Get display name for the configured editor
-  const editorDisplayName = useMemo(() => {
-    if (!config?.editor?.editor_type) return 'Editor';
-    return getEditorDisplayName(config.editor.editor_type);
-  }, [config?.editor?.editor_type]);
+  }, [isAttemptRunning, selectedAttempt.id, refetchBranchStatus]);
 
   const handleCopyWorktreePath = useCallback(async () => {
     try {
@@ -150,7 +115,6 @@ function CurrentAttempt({
 
   return (
     <div className="space-y-2 @container">
-      {/* <div className="flex gap-6 items-start"> */}
       <div className="flex items-start">
         <div className="min-w-0">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
@@ -165,15 +129,11 @@ function CurrentAttempt({
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 pt-1">
             Path
           </div>
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => handleOpenInEditor()}
-            className="h-6 px-2 text-xs hover:bg-muted gap-1"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Open in {editorDisplayName}
-          </Button>
+          <OpenInIdeButton
+            onClick={() => openInEditor()}
+            showLabel={true}
+            className="text-xs hover:bg-muted gap-1"
+          />
         </div>
         <div
           className={`text-xs font-mono px-2 py-1 break-all cursor-pointer transition-all duration-300 flex items-center gap-2 ${
@@ -299,7 +259,7 @@ function CurrentAttempt({
                       key={attempt.id}
                       onClick={() => handleAttemptChange(attempt)}
                       className={
-                        selectedAttempt?.id === attempt.id ? 'bg-accent' : ''
+                        selectedAttempt.id === attempt.id ? 'bg-accent' : ''
                       }
                     >
                       <div className="flex flex-col w-full">

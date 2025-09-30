@@ -15,6 +15,8 @@ import LogsTab from '@/components/tasks/TaskDetails/LogsTab.tsx';
 import ProcessesTab from '@/components/tasks/TaskDetails/ProcessesTab.tsx';
 import TabNavigation from '@/components/tasks/TaskDetails/TabNavigation.tsx';
 import TaskDetailsToolbar from './TaskDetailsToolbar.tsx';
+import GitOperations from './Toolbar/GitOperations.tsx';
+import { useBranchStatus } from '@/hooks/useBranchStatus';
 import TodoPanel from '@/components/tasks/TodoPanel';
 import { TabNavContext } from '@/contexts/TabNavigationContext';
 import { ProcessSelectionProvider } from '@/contexts/ProcessSelectionContext';
@@ -38,12 +40,9 @@ interface TaskDetailsPanelProps {
   className?: string;
   hideHeader?: boolean;
   isFullScreen?: boolean;
-  forceCreateAttempt?: boolean;
-  onLeaveForceCreateAttempt?: () => void;
   onNewAttempt?: () => void;
   selectedAttempt: TaskAttempt | null;
   attempts: TaskAttempt[];
-  setSelectedAttempt: (attempt: TaskAttempt | null) => void;
   tasksById?: Record<string, TaskWithAttemptStatus>;
 }
 
@@ -58,11 +57,8 @@ export function TaskDetailsPanel({
   hideBackdrop = false,
   className,
   isFullScreen,
-  forceCreateAttempt,
-  onLeaveForceCreateAttempt,
   selectedAttempt,
   attempts,
-  setSelectedAttempt,
   tasksById,
 }: TaskDetailsPanelProps) {
   // Attempt number, find the current attempt number
@@ -75,6 +71,7 @@ export function TaskDetailsPanel({
 
   // Handler for jumping to diff tab in full screen
   const { toggleFullscreen } = useTaskViewManager();
+  const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
 
   const jumpToDiffFullScreen = () => {
     toggleFullscreen(true);
@@ -139,17 +136,19 @@ export function TaskDetailsPanel({
                           {/* Current Attempt / Actions */}
                           <TaskDetailsToolbar
                             task={task}
-                            projectId={projectId}
                             projectHasDevScript={projectHasDevScript}
-                            forceCreateAttempt={forceCreateAttempt}
-                            onLeaveForceCreateAttempt={
-                              onLeaveForceCreateAttempt
-                            }
                             attempts={attempts}
                             selectedAttempt={selectedAttempt}
-                            setSelectedAttempt={setSelectedAttempt}
-                            // hide actions in sidebar; moved to header in fullscreen
                           />
+
+                          {/* Independent Git Operations Section */}
+                          {selectedAttempt && branchStatus && (
+                            <GitOperations
+                              selectedAttempt={selectedAttempt}
+                              task={task}
+                              branchStatus={branchStatus}
+                            />
+                          )}
 
                           {/* Task Breakdown (TODOs) */}
                           <TodoPanel />
@@ -205,16 +204,9 @@ export function TaskDetailsPanel({
                         {attempts.length === 0 ? (
                           <TaskDetailsToolbar
                             task={task}
-                            projectId={projectId}
                             projectHasDevScript={projectHasDevScript}
-                            forceCreateAttempt={forceCreateAttempt}
-                            onLeaveForceCreateAttempt={
-                              onLeaveForceCreateAttempt
-                            }
                             attempts={attempts}
                             selectedAttempt={selectedAttempt}
-                            setSelectedAttempt={setSelectedAttempt}
-                            // hide actions in sidebar; moved to header in fullscreen
                           />
                         ) : (
                           <>
@@ -236,7 +228,7 @@ export function TaskDetailsPanel({
                                 <LogsTab selectedAttempt={selectedAttempt} />
                                 <TaskFollowUpSection
                                   task={task}
-                                  selectedAttemptId={selectedAttempt?.id}
+                                  selectedAttemptId={selectedAttempt.id}
                                   jumpToLogsTab={jumpToLogsTab}
                                 />
                               </RetryUiProvider>

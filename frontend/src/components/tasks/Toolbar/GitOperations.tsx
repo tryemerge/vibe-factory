@@ -18,13 +18,15 @@ import {
 import { useMemo, useState } from 'react';
 import type {
   BranchStatus,
-  GitBranch,
+  Merge,
   TaskAttempt,
   TaskWithAttemptStatus,
 } from 'shared/types';
 import { useRebase } from '@/hooks/useRebase';
 import { useMerge } from '@/hooks/useMerge';
+import { useAttemptExecution } from '@/hooks/useAttemptExecution';
 import { usePush } from '@/hooks/usePush';
+import { useProjectBranches } from '@/hooks/useProjectBranches';
 import { useChangeTargetBranch } from '@/hooks/useChangeTargetBranch';
 import NiceModal from '@ebay/nice-modal-react';
 import { Err } from '@/lib/api';
@@ -35,35 +37,29 @@ import { useTranslation } from 'react-i18next';
 interface GitOperationsProps {
   selectedAttempt: TaskAttempt;
   task: TaskWithAttemptStatus;
-  projectId: string;
-  branchStatus: BranchStatus | null;
-  branches: GitBranch[];
-  isAttemptRunning: boolean;
-  setError: (error: string | null) => void;
-  selectedBranch: string | null;
+  branchStatus: BranchStatus;
 }
 
 function GitOperations({
   selectedAttempt,
   task,
-  projectId,
   branchStatus,
-  branches,
-  isAttemptRunning,
-  setError,
-  selectedBranch,
 }: GitOperationsProps) {
   const { t } = useTranslation('tasks');
 
   // Git operation hooks
-  const rebaseMutation = useRebase(selectedAttempt.id, projectId);
+  const rebaseMutation = useRebase(selectedAttempt.id, task.project_id);
   const mergeMutation = useMerge(selectedAttempt.id);
   const pushMutation = usePush(selectedAttempt.id);
   const changeTargetBranchMutation = useChangeTargetBranch(
     selectedAttempt.id,
-    projectId
+    task.project_id
   );
   const isChangingTargetBranch = changeTargetBranchMutation.isPending;
+  const { branches } = useProjectBranches(task.project_id, {
+    enabled: true,
+  });
+  const { isAttemptRunning } = useAttemptExecution(selectedAttempt.id);
 
   // Git status calculations
   const hasConflictsCalculated = useMemo(
@@ -77,6 +73,7 @@ function GitOperations({
   const [rebasing, setRebasing] = useState(false);
   const [mergeSuccess, setMergeSuccess] = useState(false);
   const [pushSuccess, setPushSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Target branch change handlers
   const handleChangeTargetBranchClick = async (newBranch: string) => {
@@ -119,15 +116,15 @@ function GitOperations({
       };
 
     const openPR = branchStatus.merges.find(
-      (m: any) => m.type === 'pr' && m.pr_info.status === 'open'
+      (m: Merge) => m.type === 'pr' && m.pr_info.status === 'open'
     );
 
     const mergedPR = branchStatus.merges.find(
-      (m: any) => m.type === 'pr' && m.pr_info.status === 'merged'
+      (m: Merge) => m.type === 'pr' && m.pr_info.status === 'merged'
     );
 
     const merges = branchStatus.merges.filter(
-      (m: any) =>
+      (m: Merge) =>
         m.type === 'direct' ||
         (m.type === 'pr' && m.pr_info.status === 'merged')
     );
@@ -246,20 +243,21 @@ function GitOperations({
     NiceModal.show('create-pr', {
       attempt: selectedAttempt,
       task,
-      projectId,
+      projectId: task.project_id,
     });
   };
-
-  if (!branchStatus || mergeInfo.hasMergedPR) {
-    return null;
-  }
-
   return (
     <div>
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200">
+          <div className="text-destructive text-sm">{error}</div>
+        </div>
+      )}
       <Card className="bg-background p-3 border border-dashed text-sm">
         Git
       </Card>
-      <div className="p-3 space-y-3">
+      <div className="p-3">
         {/* Branch Flow with Status Below */}
         <div className="space-y-1 py-2">
           {/* Labels Row */}
@@ -297,9 +295,7 @@ function GitOperations({
             <div className="flex flex-1 items-center justify-end gap-1.5 min-w-0">
               <GitBranchIcon className="h-3 w-3 text-muted-foreground" />
               <span className="text-sm font-medium truncate">
-                {branchStatus?.target_branch_name ||
-                  selectedBranch ||
-                  t('git.branch.current')}
+                {branchStatus.target_branch_name}
               </span>
               <TooltipProvider>
                 <Tooltip>

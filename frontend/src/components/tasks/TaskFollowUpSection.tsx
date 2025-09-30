@@ -36,7 +36,7 @@ import { appendImageMarkdown } from '@/utils/markdownImages';
 
 interface TaskFollowUpSectionProps {
   task: TaskWithAttemptStatus;
-  selectedAttemptId?: string;
+  selectedAttemptId: string;
   jumpToLogsTab: () => void;
 }
 

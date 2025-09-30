@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { attemptsApi } from '@/lib/api';
 
-export function useAttemptBranch(attemptId?: string) {
+export function useAttemptBranch(attemptId?: string | null) {
   const query = useQuery({
     queryKey: ['attemptBranch', attemptId],
     queryFn: async () => {

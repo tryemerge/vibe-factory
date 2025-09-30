@@ -18,30 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { imagesApi, attemptsApi } from '@/lib/api';
+import { imagesApi } from '@/lib/api';
 import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useProjectBranches } from '@/hooks/useProjectBranches';
 import { useTemplates } from '@/hooks/useTemplates';
+import { useAttemptBranch } from '@/hooks/useAttemptBranch';
 import { useUserSystem } from '@/components/config-provider';
 import { ExecutorProfileSelector } from '@/components/settings';
 import BranchSelector from '@/components/tasks/BranchSelector';
 import type {
+  Task,
   TaskStatus,
   TaskTemplate,
   ImageResponse,
   ExecutorProfileId,
 } from 'shared/types';
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
-
-interface Task {
-  id: string;
-  project_id: string;
-  title: string;
-  description: string | null;
-  status: TaskStatus;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface TaskFormDialogProps {
   task?: Task | null; // Optional for create mode
@@ -76,14 +68,13 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
     const [newlyUploadedImageIds, setNewlyUploadedImageIds] = useState<
       string[]
     >([]);
-    const [selectedBranch, setSelectedBranch] = useState<string>('');
-    const [parentBranch, setParentBranch] = useState<string | null>(null);
+    const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
     const [selectedExecutorProfile, setSelectedExecutorProfile] =
       useState<ExecutorProfileId | null>(null);
-    const [quickstartExpanded, setQuickstartExpanded] =
-      useState<boolean>(false);
 
     const isEditMode = Boolean(task);
+    const { branch: parentBranch, isLoading: isLoadingParentBranch } =
+      useAttemptBranch(parentTaskAttemptId);
 
     const { templates } = useTemplates(projectId, {
       enabled: modal.visible && !isEditMode,
@@ -149,6 +140,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       } else if (initialTask) {
         // Duplicate mode - pre-fill from existing task but reset status to 'todo' and no images
         setTitle(initialTask.title);
+        setSelectedBranch(null);
         setDescription(initialTask.description || '');
         setStatus('todo'); // Always start duplicated tasks as 'todo'
         setSelectedTemplate('');
@@ -168,9 +160,8 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         setSelectedTemplate('');
         setImages([]);
         setNewlyUploadedImageIds([]);
-        setSelectedBranch('');
+        setSelectedBranch(null);
         setSelectedExecutorProfile(system.config?.executor_profile || null);
-        setQuickstartExpanded(false);
       }
     }, [
       task,
@@ -181,55 +172,23 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
     ]);
 
     useEffect(() => {
-      if (!modal.visible || isEditMode) {
+      if (!modal.visible || selectedBranch !== null || isLoadingParentBranch) {
         return;
       }
 
-      const nextBranch = pickBranch(
-        selectedBranch,
-        initialBaseBranch,
-        parentBranch
-      );
+      const next = pickBranch(selectedBranch, initialBaseBranch, parentBranch);
 
-      if (nextBranch !== selectedBranch) {
-        setSelectedBranch(nextBranch ?? '');
+      if (next) {
+        setSelectedBranch(next);
       }
     }, [
-      modal.visible,
-      isEditMode,
       pickBranch,
+      modal.visible,
       initialBaseBranch,
       parentBranch,
       selectedBranch,
+      isLoadingParentBranch,
     ]);
-
-    // Fetch parent base branch when parentTaskAttemptId is provided
-    useEffect(() => {
-      if (
-        modal.visible &&
-        !isEditMode &&
-        parentTaskAttemptId &&
-        !initialBaseBranch
-      ) {
-        attemptsApi
-          .get(parentTaskAttemptId)
-          .then((attempt) => {
-            setParentBranch(attempt.branch || attempt.target_branch || null);
-          })
-          .catch(() => {
-            setParentBranch(null);
-          });
-      } else {
-        setParentBranch(null);
-      }
-    }, [modal.visible, isEditMode, parentTaskAttemptId, initialBaseBranch]);
-
-    // Set default executor from config (following TaskDetailsToolbar pattern)
-    useEffect(() => {
-      if (system.config?.executor_profile) {
-        setSelectedExecutorProfile(system.config.executor_profile);
-      }
-    }, [system.config?.executor_profile]);
 
     // Set default executor from config (following TaskDetailsToolbar pattern)
     useEffect(() => {
@@ -305,7 +264,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
                 title,
                 description: description,
                 status,
-                parent_task_attempt: parentTaskAttemptId || null,
+                parent_task_attempt: task.parent_task_attempt,
                 image_ids: imageIds || null,
               },
             },
@@ -340,6 +299,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       status,
       isEditMode,
       projectId,
+      parentTaskAttemptId,
       task,
       modal,
       newlyUploadedImageIds,
@@ -399,6 +359,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       modal,
       newlyUploadedImageIds,
       createAndStart,
+      parentTaskAttemptId,
       selectedExecutorProfile,
       selectedBranch,
       system.config?.executor_profile,
@@ -418,8 +379,6 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       setShowDiscardWarning(false);
       modal.hide();
     }, [modal]);
-
-    // Handle keyboard shortcuts
 
     // Handle dialog close attempt
     const handleDialogOpenChange = (open: boolean) => {
@@ -567,69 +526,57 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
                 </div>
               )}
 
-              {!isEditMode &&
-                (() => {
-                  const quickstartSection = (
-                    <div className="pt-2">
-                      <details
-                        className="group"
-                        open={quickstartExpanded}
-                        onToggle={(e) =>
-                          setQuickstartExpanded(
-                            (e.target as HTMLDetailsElement).open
-                          )
-                        }
-                      >
-                        <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-2">
-                          <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
-                          <Settings2 className="h-3 w-3" />
-                          Quickstart
-                        </summary>
-                        <div className="mt-3 space-y-3">
-                          <p className="text-xs text-muted-foreground">
-                            Configuration for "Create & Start" workflow
-                          </p>
+              {!isEditMode && (
+                <div className="pt-2">
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-2">
+                      <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
+                      <Settings2 className="h-3 w-3" />
+                      Quickstart
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        Configuration for "Create & Start" workflow
+                      </p>
 
-                          {/* Executor Profile Selector */}
-                          {profiles && selectedExecutorProfile && (
-                            <ExecutorProfileSelector
-                              profiles={profiles}
-                              selectedProfile={selectedExecutorProfile}
-                              onProfileSelect={setSelectedExecutorProfile}
-                              disabled={isSubmitting || isSubmittingAndStart}
+                      {/* Executor Profile Selector */}
+                      {profiles && selectedExecutorProfile && (
+                        <ExecutorProfileSelector
+                          profiles={profiles}
+                          selectedProfile={selectedExecutorProfile}
+                          onProfileSelect={setSelectedExecutorProfile}
+                          disabled={isSubmitting || isSubmittingAndStart}
+                        />
+                      )}
+
+                      {/* Branch Selector */}
+                      {branches.length > 0 && (
+                        <div>
+                          <Label
+                            htmlFor="base-branch"
+                            className="text-sm font-medium"
+                          >
+                            Branch
+                          </Label>
+                          <div className="mt-1.5">
+                            <BranchSelector
+                              branches={branches}
+                              selectedBranch={selectedBranch}
+                              onBranchSelect={setSelectedBranch}
+                              placeholder="Select branch"
+                              className={
+                                isSubmitting || isSubmittingAndStart
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : ''
+                              }
                             />
-                          )}
-
-                          {/* Branch Selector */}
-                          {branches.length > 0 && (
-                            <div>
-                              <Label
-                                htmlFor="base-branch"
-                                className="text-sm font-medium"
-                              >
-                                Branch
-                              </Label>
-                              <div className="mt-1.5">
-                                <BranchSelector
-                                  branches={branches}
-                                  selectedBranch={selectedBranch}
-                                  onBranchSelect={setSelectedBranch}
-                                  placeholder="Select branch"
-                                  className={
-                                    isSubmitting || isSubmittingAndStart
-                                      ? 'opacity-50 cursor-not-allowed'
-                                      : ''
-                                  }
-                                />
-                              </div>
-                            </div>
-                          )}
+                          </div>
                         </div>
-                      </details>
+                      )}
                     </div>
-                  );
-                  return quickstartSection;
-                })()}
+                  </details>
+                </div>
+              )}
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                 <Button
