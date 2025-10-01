@@ -3,7 +3,9 @@ use std::{future::Future, path::PathBuf, str::FromStr};
 use db::models::{
     project::Project,
     task::{CreateTask, Task, TaskStatus, TaskWithAttemptStatus, UpdateTask},
+    task_attempt::TaskAttempt,
 };
+use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use rmcp::{
     ErrorData, ServerHandler,
     handler::server::tool::{Parameters, ToolRouter},
@@ -15,6 +17,8 @@ use rmcp::{
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json;
 use uuid::Uuid;
+
+use crate::routes::task_attempts::CreateTaskAttemptBody;
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct CreateTaskRequest {
@@ -177,6 +181,27 @@ pub struct DeleteTaskRequest {
     pub project_id: String,
     #[schemars(description = "The ID of the task to delete")]
     pub task_id: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct StartTaskAttemptRequest {
+    #[schemars(description = "The ID of the task to start")]
+    pub task_id: String,
+    #[schemars(
+        description = "The coding agent executor to run ('CLAUDE_CODE', 'CODEX', 'GEMINI', 'CURSOR', 'OPENCODE')"
+    )]
+    pub executor: String,
+    #[schemars(description = "Optional executor variant, if needed")]
+    pub variant: Option<String>,
+    #[schemars(description = "The base branch to use for the attempt")]
+    pub base_branch: String,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct StartTaskAttemptResponse {
+    pub message: String,
+    pub task_id: String,
+    pub attempt_id: String,
 }
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
@@ -423,6 +448,83 @@ impl TaskServer {
         TaskServer::success(&response)
     }
 
+    #[tool(description = "Start working on a task by creating and launching a new task attempt.")]
+    async fn start_task_attempt(
+        &self,
+        Parameters(StartTaskAttemptRequest {
+            task_id,
+            executor,
+            variant,
+            base_branch,
+        }): Parameters<StartTaskAttemptRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let task_uuid = match Uuid::parse_str(&task_id) {
+            Ok(uuid) => uuid,
+            Err(_) => {
+                return Self::err(
+                    "Invalid task ID format. Must be a valid UUID.".to_string(),
+                    Some(task_id),
+                );
+            }
+        };
+
+        let base_branch = base_branch.trim().to_string();
+        if base_branch.is_empty() {
+            return Self::err("Base branch must not be empty.".to_string(), None::<String>);
+        }
+
+        let executor_trimmed = executor.trim();
+        if executor_trimmed.is_empty() {
+            return Self::err("Executor must not be empty.".to_string(), None::<String>);
+        }
+
+        let normalized_executor = executor_trimmed.replace('-', "_").to_ascii_uppercase();
+        let base_executor = match BaseCodingAgent::from_str(&normalized_executor) {
+            Ok(exec) => exec,
+            Err(_) => {
+                return Self::err(
+                    format!("Unknown executor '{executor_trimmed}'."),
+                    None::<String>,
+                );
+            }
+        };
+
+        let variant = variant.and_then(|v| {
+            let trimmed = v.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        });
+
+        let executor_profile_id = ExecutorProfileId {
+            executor: base_executor,
+            variant,
+        };
+
+        let payload = CreateTaskAttemptBody {
+            task_id: task_uuid,
+            executor_profile_id,
+            base_branch,
+        };
+
+        let url = self.url("/api/task-attempts");
+        let attempt: TaskAttempt = match self.send_json(self.client.post(&url).json(&payload)).await
+        {
+            Ok(attempt) => attempt,
+            Err(e) => return Ok(e),
+        };
+
+        let response = StartTaskAttemptResponse {
+            message: "Task attempt started successfully".to_string(),
+            task_id: attempt.task_id.to_string(),
+            attempt_id: attempt.id.to_string(),
+        };
+
+        TaskServer::success(&response)
+    }
+
     #[tool(
         description = "Update an existing task/ticket's title, description, or status. `project_id` and `task_id` are required! `title`, `description`, and `status` are optional."
     )]
@@ -578,7 +680,7 @@ impl ServerHandler for TaskServer {
                 name: "vibe-kanban".to_string(),
                 version: "1.0.0".to_string(),
             },
-            instructions: Some("A task and project management server. If you need to create or update tickets or tasks then use these tools. Most of them absolutely require that you pass the `project_id` of the project that you are currently working on. This should be provided to you. Call `list_tasks` to fetch the `task_ids` of all the tasks in a project`. TOOLS: 'list_projects', 'list_tasks', 'create_task', 'get_task', 'update_task', 'delete_task'. Make sure to pass `project_id` or `task_id` where required. You can use list tools to get the available ids.".to_string()),
+            instructions: Some("A task and project management server. If you need to create or update tickets or tasks then use these tools. Most of them absolutely require that you pass the `project_id` of the project that you are currently working on. This should be provided to you. Call `list_tasks` to fetch the `task_ids` of all the tasks in a project`. TOOLS: 'list_projects', 'list_tasks', 'create_task', 'start_task_attempt', 'get_task', 'update_task', 'delete_task'. Make sure to pass `project_id` or `task_id` where required. You can use list tools to get the available ids.".to_string()),
         }
     }
 }
