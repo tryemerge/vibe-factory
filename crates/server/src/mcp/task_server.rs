@@ -14,10 +14,7 @@ use rmcp::{
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json;
-use utils::response::ApiResponse;
 use uuid::Uuid;
-
-use crate::routes::tasks::TaskQuery;
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct CreateTaskRequest {
@@ -220,6 +217,13 @@ impl TaskServer {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct ApiResponseEnvelope<T> {
+    success: bool,
+    data: Option<T>,
+    message: Option<String>,
+}
+
 impl TaskServer {
     fn success<T: Serialize>(data: &T) -> Result<CallToolResult, ErrorData> {
         Ok(CallToolResult::success(vec![Content::text(
@@ -259,17 +263,17 @@ impl TaskServer {
             );
         }
 
-        let api_response = resp.json::<ApiResponse<T>>().await.map_err(|e| {
+        let api_response = resp.json::<ApiResponseEnvelope<T>>().await.map_err(|e| {
             Self::err("Failed to parse VK API response", Some(&e.to_string())).unwrap()
         })?;
 
-        if !api_response.is_success() {
-            let msg = api_response.message().unwrap_or("Unknown error");
+        if !api_response.success {
+            let msg = api_response.message.as_deref().unwrap_or("Unknown error");
             return Err(Self::err("VK API returned error", Some(msg)).unwrap());
         }
 
         api_response
-            .into_data()
+            .data
             .ok_or_else(|| Self::err("VK API response missing data field", None).unwrap())
     }
 
@@ -305,7 +309,7 @@ impl TaskServer {
             }
         };
 
-        let url = self.url(&format!("/api/projects/{}/tasks", project_uuid));
+        let url = self.url("/api/tasks");
         let task: Task = match self
             .send_json(
                 self.client
@@ -384,16 +388,12 @@ impl TaskServer {
             None
         };
 
-        let url = self.url(&format!("/api/projects/{}/tasks", project_uuid));
-        let all_tasks: Vec<TaskWithAttemptStatus> = match self
-            .send_json(self.client.post(&url).json(&TaskQuery {
-                project_id: project_uuid,
-            }))
-            .await
-        {
-            Ok(t) => t,
-            Err(e) => return Ok(e),
-        };
+        let url = self.url(&format!("/api/tasks?project_id={}", project_uuid));
+        let all_tasks: Vec<TaskWithAttemptStatus> =
+            match self.send_json(self.client.get(&url)).await {
+                Ok(t) => t,
+                Err(e) => return Ok(e),
+            };
 
         let task_limit = limit.unwrap_or(50).max(0) as usize;
         let filtered = all_tasks.into_iter().filter(|t| {
@@ -471,7 +471,7 @@ impl TaskServer {
             parent_task_attempt: None,
             image_ids: None,
         };
-        let url = self.url(&format!("/api/projects/{}/tasks/{}", project_id, task_id));
+        let url = self.url(&format!("/api/tasks/{}", task_id));
         let updated_task: Task = match self.send_json(self.client.put(&url).json(&payload)).await {
             Ok(t) => t,
             Err(e) => return Ok(e),
@@ -510,7 +510,7 @@ impl TaskServer {
             );
         };
 
-        let url = self.url(&format!("/api/projects/{}/tasks/{}", project_id, task_id));
+        let url = self.url(&format!("/api/tasks/{}", task_id));
         if let Err(e) = self
             .send_json::<serde_json::Value>(self.client.delete(&url))
             .await
@@ -550,7 +550,7 @@ impl TaskServer {
             );
         };
 
-        let url = self.url(&format!("/api/projects/{}/tasks/{}", project_id, task_id));
+        let url = self.url(&format!("/api/tasks/{}", task_id));
         let task: Task = match self.send_json(self.client.get(&url)).await {
             Ok(t) => t,
             Err(e) => return Ok(e),
