@@ -1,4 +1,4 @@
-use std::{future::Future, path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 
 use db::models::{
     project::Project,
@@ -8,7 +8,7 @@ use db::models::{
 use executors::{executors::BaseCodingAgent, profile::ExecutorProfileId};
 use rmcp::{
     ErrorData, ServerHandler,
-    handler::server::tool::{Parameters, ToolRouter},
+    handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{
         CallToolResult, Content, Implementation, ProtocolVersion, ServerCapabilities, ServerInfo,
     },
@@ -672,13 +672,16 @@ impl TaskServer {
 impl ServerHandler for TaskServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            protocol_version: ProtocolVersion::V_2025_03_26,
+            protocol_version: ProtocolVersion::V_2025_06_18,
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
                 .build(),
             server_info: Implementation {
                 name: "vibe-kanban".to_string(),
+                title: Some("Vibe Kanban".to_string()),
                 version: "1.0.0".to_string(),
+                icons: None,
+                website_url: Some("https://www.vibekanban.com/".to_string())
             },
             instructions: Some("A task and project management server. If you need to create or update tickets or tasks then use these tools. Most of them absolutely require that you pass the `project_id` of the project that you are currently working on. This should be provided to you. Call `list_tasks` to fetch the `task_ids` of all the tasks in a project`. TOOLS: 'list_projects', 'list_tasks', 'create_task', 'start_task_attempt', 'get_task', 'update_task', 'delete_task'. Make sure to pass `project_id` or `task_id` where required. You can use list tools to get the available ids.".to_string()),
         }

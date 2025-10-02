@@ -69,6 +69,7 @@ function getBinaryName(base) {
 const platformDir = getPlatformDir();
 const extractDir = path.join(__dirname, "..", "dist", platformDir);
 const isMcpMode = process.argv.includes("--mcp");
+const isMcpHttpMode = argv.includes("--http"); // turns on http mcp transport
 
 // ensure output dir
 fs.mkdirSync(extractDir, { recursive: true });
@@ -105,7 +106,10 @@ function extractAndRun(baseName, launch) {
 
 if (isMcpMode) {
   extractAndRun("vibe-kanban-mcp", (bin) => {
-    const proc = spawn(bin, [], { stdio: "inherit" });
+    const mcpArgs = [];
+    if (isMcpHttpMode) mcpArgs.push("--http");
+
+    const proc = spawn(bin, mcpArgs, { stdio: "inherit" });
     proc.on("exit", (c) => process.exit(c || 0));
     proc.on("error", (e) => {
       console.error("❌ MCP server error:", e.message);

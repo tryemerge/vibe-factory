@@ -1,7 +1,17 @@
-use rmcp::{ServiceExt, transport::stdio};
+use rmcp::{
+    ServiceExt,
+    transport::{
+        stdio,
+        streamable_http_server::{StreamableHttpService, session::local::LocalSessionManager},
+    },
+};
 use server::mcp::task_server::TaskServer;
 use tracing_subscriber::{EnvFilter, prelude::*};
 use utils::{port_file::read_port_file, sentry::sentry_layer};
+
+fn use_http() -> bool {
+    std::env::args().any(|arg| arg == "--http")
+}
 
 fn main() -> anyhow::Result<()> {
     let environment = if cfg!(debug_assertions) {
@@ -64,15 +74,48 @@ fn main() -> anyhow::Result<()> {
                 url
             };
 
-            let service = TaskServer::new(&base_url)
-                .serve(stdio())
-                .await
-                .inspect_err(|e| {
-                    tracing::error!("serving error: {:?}", e);
-                    sentry::capture_error(e);
-                })?;
+            if use_http() {
+                let host =
+                    std::env::var("VIBE_MCP_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+                let port: u16 = std::env::var("VIBE_MCP_PORT")
+                    .ok()
+                    .and_then(|p| p.parse().ok())
+                    .unwrap_or(8000);
 
-            service.waiting().await?;
+                let bind_addr = format!("{}:{}", host, port);
+                tracing::info!("[MCP] HTTP mode enabled; binding to {}", bind_addr);
+
+                let service = StreamableHttpService::new(
+                    {
+                        let base_url = base_url.clone();
+                        move || Ok(TaskServer::new(&base_url))
+                    },
+                    LocalSessionManager::default().into(),
+                    Default::default(),
+                );
+
+                let router = axum::Router::new().nest_service("/mcp", service);
+                let tcp_listener = tokio::net::TcpListener::bind(&bind_addr).await?;
+
+                axum::serve(tcp_listener, router)
+                    .with_graceful_shutdown(async {
+                        tokio::signal::ctrl_c()
+                            .await
+                            .expect("failed to install Ctrl+C handler");
+                    })
+                    .await?;
+            } else {
+                let service = TaskServer::new(&base_url)
+                    .serve(stdio())
+                    .await
+                    .inspect_err(|e| {
+                        tracing::error!("serving error: {:?}", e);
+                        sentry::capture_error(e);
+                    })?;
+
+                service.waiting().await?;
+            }
+
             Ok(())
         })
 }
