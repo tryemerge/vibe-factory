@@ -53,6 +53,11 @@ export {
   type RebaseDialogResult,
 } from './tasks/RebaseDialog';
 export {
+  ForcePushConfirmDialog,
+  type ForcePushConfirmDialogProps,
+  type ForcePushConfirmDialogResult,
+} from './tasks/ForcePushConfirmDialog';
+export {
   RestoreLogsDialog,
   type RestoreLogsDialogProps,
   type RestoreLogsDialogResult,

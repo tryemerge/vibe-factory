@@ -649,9 +649,16 @@ pub async fn merge_task_attempt(
     Ok(ResponseJson(ApiResponse::success(())))
 }
 
+#[derive(Debug, Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct PushRequest {
+    pub force: Option<bool>,
+}
+
 pub async fn push_task_attempt_branch(
     Extension(task_attempt): Extension<TaskAttempt>,
     State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<PushRequest>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
     let github_config = deployment.config().read().await.github.clone();
     let Some(github_token) = github_config.token() else {
@@ -663,9 +670,10 @@ pub async fn push_task_attempt_branch(
 
     let ws_path = ensure_worktree_path(&deployment, &task_attempt).await?;
 
+    let force = payload.force.unwrap_or(false);
     deployment
         .git()
-        .push_to_github(&ws_path, &task_attempt.branch, &github_token)?;
+        .push_to_github(&ws_path, &task_attempt.branch, &github_token, force)?;
     Ok(ResponseJson(ApiResponse::success(())))
 }
 
@@ -711,7 +719,7 @@ pub async fn create_github_pr(
     if let Err(e) =
         deployment
             .git()
-            .push_to_github(&workspace_path, &task_attempt.branch, &github_token)
+            .push_to_github(&workspace_path, &task_attempt.branch, &github_token, false)
     {
         tracing::error!("Failed to push branch to GitHub: {}", e);
         let gh_e = GitHubServiceError::from(e);

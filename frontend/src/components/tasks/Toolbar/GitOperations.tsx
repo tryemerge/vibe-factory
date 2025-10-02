@@ -158,15 +158,38 @@ function GitOperations({
     await performMerge();
   };
 
-  const handlePushClick = async () => {
+  const handlePushClick = async (force: boolean = false) => {
     try {
       setPushing(true);
-      await pushMutation.mutateAsync();
+      await pushMutation.mutateAsync(force);
       setError(null); // Clear any previous errors on success
       setPushSuccess(true);
       setTimeout(() => setPushSuccess(false), 2000);
     } catch (error: any) {
-      setError(error.message || t('git.errors.pushChanges'));
+      // Check if this is a push rejection error that might need force push
+      const isPushRejected = error.message?.toLowerCase().includes('non-fast-forward') ||
+                             error.message?.toLowerCase().includes('fetch first') ||
+                             error.message?.toLowerCase().includes('rejected') ||
+                             error.message?.toLowerCase().includes('updates were rejected');
+
+      if (isPushRejected && !force) {
+        // Show force push confirmation dialog
+        try {
+          const result = await showModal<{ action: 'confirmed' | 'canceled' }>('force-push-confirm-dialog', {
+            isPushing: false,
+          });
+
+          if (result.action === 'confirmed') {
+            // Retry with force
+            await handlePushClick(true);
+          }
+        } catch (dialogError) {
+          // User cancelled the dialog
+          setError(error.message || t('git.errors.pushChanges'));
+        }
+      } else {
+        setError(error.message || t('git.errors.pushChanges'));
+      }
     } finally {
       setPushing(false);
     }

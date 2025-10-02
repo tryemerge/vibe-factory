@@ -9,9 +9,9 @@ export function usePush(
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => {
+    mutationFn: (force?: boolean) => {
       if (!attemptId) return Promise.resolve();
-      return attemptsApi.push(attemptId);
+      return attemptsApi.push(attemptId, force);
     },
     onSuccess: () => {
       // A push only affects remote status; invalidate the same branchStatus

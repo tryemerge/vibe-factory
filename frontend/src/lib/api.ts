@@ -488,9 +488,10 @@ export const attemptsApi = {
     return handleApiResponse<void>(response);
   },
 
-  push: async (attemptId: string): Promise<void> => {
+  push: async (attemptId: string, force?: boolean): Promise<void> => {
     const response = await makeRequest(`/api/task-attempts/${attemptId}/push`, {
       method: 'POST',
+      body: JSON.stringify({ force: force || false }),
     });
     return handleApiResponse<void>(response);
   },

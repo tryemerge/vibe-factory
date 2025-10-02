@@ -333,8 +333,13 @@ impl GitCli {
         remote_url: &str,
         branch: &str,
         token: &str,
+        force: bool,
     ) -> Result<(), GitCliError> {
-        let refspec = format!("refs/heads/{branch}:refs/heads/{branch}");
+        let refspec = if force {
+            format!("+refs/heads/{branch}:refs/heads/{branch}")
+        } else {
+            format!("refs/heads/{branch}:refs/heads/{branch}")
+        };
         let auth_header = self.build_auth_header(token);
         let envs = self.build_token_env(&auth_header);
 

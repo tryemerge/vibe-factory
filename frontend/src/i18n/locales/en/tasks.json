@@ -86,6 +86,17 @@
       "pushChanges": "Failed to push changes",
       "mergeChanges": "Failed to merge changes",
       "rebaseBranch": "Failed to rebase branch"
+    },
+    "forcePush": {
+      "dialog": {
+        "title": "Force Push Required",
+        "description": "The remote branch has diverged from your local branch. A force push will overwrite the remote branch with your local changes.",
+        "warning": "Warning: Force pushing can overwrite changes on the remote branch",
+        "warningPoint1": "This will rewrite the remote branch history",
+        "warningPoint2": "Any commits on the remote that aren't in your local branch will be lost",
+        "confirm": "Force Push",
+        "pushing": "Force Pushing..."
+      }
     }
   },
   "preview": {

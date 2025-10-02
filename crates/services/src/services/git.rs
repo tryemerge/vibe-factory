@@ -1734,6 +1734,7 @@ impl GitService {
         worktree_path: &Path,
         branch_name: &str,
         github_token: &str,
+        force: bool,
     ) -> Result<(), GitServiceError> {
         let repo = Repository::open(worktree_path)?;
         self.check_worktree_clean(&repo)?;
@@ -1748,7 +1749,7 @@ impl GitService {
         let https_url = self.convert_to_https_url(remote_url);
         let git_cli = GitCli::new();
         if let Err(e) =
-            git_cli.push_with_token(worktree_path, &https_url, branch_name, github_token)
+            git_cli.push_with_token(worktree_path, &https_url, branch_name, github_token, force)
         {
             tracing::error!("Push to GitHub failed: {}", e);
             return Err(e.into());
