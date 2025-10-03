@@ -233,10 +233,6 @@ async fn write_python_hook(current_dir: &Path) -> Result<(), ExecutorError> {
     tokio::fs::create_dir_all(&hooks_dir).await?;
     let hook_path = hooks_dir.join("confirm.py");
 
-    if tokio::fs::try_exists(&hook_path).await? {
-        return Ok(());
-    }
-
     // Replace placeholder with actual marker value (single source of truth)
     let script_content =
         CONFIRM_HOOK_SCRIPT.replace("{{USER_FEEDBACK_MARKER}}", USER_FEEDBACK_MARKER);
@@ -323,18 +319,29 @@ exit "$exit_code"
 
 /// Extract user denial reason from tool result error messages
 /// Our confirm.py hook prefixes user feedback with "User feedback: " for easy extraction
+/// Supports both string content and Claude's array format: [{"type":"text","text":"..."}]
 fn extract_denial_reason(content: &serde_json::Value) -> Option<String> {
+    // First try to parse as string
     let content_str = if let Some(s) = content.as_str() {
-        s
+        s.to_string()
+    } else if let Ok(items) =
+        serde_json::from_value::<Vec<ClaudeToolResultTextItem>>(content.clone())
+    {
+        // Handle array format: [{"type":"text","text":"..."}]
+        items
+            .into_iter()
+            .map(|item| item.text)
+            .collect::<Vec<_>>()
+            .join("\n")
     } else {
-        return None;
+        // Try to serialize the value as a string
+        content.to_string()
     };
 
     // Look for our natural language marker and extract everything after it
     if let Some(pos) = content_str.find(USER_FEEDBACK_MARKER) {
         let after_marker = &content_str[pos + USER_FEEDBACK_MARKER.len()..];
-        // Take the first line after the marker (in case there's more content)
-        let feedback = after_marker.lines().next()?.trim();
+        let feedback = after_marker.trim();
         if !feedback.is_empty() {
             return Some(feedback.to_string());
         }
