@@ -600,6 +600,7 @@ function DisplayConversationEntry({
   executionProcessId,
   taskAttempt,
 }: Props) {
+  const { t } = useTranslation('common');
   const isNormalizedEntry = (
     entry: NormalizedEntry | ProcessStartPayload
   ): entry is NormalizedEntry => 'entry_type' in entry;
@@ -657,7 +658,9 @@ function DisplayConversationEntry({
             className="text-xs mb-1 opacity-70"
             style={{ color: 'hsl(var(--destructive))' }}
           >
-            {feedbackEntry.denied_tool} denied by user
+            {t('conversation.deniedByUser', {
+              toolName: feedbackEntry.denied_tool,
+            })}
           </div>
           <MarkdownRenderer
             content={entry.content}
