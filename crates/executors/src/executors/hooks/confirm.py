@@ -10,11 +10,15 @@ from typing import Optional
 
 def json_error(reason: Optional[str]) -> None:
     """Emit a deny PreToolUse JSON to stdout and exit(0)."""
+    # Prefix user feedback with a natural language marker for extraction
+    # This marker is replaced at runtime by Rust code - do not modify directly
+    USER_FEEDBACK_MARKER = "{{USER_FEEDBACK_MARKER}}"
+    formatted_reason = f"{USER_FEEDBACK_MARKER}{reason}" if reason else None
     payload = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": "deny",
-            "permissionDecisionReason": reason,
+            "permissionDecisionReason": formatted_reason,
         }
     }
     print(json.dumps(payload, ensure_ascii=False))
