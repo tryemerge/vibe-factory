@@ -734,27 +734,24 @@ impl ClaudeLogProcessor {
                                             }
 
                                             // Check if this is a denial with user feedback (for both command and non-command tools)
-                                            if is_error.unwrap_or(false) {
-                                                if let Some(denial_reason) =
+                                            if is_error.unwrap_or(false)
+                                                && let Some(denial_reason) =
                                                     extract_denial_reason(content)
-                                                {
-                                                    let user_feedback = NormalizedEntry {
-                                                        timestamp: None,
-                                                        entry_type:
-                                                            NormalizedEntryType::UserFeedback {
-                                                                denied_tool: display_tool_name
-                                                                    .clone(),
-                                                            },
-                                                        content: denial_reason,
-                                                        metadata: None,
-                                                    };
-                                                    msg_store.push_patch(
-                                                        ConversationPatch::add_normalized_entry(
-                                                            entry_index_provider.next(),
-                                                            user_feedback,
-                                                        ),
-                                                    );
-                                                }
+                                            {
+                                                let user_feedback = NormalizedEntry {
+                                                    timestamp: None,
+                                                    entry_type: NormalizedEntryType::UserFeedback {
+                                                        denied_tool: display_tool_name.clone(),
+                                                    },
+                                                    content: denial_reason,
+                                                    metadata: None,
+                                                };
+                                                msg_store.push_patch(
+                                                    ConversationPatch::add_normalized_entry(
+                                                        entry_index_provider.next(),
+                                                        user_feedback,
+                                                    ),
+                                                );
                                             }
                                         }
                                     }
