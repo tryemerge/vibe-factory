@@ -146,7 +146,7 @@ function GitOperations({
 
   const prButtonMode = useMemo(() => {
     if (!mergeInfo.hasOpenPR) return 'create' as const;
-    return remoteAhead === 0 ? 'view' as const : 'push' as const;
+    return remoteAhead === 0 ? ('view' as const) : ('push' as const);
   }, [mergeInfo.hasOpenPR, remoteAhead]);
 
   const prButtonLabel = useMemo(() => {
@@ -259,7 +259,11 @@ function GitOperations({
       mergeInfo.openPR?.type === 'pr' &&
       mergeInfo.openPR.pr_info?.url
     ) {
-      window.open(mergeInfo.openPR.pr_info.url, '_blank', 'noopener,noreferrer');
+      window.open(
+        mergeInfo.openPR.pr_info.url,
+        '_blank',
+        'noopener,noreferrer'
+      );
       return;
     }
     if (prButtonMode === 'push') {
