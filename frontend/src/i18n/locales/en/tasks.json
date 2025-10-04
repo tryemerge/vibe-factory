@@ -79,7 +79,8 @@
       "pushing": "Pushing...",
       "push": "Push",
       "creating": "Creating...",
-      "createPr": "Create PR"
+      "createPr": "Create PR",
+      "viewPr": "View PR"
     },
     "errors": {
       "changeTargetBranch": "Failed to change target branch",

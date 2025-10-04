@@ -142,6 +142,23 @@ function GitOperations({
     };
   }, [branchStatus?.merges]);
 
+  const remoteAhead = branchStatus?.remote_commits_ahead ?? 0;
+
+  const prButtonMode = useMemo(() => {
+    if (!mergeInfo.hasOpenPR) return 'create' as const;
+    return remoteAhead === 0 ? 'view' as const : 'push' as const;
+  }, [mergeInfo.hasOpenPR, remoteAhead]);
+
+  const prButtonLabel = useMemo(() => {
+    if (prButtonMode === 'view') return t('git.states.viewPr');
+    if (prButtonMode === 'push') {
+      if (pushSuccess) return t('git.states.pushed');
+      if (pushing) return t('git.states.pushing');
+      return t('git.states.push');
+    }
+    return t('git.states.createPr');
+  }, [prButtonMode, pushSuccess, pushing, t]);
+
   const mergeButtonLabel = useMemo(() => {
     if (mergeSuccess) return t('git.states.merged');
     if (merging) return t('git.states.merging');
@@ -237,12 +254,18 @@ function GitOperations({
   };
 
   const handlePRButtonClick = async () => {
-    // If PR already exists, push to it
-    if (mergeInfo.hasOpenPR) {
+    if (
+      prButtonMode === 'view' &&
+      mergeInfo.openPR?.type === 'pr' &&
+      mergeInfo.openPR.pr_info?.url
+    ) {
+      window.open(mergeInfo.openPR.pr_info.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (prButtonMode === 'push') {
       await handlePushClick();
       return;
     }
-
     NiceModal.show('create-pr', {
       attempt: selectedAttempt,
       task,
@@ -465,9 +488,8 @@ function GitOperations({
                 Boolean((branchStatus.commits_behind ?? 0) > 0) ||
                 isAttemptRunning ||
                 hasConflictsCalculated ||
-                (mergeInfo.hasOpenPR &&
-                  branchStatus.remote_commits_ahead === 0) ||
-                ((branchStatus.commits_ahead ?? 0) === 0 &&
+                (prButtonMode !== 'view' &&
+                  (branchStatus.commits_ahead ?? 0) === 0 &&
                   (branchStatus.remote_commits_ahead ?? 0) === 0 &&
                   !pushSuccess &&
                   !mergeSuccess)
@@ -477,13 +499,7 @@ function GitOperations({
               className="border-info text-info hover:bg-info gap-1 flex-1"
             >
               <GitPullRequest className="h-3 w-3" />
-              {mergeInfo.hasOpenPR
-                ? pushSuccess
-                  ? t('git.states.pushed')
-                  : pushing
-                    ? t('git.states.pushing')
-                    : t('git.states.push')
-                : t('git.states.createPr')}
+              {prButtonLabel}
             </Button>
             <Button
               onClick={handleRebaseDialogOpen}
