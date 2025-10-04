@@ -488,15 +488,16 @@ function GitOperations({
             <Button
               onClick={handlePRButtonClick}
               disabled={
-                pushing ||
-                Boolean((branchStatus.commits_behind ?? 0) > 0) ||
-                isAttemptRunning ||
-                hasConflictsCalculated ||
-                (prButtonMode !== 'view' &&
-                  (branchStatus.commits_ahead ?? 0) === 0 &&
-                  (branchStatus.remote_commits_ahead ?? 0) === 0 &&
-                  !pushSuccess &&
-                  !mergeSuccess)
+                prButtonMode === 'view'
+                  ? false
+                  : pushing ||
+                    Boolean((branchStatus.commits_behind ?? 0) > 0) ||
+                    isAttemptRunning ||
+                    hasConflictsCalculated ||
+                    ((branchStatus.commits_ahead ?? 0) === 0 &&
+                      (branchStatus.remote_commits_ahead ?? 0) === 0 &&
+                      !pushSuccess &&
+                      !mergeSuccess)
               }
               variant="outline"
               size="xs"
