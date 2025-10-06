@@ -1,0 +1,257 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sqlx::PgPool;
+use uuid::Uuid;
+
+use super::Tx;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "kebab-case")]
+#[sqlx(type_name = "task_status", rename_all = "kebab-case")]
+pub enum TaskStatus {
+    Todo,
+    InProgress,
+    InReview,
+    Done,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SharedTask {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub creator_member_id: Option<Uuid>,
+    pub assignee_member_id: Option<Uuid>,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: TaskStatus,
+    pub version: i64,
+    pub shared_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateSharedTaskData {
+    pub title: String,
+    pub description: Option<String>,
+    pub assignee_member_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateSharedTaskData {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<TaskStatus>,
+    pub version: Option<i64>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TransferTaskAssignmentData {
+    pub new_assignee_member_id: Uuid,
+    pub previous_assignee_member_id: Option<Uuid>,
+    pub version: Option<i64>,
+}
+
+#[derive(Debug)]
+pub enum SharedTaskError {
+    NotFound,
+    Conflict(String),
+    Database(sqlx::Error),
+}
+
+impl From<sqlx::Error> for SharedTaskError {
+    fn from(error: sqlx::Error) -> Self {
+        if matches!(error, sqlx::Error::RowNotFound) {
+            Self::NotFound
+        } else {
+            Self::Database(error)
+        }
+    }
+}
+
+pub struct SharedTaskRepository<'a> {
+    pool: &'a PgPool,
+}
+
+impl<'a> SharedTaskRepository<'a> {
+    pub fn new(pool: &'a PgPool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn create(
+        &self,
+        organization_id: Uuid,
+        data: CreateSharedTaskData,
+    ) -> Result<SharedTask, SharedTaskError> {
+        let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
+
+        let task = sqlx::query_as!(
+            SharedTask,
+            r#"
+            INSERT INTO shared_tasks (
+                organization_id,
+                assignee_member_id,
+                title,
+                description,
+                shared_at
+            )
+            VALUES ($1, $2, $3, $4, NOW())
+            RETURNING id                AS "id!",
+                      organization_id   AS "organization_id!",
+                      creator_member_id AS "creator_member_id?",
+                      assignee_member_id AS "assignee_member_id?",
+                      title             AS "title!",
+                      description       AS "description?",
+                      status            AS "status!: TaskStatus",
+                      version           AS "version!",
+                      shared_at         AS "shared_at?",
+                      created_at        AS "created_at!",
+                      updated_at        AS "updated_at!"
+            "#,
+            organization_id,
+            data.assignee_member_id,
+            data.title,
+            data.description
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        let payload = serde_json::to_value(&task).map_err(|e| {
+            SharedTaskError::Conflict(format!("could not serialize task snapshot: {e}"))
+        })?;
+
+        insert_activity(&mut tx, &task, "task.created", payload).await?;
+        tx.commit().await.map_err(SharedTaskError::from)?;
+        Ok(task)
+    }
+
+    pub async fn update(
+        &self,
+        task_id: Uuid,
+        data: UpdateSharedTaskData,
+    ) -> Result<SharedTask, SharedTaskError> {
+        let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
+
+        let task = sqlx::query_as!(
+            SharedTask,
+            r#"
+        UPDATE shared_tasks AS t
+        SET title       = COALESCE($2, t.title),
+            description = COALESCE($3, t.description),
+            status      = COALESCE($4, t.status),
+            version     = t.version + 1,
+            updated_at  = NOW()
+        WHERE t.id = $1
+          AND t.version = COALESCE($5, t.version)
+        RETURNING
+            t.id                AS "id!",
+            t.organization_id   AS "organization_id!",
+            t.creator_member_id AS "creator_member_id?",
+            t.assignee_member_id AS "assignee_member_id?",
+            t.title             AS "title!",
+            t.description       AS "description?",
+            t.status            AS "status!: TaskStatus",
+            t.version           AS "version!",
+            t.shared_at         AS "shared_at?",
+            t.created_at        AS "created_at!",
+            t.updated_at        AS "updated_at!"
+        "#,
+            task_id,
+            data.title,
+            data.description,
+            data.status as Option<TaskStatus>,
+            data.version
+        )
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(|| SharedTaskError::Conflict("task version mismatch".to_string()))?;
+
+        let payload = serde_json::to_value(&task).map_err(|e| {
+            SharedTaskError::Conflict(format!("could not serialize task snapshot: {e}"))
+        })?;
+
+        insert_activity(&mut tx, &task, "task.updated", payload).await?;
+
+        tx.commit().await.map_err(SharedTaskError::from)?;
+        Ok(task)
+    }
+
+    pub async fn transfer_task_assignment(
+        &self,
+        task_id: Uuid,
+        data: TransferTaskAssignmentData,
+    ) -> Result<SharedTask, SharedTaskError> {
+        let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
+
+        let task = sqlx::query_as!(
+            SharedTask,
+            r#"
+        UPDATE shared_tasks AS t
+        SET assignee_member_id = $2,
+            version = t.version + 1,
+            updated_at = NOW()
+        WHERE t.id = $1
+          AND t.version = COALESCE($4, t.version)
+          AND ($3::uuid IS NULL OR t.assignee_member_id = $3::uuid)
+        RETURNING
+            t.id                AS "id!",
+            t.organization_id   AS "organization_id!",
+            t.creator_member_id AS "creator_member_id?",
+            t.assignee_member_id AS "assignee_member_id?",
+            t.title             AS "title!",
+            t.description       AS "description?",
+            t.status            AS "status!: TaskStatus",
+            t.version           AS "version!",
+            t.shared_at         AS "shared_at?",
+            t.created_at        AS "created_at!",
+            t.updated_at        AS "updated_at!"
+        "#,
+            task_id,
+            data.new_assignee_member_id,
+            data.previous_assignee_member_id,
+            data.version
+        )
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(|| {
+            SharedTaskError::Conflict("task version or previous assignee mismatch".to_string())
+        })?;
+
+        let payload = serde_json::to_value(&task).map_err(|e| {
+            SharedTaskError::Conflict(format!("could not serialize task snapshot: {e}"))
+        })?;
+
+        insert_activity(&mut tx, &task, "task.assignment_transferred", payload).await?;
+        tx.commit().await.map_err(SharedTaskError::from)?;
+        Ok(task)
+    }
+}
+
+async fn insert_activity(
+    tx: &mut Tx<'_>,
+    task: &SharedTask,
+    event_type: &str,
+    payload: Value,
+) -> Result<(), SharedTaskError> {
+    sqlx::query!(
+        r#"
+        INSERT INTO activity (
+            organization_id,
+            assignee_member_id,
+            event_type,
+            payload
+        )
+        VALUES ($1, $2, $3, $4) 
+        "#,
+        task.organization_id,
+        task.assignee_member_id,
+        event_type,
+        payload
+    )
+    .execute(&mut **tx)
+    .await
+    .map(|_| ())
+    .map_err(SharedTaskError::from)
+}

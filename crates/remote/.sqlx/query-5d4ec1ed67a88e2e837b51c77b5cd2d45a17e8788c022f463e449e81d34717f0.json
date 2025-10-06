@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE shared_tasks AS t\n        SET title       = COALESCE($2, t.title),\n            description = COALESCE($3, t.description),\n            status      = COALESCE($4, t.status),\n            version     = t.version + 1,\n            updated_at  = NOW()\n        WHERE t.id = $1\n          AND t.version = COALESCE($5, t.version)\n        RETURNING\n            t.id                AS \"id!\",\n            t.organization_id   AS \"organization_id!\",\n            t.creator_member_id AS \"creator_member_id?\",\n            t.assignee_member_id AS \"assignee_member_id?\",\n            t.title             AS \"title!\",\n            t.description       AS \"description?\",\n            t.status            AS \"status!: TaskStatus\",\n            t.version           AS \"version!\",\n            t.shared_at         AS \"shared_at?\",\n            t.created_at        AS \"created_at!\",\n            t.updated_at        AS \"updated_at!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "organization_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_member_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "assignee_member_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "title!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "description?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "status!: TaskStatus",
+        "type_info": {
+          "Custom": {
+            "name": "task_status",
+            "kind": {
+              "Enum": [
+                "todo",
+                "in-progress",
+                "in-review",
+                "done",
+                "cancelled"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "version!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "shared_at?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "task_status",
+            "kind": {
+              "Enum": [
+                "todo",
+                "in-progress",
+                "in-review",
+                "done",
+                "cancelled"
+              ]
+            }
+          }
+        },
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "5d4ec1ed67a88e2e837b51c77b5cd2d45a17e8788c022f463e449e81d34717f0"
+}
