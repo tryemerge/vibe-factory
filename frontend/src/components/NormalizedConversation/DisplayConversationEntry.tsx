@@ -438,11 +438,16 @@ const ToolCallCard: React.FC<{
 }) => {
   const { t } = useTranslation('common');
   const at: any = entryType?.action_type || action;
+  
+  const isMermaidTool =
+    (entryType?.action_type?.action === 'tool' || at?.action === 'tool') &&
+    ((entryType?.tool_name || at?.tool_name)?.toLowerCase?.() === 'mermaid');
+  
   const [expanded, toggle] = useExpandable(
     `tool-entry:${expansionKey}`,
     defaultExpanded
   );
-  const effectiveExpanded = forceExpanded || expanded;
+  const effectiveExpanded = forceExpanded || isMermaidTool || expanded;
 
   const label =
     at?.action === 'command_run'
@@ -472,9 +477,11 @@ const ToolCallCard: React.FC<{
     argsText = (fromArgs || fallback).trim();
   }
 
-  const hasExpandableDetails = isCommand
-    ? Boolean(argsText) || Boolean(output)
-    : hasArgs || hasResult;
+  const hasExpandableDetails = isMermaidTool
+    ? false
+    : isCommand
+      ? Boolean(argsText) || Boolean(output)
+      : hasArgs || hasResult;
 
   const HeaderWrapper: React.ElementType = hasExpandableDetails
     ? 'button'
@@ -513,7 +520,12 @@ const ToolCallCard: React.FC<{
       </HeaderWrapper>
 
       {effectiveExpanded && (
-        <div className="max-h-[200px] overflow-y-auto border">
+        <div
+          className={cn(
+            'border',
+            isMermaidTool ? '' : 'max-h-[200px] overflow-y-auto'
+          )}
+        >
           {isCommand ? (
             <>
               {argsText && (
