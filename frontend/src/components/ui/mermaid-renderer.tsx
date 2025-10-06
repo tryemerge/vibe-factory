@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import mermaid from 'mermaid';
-import { Maximize2 } from 'lucide-react';
+import { Maximize2, Share2 } from 'lucide-react';
+import { deflate } from 'pako';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,13 @@ interface MermaidRendererProps {
 
 let mermaidInitialized = false;
 
+const toUrlSafeBase64 = (u8a: Uint8Array): string => {
+  return btoa(String.fromCharCode(...u8a))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+};
+
 const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   code,
   className = '',
@@ -24,6 +32,16 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const handleShare = () => {
+    const state = { code };
+    const json = JSON.stringify(state);
+    const data = new TextEncoder().encode(json);
+    const compressed = deflate(data, { level: 9 });
+    const base64 = toUrlSafeBase64(compressed);
+    const url = `https://mermaid.live/edit#pako:${base64}`;
+    window.open(url, '_blank');
+  };
 
   useEffect(() => {
     if (!mermaidInitialized) {
@@ -88,13 +106,22 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   return (
     <>
       <div className="relative">
-        <button
-          onClick={() => setIsFullscreen(true)}
-          className="absolute top-2 right-2 p-1.5 bg-background/80 hover:bg-background border rounded opacity-70 hover:opacity-100 transition-opacity z-10"
-          title="View fullscreen"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </button>
+        <div className="absolute top-2 right-2 flex gap-2 z-10">
+          <button
+            onClick={handleShare}
+            className="p-1.5 bg-background/80 hover:bg-background border rounded opacity-70 hover:opacity-100 transition-opacity"
+            title="View & Share on Web"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setIsFullscreen(true)}
+            className="p-1.5 bg-background/80 hover:bg-background border rounded opacity-70 hover:opacity-100 transition-opacity"
+            title="View fullscreen"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+        </div>
         <div
           ref={containerRef}
           className={`mermaid-container ${className}`}
