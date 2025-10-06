@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import MarkdownRenderer from '@/components/ui/markdown-renderer.tsx';
+import MermaidRenderer from '@/components/ui/mermaid-renderer.tsx';
 import {
   ActionType,
   NormalizedEntry,
@@ -539,25 +540,38 @@ const ToolCallCard: React.FC<{
             <>
               {entryType?.action_type.action === 'tool' && (
                 <>
-                  <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
-                    {t('conversation.args')}
-                  </div>
-                  <div className="px-2 py-1">
-                    {renderJson(entryType.action_type.arguments)}
-                  </div>
-                  <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
-                    {t('conversation.result')}
-                  </div>
-                  <div className="px-2 py-1">
-                    {entryType.action_type.result?.type.type === 'markdown' &&
-                      entryType.action_type.result.value && (
-                        <MarkdownRenderer
-                          content={entryType.action_type.result.value?.toString()}
-                        />
-                      )}
-                    {entryType.action_type.result?.type.type === 'json' &&
-                      renderJson(entryType.action_type.result.value)}
-                  </div>
+                  {entryType.tool_name?.toLowerCase() === 'mermaid' &&
+                  typeof entryType.action_type.arguments === 'object' &&
+                  entryType.action_type.arguments !== null &&
+                  'code' in entryType.action_type.arguments ? (
+                    <div className="px-2 py-1">
+                      <MermaidRenderer
+                        code={String(entryType.action_type.arguments.code)}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
+                        {t('conversation.args')}
+                      </div>
+                      <div className="px-2 py-1">
+                        {renderJson(entryType.action_type.arguments)}
+                      </div>
+                      <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
+                        {t('conversation.result')}
+                      </div>
+                      <div className="px-2 py-1">
+                        {entryType.action_type.result?.type.type === 'markdown' &&
+                          entryType.action_type.result.value && (
+                            <MarkdownRenderer
+                              content={entryType.action_type.result.value?.toString()}
+                            />
+                          )}
+                        {entryType.action_type.result?.type.type === 'json' &&
+                          renderJson(entryType.action_type.result.value)}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </>
