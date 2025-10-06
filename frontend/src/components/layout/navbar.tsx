@@ -28,6 +28,14 @@ import { useOpenProjectInEditor } from '@/hooks/useOpenProjectInEditor';
 import { OpenInIdeButton } from '@/components/ide/OpenInIdeButton';
 import { useDiscordOnlineCount } from '@/hooks/useDiscordOnlineCount';
 
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignOutButton,
+  UserButton,
+} from '@clerk/clerk-react';
+
 const INTERNAL_NAV = [
   { label: 'Projects', icon: FolderOpen, to: '/projects' },
   { label: 'Settings', icon: Settings, to: '/settings' },
@@ -152,6 +160,20 @@ export function Navbar() {
                 </Button>
               </>
             )}
+
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="btn btn-primary">Sign In</button>
+              </SignInButton>
+            </SignedOut>
+
+            <SignedIn>
+              <UserButton />
+              <SignOutButton>
+                <button className="btn btn-secondary">Sign Out</button>
+              </SignOutButton>
+            </SignedIn>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
