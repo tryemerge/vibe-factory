@@ -438,11 +438,11 @@ const ToolCallCard: React.FC<{
 }) => {
   const { t } = useTranslation('common');
   const at: any = entryType?.action_type || action;
-  
+
   const isMermaidTool =
     (entryType?.action_type?.action === 'tool' || at?.action === 'tool') &&
-    ((entryType?.tool_name || at?.tool_name)?.toLowerCase?.() === 'mermaid');
-  
+    (entryType?.tool_name || at?.tool_name)?.toLowerCase?.() === 'mermaid';
+
   const [expanded, toggle] = useExpandable(
     `tool-entry:${expansionKey}`,
     defaultExpanded
