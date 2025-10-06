@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import { Maximize2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface MermaidRendererProps {
   code: string;
@@ -13,7 +20,9 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   className = '',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (!mermaidInitialized) {
@@ -48,6 +57,24 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
     renderDiagram();
   }, [code]);
 
+  useEffect(() => {
+    const renderFullscreenDiagram = async () => {
+      if (!fullscreenContainerRef.current || !code || !isFullscreen) return;
+
+      try {
+        const id = `mermaid-fullscreen-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(id, code);
+        if (fullscreenContainerRef.current) {
+          fullscreenContainerRef.current.innerHTML = svg;
+        }
+      } catch (err) {
+        console.error('Mermaid fullscreen rendering error:', err);
+      }
+    };
+
+    renderFullscreenDiagram();
+  }, [code, isFullscreen]);
+
   if (error) {
     return (
       <div className="text-red-500 text-sm p-2 border border-red-400 rounded">
@@ -58,11 +85,34 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`mermaid-container ${className}`}
-      style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}
-    />
+    <>
+      <div className="relative">
+        <button
+          onClick={() => setIsFullscreen(true)}
+          className="absolute top-2 right-2 p-1.5 bg-background/80 hover:bg-background border rounded opacity-70 hover:opacity-100 transition-opacity z-10"
+          title="View fullscreen"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+        <div
+          ref={containerRef}
+          className={`mermaid-container ${className}`}
+          style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}
+        />
+      </div>
+
+      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Mermaid Diagram</DialogTitle>
+          </DialogHeader>
+          <div
+            ref={fullscreenContainerRef}
+            className="mermaid-container flex justify-center p-4"
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
