@@ -561,7 +561,8 @@ const ToolCallCard: React.FC<{
                         {t('conversation.result')}
                       </div>
                       <div className="px-2 py-1">
-                        {entryType.action_type.result?.type.type === 'markdown' &&
+                        {entryType.action_type.result?.type.type ===
+                          'markdown' &&
                           entryType.action_type.result.value && (
                             <MarkdownRenderer
                               content={entryType.action_type.result.value?.toString()}
