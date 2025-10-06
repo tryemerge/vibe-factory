@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import mermaid from 'mermaid';
 import { Maximize2 } from 'lucide-react';
 import {
@@ -101,17 +102,21 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
         />
       </div>
 
-      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
-        <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Mermaid Diagram</DialogTitle>
-          </DialogHeader>
-          <div
-            ref={fullscreenContainerRef}
-            className="mermaid-container flex justify-center p-4"
-          />
-        </DialogContent>
-      </Dialog>
+      {isFullscreen &&
+        createPortal(
+          <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+            <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle>Mermaid Diagram</DialogTitle>
+              </DialogHeader>
+              <div
+                ref={fullscreenContainerRef}
+                className="mermaid-container flex justify-center p-4"
+              />
+            </DialogContent>
+          </Dialog>,
+          document.body
+        )}
     </>
   );
 };
