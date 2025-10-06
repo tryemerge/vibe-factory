@@ -1,0 +1,118 @@
+use axum::extract::ws::{Message, WebSocket};
+use futures::{SinkExt, StreamExt};
+use tokio_stream::wrappers::BroadcastStream;
+
+use super::{
+    WsQueryParams,
+    message::{InboundMessage, OutboundMessage},
+};
+use crate::{AppState, activity::ActivityEvent, db::activity::ActivityRepository};
+
+pub async fn handle(socket: WebSocket, state: AppState, params: WsQueryParams) {
+    let pool = state.pool().clone();
+    let receiver = state.broker().subscribe();
+    let mut activity_stream = BroadcastStream::new(receiver);
+
+    let (mut sender, mut inbound) = socket.split();
+
+    if let Ok(history) = ActivityRepository::new(&pool)
+        .fetch_since(params.organization_id, params.cursor, 200)
+        .await
+    {
+        for event in history {
+            if send_activity(&mut sender, &event).await.is_err() {
+                return;
+            }
+        }
+    }
+
+    loop {
+        tokio::select! {
+            maybe_activity = activity_stream.next() => {
+                match maybe_activity {
+                    Some(Ok(event)) => {
+                        tracing::info!(?event, "received activity event");
+                        if event.organization_id == params.organization_id {
+                            if send_activity(&mut sender, &event).await.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    Some(Err(error)) => {
+                        tracing::warn!(?error, "activity stream lagged");
+                        let _ = send_error(&mut sender, "activity backlog dropped").await;
+                        break;
+                    }
+                    None => break,
+                }
+            }
+            maybe_message = inbound.next() => {
+                match maybe_message {
+                    Some(Ok(msg)) => {
+                        if matches!(msg, Message::Close(_)) {
+                            break;
+                        }
+                        if let Message::Text(text) = msg {
+                            if let Err(error) = handle_inbound_message(&text).await {
+                                tracing::debug!(?error, "invalid inbound message");
+                            }
+                        }
+                    }
+                    Some(Err(error)) => {
+                        tracing::debug!(?error, "websocket receive error");
+                        break;
+                    }
+                    None => break,
+                }
+            }
+        }
+    }
+}
+
+async fn send_activity(
+    sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+    event: &ActivityEvent,
+) -> Result<(), ()> {
+    match serde_json::to_string(&OutboundMessage::Activity(event.clone())) {
+        Ok(json) => sender
+            .send(Message::Text(json.into()))
+            .await
+            .map_err(|error| {
+                tracing::debug!(?error, "failed to send activity message");
+            }),
+        Err(error) => {
+            tracing::error!(?error, "failed to serialise activity event");
+            Err(())
+        }
+    }
+}
+
+async fn send_error(
+    sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+    message: &str,
+) -> Result<(), ()> {
+    match serde_json::to_string(&OutboundMessage::Error {
+        message: message.to_string(),
+    }) {
+        Ok(json) => sender
+            .send(Message::Text(json.into()))
+            .await
+            .map_err(|error| {
+                tracing::debug!(?error, "failed to send websocket error message");
+            }),
+        Err(error) => {
+            tracing::error!(?error, "failed to serialise websocket error message");
+            Err(())
+        }
+    }
+}
+
+async fn handle_inbound_message(payload: &str) -> Result<(), serde_json::Error> {
+    let message: InboundMessage = serde_json::from_str(payload)?;
+    match message {
+        InboundMessage::Ack { cursor: _ } => {
+            // No-op for now; future versions can persist cursor acknowledgements.
+        }
+    }
+    Ok(())
+}
