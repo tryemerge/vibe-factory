@@ -40,6 +40,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
 
       - name: Setup Node
         uses: ./.github/actions/setup-node
