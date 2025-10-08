@@ -10,19 +10,20 @@ use uuid::Uuid;
 use crate::{
     AppState,
     db::tasks::{
-        CreateTaskData, TaskError, TaskRepository, TransferAssignmentData, UpdateTaskData,
+        CreateSharedTaskData, SharedTaskError, SharedTaskRepository, TransferTaskAssignmentData,
+        UpdateSharedTaskData,
     },
 };
 
 #[derive(Debug, Deserialize)]
-pub struct CreateTaskRequest {
+pub struct CreateSharedTaskRequest {
     pub title: String,
     pub description: Option<String>,
     pub assignee_member_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateTaskRequest {
+pub struct UpdateSharedTaskRequest {
     pub title: Option<String>,
     pub description: Option<String>,
     pub status: Option<String>,
@@ -30,7 +31,7 @@ pub struct UpdateTaskRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct TransferAssignmentRequest {
+pub struct TransferSharedTaskAssignmentRequest {
     pub new_assignee_member_id: Uuid,
     pub previous_assignee_member_id: Option<Uuid>,
     pub version: Option<i64>,
@@ -39,14 +40,16 @@ pub struct TransferAssignmentRequest {
 pub async fn create_shared_task(
     State(state): State<AppState>,
     Path(org_id): Path<Uuid>,
-    Json(payload): Json<CreateTaskRequest>,
+    Json(payload): Json<CreateSharedTaskRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let repo = TaskRepository::new(state.pool());
-    let data = CreateTaskData {
+    let repo = SharedTaskRepository::new(state.pool());
+    let data = CreateSharedTaskData {
         title: payload.title,
         description: payload.description,
         assignee_member_id: payload.assignee_member_id,
     };
+
+    dbg!("Recevied create_shared_task request:", &data);
 
     match repo.create(org_id, data).await {
         Ok(task) => (StatusCode::CREATED, Json(json!({ "task": task }))),
@@ -57,10 +60,10 @@ pub async fn create_shared_task(
 pub async fn update_shared_task(
     State(state): State<AppState>,
     Path(task_id): Path<Uuid>,
-    Json(payload): Json<UpdateTaskRequest>,
+    Json(payload): Json<UpdateSharedTaskRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let repo = TaskRepository::new(state.pool());
-    let data = UpdateTaskData {
+    let repo = SharedTaskRepository::new(state.pool());
+    let data = UpdateSharedTaskData {
         title: payload.title,
         description: payload.description,
         status: payload.status,
@@ -73,32 +76,37 @@ pub async fn update_shared_task(
     }
 }
 
-pub async fn transfer_assignment(
+pub async fn transfer_task_assignment(
     State(state): State<AppState>,
     Path(task_id): Path<Uuid>,
-    Json(payload): Json<TransferAssignmentRequest>,
+    Json(payload): Json<TransferSharedTaskAssignmentRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let repo = TaskRepository::new(state.pool());
-    let data = TransferAssignmentData {
+    let repo = SharedTaskRepository::new(state.pool());
+    let data = TransferTaskAssignmentData {
         new_assignee_member_id: payload.new_assignee_member_id,
         previous_assignee_member_id: payload.previous_assignee_member_id,
         version: payload.version,
     };
 
-    match repo.transfer_assignment(task_id, data).await {
+    match repo.transfer_task_assignment(task_id, data).await {
         Ok(task) => (StatusCode::OK, Json(json!({ "task": task }))),
         Err(error) => task_error_response(error, "failed to transfer task assignment"),
     }
 }
 
-fn task_error_response(error: TaskError, context: &str) -> (StatusCode, Json<serde_json::Value>) {
+fn task_error_response(
+    error: SharedTaskError,
+    context: &str,
+) -> (StatusCode, Json<serde_json::Value>) {
     match error {
-        TaskError::NotFound => (
+        SharedTaskError::NotFound => (
             StatusCode::NOT_FOUND,
             Json(json!({ "error": "task not found" })),
         ),
-        TaskError::Conflict(message) => (StatusCode::CONFLICT, Json(json!({ "error": message }))),
-        TaskError::Database(err) => {
+        SharedTaskError::Conflict(message) => {
+            (StatusCode::CONFLICT, Json(json!({ "error": message })))
+        }
+        SharedTaskError::Database(err) => {
             tracing::error!(?err, "{context}", context = context);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

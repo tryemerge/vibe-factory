@@ -7,7 +7,7 @@ use uuid::Uuid;
 use super::Tx;
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Task {
+pub struct SharedTask {
     pub id: Uuid,
     pub organization_id: Uuid,
     pub creator_member_id: Option<Uuid>,
@@ -15,22 +15,21 @@ pub struct Task {
     pub title: String,
     pub description: String,
     pub status: String,
-    pub shared: bool,
-    pub shared_at: Option<DateTime<Utc>>,
     pub version: i64,
+    pub shared_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct CreateTaskData {
+pub struct CreateSharedTaskData {
     pub title: String,
     pub description: Option<String>,
     pub assignee_member_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct UpdateTaskData {
+pub struct UpdateSharedTaskData {
     pub title: Option<String>,
     pub description: Option<String>,
     pub status: Option<String>,
@@ -38,20 +37,20 @@ pub struct UpdateTaskData {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct TransferAssignmentData {
+pub struct TransferTaskAssignmentData {
     pub new_assignee_member_id: Uuid,
     pub previous_assignee_member_id: Option<Uuid>,
     pub version: Option<i64>,
 }
 
 #[derive(Debug)]
-pub enum TaskError {
+pub enum SharedTaskError {
     NotFound,
     Conflict(String),
     Database(sqlx::Error),
 }
 
-impl From<sqlx::Error> for TaskError {
+impl From<sqlx::Error> for SharedTaskError {
     fn from(error: sqlx::Error) -> Self {
         if matches!(error, sqlx::Error::RowNotFound) {
             Self::NotFound
@@ -61,11 +60,11 @@ impl From<sqlx::Error> for TaskError {
     }
 }
 
-pub struct TaskRepository<'a> {
+pub struct SharedTaskRepository<'a> {
     pool: &'a PgPool,
 }
 
-impl<'a> TaskRepository<'a> {
+impl<'a> SharedTaskRepository<'a> {
     pub fn new(pool: &'a PgPool) -> Self {
         Self { pool }
     }
@@ -73,23 +72,22 @@ impl<'a> TaskRepository<'a> {
     pub async fn create(
         &self,
         organization_id: Uuid,
-        data: CreateTaskData,
-    ) -> Result<Task, TaskError> {
-        let mut tx = self.pool.begin().await.map_err(TaskError::from)?;
+        data: CreateSharedTaskData,
+    ) -> Result<SharedTask, SharedTaskError> {
+        let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
         let description = data.description.unwrap_or_default();
 
         let task = sqlx::query_as!(
-            Task,
+            SharedTask,
             r#"
-            INSERT INTO tasks (
+            INSERT INTO shared_tasks (
                 organization_id,
                 assignee_member_id,
                 title,
                 description,
-                shared,
                 shared_at
             )
-            VALUES ($1, $2, $3, $4, TRUE, NOW())
+            VALUES ($1, $2, $3, $4, NOW())
             RETURNING id                AS "id!",
                       organization_id   AS "organization_id!",
                       creator_member_id AS "creator_member_id?",
@@ -97,9 +95,8 @@ impl<'a> TaskRepository<'a> {
                       title             AS "title!",
                       description       AS "description!",
                       status            AS "status!",
-                      shared            AS "shared!",
-                      shared_at         AS "shared_at?",
                       version           AS "version!",
+                      shared_at         AS "shared_at?",
                       created_at        AS "created_at!",
                       updated_at        AS "updated_at!"
             "#,
@@ -111,21 +108,26 @@ impl<'a> TaskRepository<'a> {
         .fetch_one(&mut *tx)
         .await?;
 
-        let payload = serde_json::to_value(&task)
-            .map_err(|e| TaskError::Conflict(format!("could not serialize task snapshot: {e}")))?;
+        let payload = serde_json::to_value(&task).map_err(|e| {
+            SharedTaskError::Conflict(format!("could not serialize task snapshot: {e}"))
+        })?;
 
         insert_activity(&mut tx, &task, "task.created", payload).await?;
-        tx.commit().await.map_err(TaskError::from)?;
+        tx.commit().await.map_err(SharedTaskError::from)?;
         Ok(task)
     }
 
-    pub async fn update(&self, task_id: Uuid, data: UpdateTaskData) -> Result<Task, TaskError> {
-        let mut tx = self.pool.begin().await.map_err(TaskError::from)?;
+    pub async fn update(
+        &self,
+        task_id: Uuid,
+        data: UpdateSharedTaskData,
+    ) -> Result<SharedTask, SharedTaskError> {
+        let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
 
         let task = sqlx::query_as!(
-            Task,
+            SharedTask,
             r#"
-        UPDATE tasks AS t
+        UPDATE shared_tasks AS t
         SET title       = COALESCE($2, t.title),
             description = COALESCE($3, t.description),
             status      = COALESCE($4, t.status),
@@ -141,9 +143,8 @@ impl<'a> TaskRepository<'a> {
             t.title             AS "title!",
             t.description       AS "description!",
             t.status            AS "status!",
-            t.shared            AS "shared!",
-            t.shared_at         AS "shared_at?",
             t.version           AS "version!",
+            t.shared_at         AS "shared_at?",
             t.created_at        AS "created_at!",
             t.updated_at        AS "updated_at!"
         "#,
@@ -155,28 +156,29 @@ impl<'a> TaskRepository<'a> {
         )
         .fetch_optional(&mut *tx)
         .await?
-        .ok_or_else(|| TaskError::Conflict("task version mismatch".to_string()))?;
+        .ok_or_else(|| SharedTaskError::Conflict("task version mismatch".to_string()))?;
 
-        let payload = serde_json::to_value(&task)
-            .map_err(|e| TaskError::Conflict(format!("could not serialize task snapshot: {e}")))?;
+        let payload = serde_json::to_value(&task).map_err(|e| {
+            SharedTaskError::Conflict(format!("could not serialize task snapshot: {e}"))
+        })?;
 
         insert_activity(&mut tx, &task, "task.updated", payload).await?;
 
-        tx.commit().await.map_err(TaskError::from)?;
+        tx.commit().await.map_err(SharedTaskError::from)?;
         Ok(task)
     }
 
-    pub async fn transfer_assignment(
+    pub async fn transfer_task_assignment(
         &self,
         task_id: Uuid,
-        data: TransferAssignmentData,
-    ) -> Result<Task, TaskError> {
-        let mut tx = self.pool.begin().await.map_err(TaskError::from)?;
+        data: TransferTaskAssignmentData,
+    ) -> Result<SharedTask, SharedTaskError> {
+        let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
 
         let task = sqlx::query_as!(
-            Task,
+            SharedTask,
             r#"
-        UPDATE tasks AS t
+        UPDATE shared_tasks AS t
         SET assignee_member_id = $2,
             version = t.version + 1,
             updated_at = NOW()
@@ -191,9 +193,8 @@ impl<'a> TaskRepository<'a> {
             t.title             AS "title!",
             t.description       AS "description!",
             t.status            AS "status!",
-            t.shared            AS "shared!",
-            t.shared_at         AS "shared_at?",
             t.version           AS "version!",
+            t.shared_at         AS "shared_at?",
             t.created_at        AS "created_at!",
             t.updated_at        AS "updated_at!"
         "#,
@@ -205,47 +206,42 @@ impl<'a> TaskRepository<'a> {
         .fetch_optional(&mut *tx)
         .await?
         .ok_or_else(|| {
-            TaskError::Conflict("task version or previous assignee mismatch".to_string())
+            SharedTaskError::Conflict("task version or previous assignee mismatch".to_string())
         })?;
 
-        let payload = serde_json::to_value(&task)
-            .map_err(|e| TaskError::Conflict(format!("could not serialize task snapshot: {e}")))?;
+        let payload = serde_json::to_value(&task).map_err(|e| {
+            SharedTaskError::Conflict(format!("could not serialize task snapshot: {e}"))
+        })?;
 
         insert_activity(&mut tx, &task, "task.assignment_transferred", payload).await?;
-        tx.commit().await.map_err(TaskError::from)?;
+        tx.commit().await.map_err(SharedTaskError::from)?;
         Ok(task)
     }
 }
 
 async fn insert_activity(
     tx: &mut Tx<'_>,
-    task: &Task,
+    task: &SharedTask,
     event_type: &str,
     payload: Value,
-) -> Result<(), TaskError> {
+) -> Result<(), SharedTaskError> {
     sqlx::query!(
         r#"
         INSERT INTO activity (
             organization_id,
-            task_id,
-            actor_member_id,
             assignee_member_id,
-            task_version,
             event_type,
             payload
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4) 
         "#,
         task.organization_id,
-        task.id,
-        None::<Uuid>,
         task.assignee_member_id,
-        task.version,
         event_type,
         payload
     )
     .execute(&mut **tx)
     .await
     .map(|_| ())
-    .map_err(TaskError::from)
+    .map_err(SharedTaskError::from)
 }

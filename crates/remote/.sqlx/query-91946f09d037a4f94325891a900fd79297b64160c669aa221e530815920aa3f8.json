@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE tasks AS t\n        SET assignee_member_id = $2,\n            version = t.version + 1,\n            updated_at = NOW()\n        WHERE t.id = $1\n          AND t.version = COALESCE($4, t.version)\n          AND ($3::uuid IS NULL OR t.assignee_member_id = $3::uuid)\n        RETURNING\n            t.id                AS \"id!\",\n            t.organization_id   AS \"organization_id!\",\n            t.creator_member_id AS \"creator_member_id?\",\n            t.assignee_member_id AS \"assignee_member_id?\",\n            t.title             AS \"title!\",\n            t.description       AS \"description!\",\n            t.status            AS \"status!\",\n            t.shared            AS \"shared!\",\n            t.shared_at         AS \"shared_at?\",\n            t.version           AS \"version!\",\n            t.created_at        AS \"created_at!\",\n            t.updated_at        AS \"updated_at!\"\n        ",
+  "query": "\n            INSERT INTO shared_tasks (\n                organization_id,\n                assignee_member_id,\n                title,\n                description,\n                shared_at\n            )\n            VALUES ($1, $2, $3, $4, NOW())\n            RETURNING id                AS \"id!\",\n                      organization_id   AS \"organization_id!\",\n                      creator_member_id AS \"creator_member_id?\",\n                      assignee_member_id AS \"assignee_member_id?\",\n                      title             AS \"title!\",\n                      description       AS \"description!\",\n                      status            AS \"status!\",\n                      version           AS \"version!\",\n                      shared_at         AS \"shared_at?\",\n                      created_at        AS \"created_at!\",\n                      updated_at        AS \"updated_at!\"\n            ",
   "describe": {
     "columns": [
       {
@@ -40,8 +40,8 @@
       },
       {
         "ordinal": 7,
-        "name": "shared!",
-        "type_info": "Bool"
+        "name": "version!",
+        "type_info": "Int8"
       },
       {
         "ordinal": 8,
@@ -50,16 +50,11 @@
       },
       {
         "ordinal": 9,
-        "name": "version!",
-        "type_info": "Int8"
-      },
-      {
-        "ordinal": 10,
         "name": "created_at!",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "updated_at!",
         "type_info": "Timestamptz"
       }
@@ -68,8 +63,8 @@
       "Left": [
         "Uuid",
         "Uuid",
-        "Uuid",
-        "Int8"
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -83,9 +78,8 @@
       false,
       true,
       false,
-      false,
       false
     ]
   },
-  "hash": "3dd15d5705b0e0ac28f9da043717e7311b3394a6bec0e0b449ca3116b048f812"
+  "hash": "91946f09d037a4f94325891a900fd79297b64160c669aa221e530815920aa3f8"
 }

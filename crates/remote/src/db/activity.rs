@@ -24,9 +24,7 @@ impl<'a> ActivityRepository<'a> {
             SELECT seq,
                    event_id,
                    organization_id,
-                   task_id,
                    event_type,
-                   task_version,
                    created_at,
                    payload
             FROM activity
@@ -44,6 +42,33 @@ impl<'a> ActivityRepository<'a> {
 
         Ok(rows.into_iter().map(ActivityRow::into_event).collect())
     }
+
+    pub async fn fetch_by_seq(
+        &self,
+        organization_id: Uuid,
+        seq: i64,
+    ) -> Result<Option<ActivityEvent>, sqlx::Error> {
+        let row = sqlx::query_as::<_, ActivityRow>(
+            r#"
+            SELECT seq,
+                   event_id,
+                   organization_id,
+                   event_type,
+                   created_at,
+                   payload
+            FROM activity
+            WHERE organization_id = $1
+              AND seq = $2
+            LIMIT 1
+            "#,
+        )
+        .bind(organization_id)
+        .bind(seq)
+        .fetch_optional(self.pool)
+        .await?;
+
+        Ok(row.map(ActivityRow::into_event))
+    }
 }
 
 #[derive(sqlx::FromRow)]
@@ -51,9 +76,7 @@ struct ActivityRow {
     seq: i64,
     event_id: Uuid,
     organization_id: Uuid,
-    task_id: Uuid,
     event_type: String,
-    task_version: Option<i64>,
     created_at: DateTime<Utc>,
     payload: serde_json::Value,
 }
@@ -64,9 +87,7 @@ impl ActivityRow {
             self.seq,
             self.event_id,
             self.organization_id,
-            self.task_id,
             self.event_type,
-            self.task_version,
             self.created_at,
             Some(self.payload),
         )

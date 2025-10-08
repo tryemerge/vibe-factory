@@ -11,6 +11,7 @@ cloud = []
 utils = { path = "../utils" }
 executors = { path = "../executors" }
 db = { path = "../db" }
+remote = { path = "../remote" }
 tokio = { workspace = true }
 tokio-util = { version = "0.7", features = ["io"] }
 axum = { workspace = true }
@@ -28,7 +29,7 @@ dirs = "5.0"
 xdg = "3.0"
 git2 = "0.18"
 tempfile = "3.21"
-async-trait = "0.1"
+async-trait = { workspace = true } 
 libc = "0.2"
 rust-embed = "8.2"
 directories = "6.0.0"
@@ -56,7 +57,7 @@ strum_macros = "0.27.2"
 strum = "0.27.2"
 notify = "8.2.0"
 notify-debouncer-full = "0.5.0"
-tokio-tungstenite = { version = "0.21", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = "0.28.0" 
 dunce = "1.0"
 dashmap = "6.1"
 once_cell = "1.20"

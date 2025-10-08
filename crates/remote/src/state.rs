@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::activity::ActivityBroker;
+use crate::{activity::ActivityBroker, config::RemoteServerConfig};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -12,12 +12,17 @@ pub struct AppState {
 struct AppStateInner {
     pool: PgPool,
     broker: ActivityBroker,
+    config: RemoteServerConfig,
 }
 
 impl AppState {
-    pub fn new(pool: PgPool, broker: ActivityBroker) -> Self {
+    pub fn new(pool: PgPool, broker: ActivityBroker, config: RemoteServerConfig) -> Self {
         Self {
-            inner: Arc::new(AppStateInner { pool, broker }),
+            inner: Arc::new(AppStateInner {
+                pool,
+                broker,
+                config,
+            }),
         }
     }
 
@@ -27,5 +32,9 @@ impl AppState {
 
     pub fn broker(&self) -> &ActivityBroker {
         &self.inner.broker
+    }
+
+    pub fn config(&self) -> &RemoteServerConfig {
+        &self.inner.config
     }
 }

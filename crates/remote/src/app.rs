@@ -2,22 +2,22 @@ use std::net::SocketAddr;
 
 use anyhow::Context;
 
-use crate::{AppState, activity::ActivityBroker, config::SharedServerConfig, db, routes};
+use crate::{AppState, activity::ActivityBroker, config::RemoteServerConfig, db, routes};
 
 pub struct Server;
 
 impl Server {
-    pub async fn run(config: SharedServerConfig) -> anyhow::Result<()> {
-        let pool = db::pool::create_pool(&config.database_url)
+    pub async fn run(config: RemoteServerConfig) -> anyhow::Result<()> {
+        let pool = db::create_pool(&config.database_url)
             .await
             .context("failed to create postgres pool")?;
 
-        db::migrate::run(&pool)
+        db::migrate(&pool)
             .await
             .context("failed to run database migrations")?;
 
         let broker = ActivityBroker::default();
-        let state = AppState::new(pool.clone(), broker.clone());
+        let state = AppState::new(pool.clone(), broker.clone(), config.clone());
 
         let listener =
             db::ActivityListener::new(pool.clone(), broker, config.activity_channel.clone());

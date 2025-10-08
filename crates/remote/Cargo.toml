@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 anyhow = { workspace = true }
-async-trait = "0.1"
+async-trait = { workspace = true } 
 axum = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"

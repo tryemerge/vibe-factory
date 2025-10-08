@@ -3,14 +3,17 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ActivityResponse {
+    pub data: Vec<ActivityEvent>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityEvent {
     pub seq: i64,
     pub event_id: Uuid,
     pub organization_id: Uuid,
-    pub task_id: Uuid,
     pub event_type: String,
-    pub task_version: Option<i64>,
     pub created_at: DateTime<Utc>,
     pub payload: Option<serde_json::Value>,
 }
@@ -20,9 +23,7 @@ impl ActivityEvent {
         seq: i64,
         event_id: Uuid,
         organization_id: Uuid,
-        task_id: Uuid,
         event_type: String,
-        task_version: Option<i64>,
         created_at: DateTime<Utc>,
         payload: Option<serde_json::Value>,
     ) -> Self {
@@ -30,9 +31,7 @@ impl ActivityEvent {
             seq,
             event_id,
             organization_id,
-            task_id,
             event_type,
-            task_version,
             created_at,
             payload,
         }

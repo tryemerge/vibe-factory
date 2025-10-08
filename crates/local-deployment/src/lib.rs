@@ -17,7 +17,7 @@ use services::services::{
     git::GitService,
     image::ImageService,
     sentry::SentryService,
-    shared_tasks::SharedTaskSync,
+    share::SharedTaskSync,
 };
 use tokio::sync::RwLock;
 use utils::{assets::config_path, msg_store::MsgStore};

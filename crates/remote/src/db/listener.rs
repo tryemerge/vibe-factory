@@ -1,13 +1,12 @@
 use std::time::Duration;
 
 use anyhow::Context;
-use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{PgPool, postgres::PgListener};
 use tokio::time::sleep;
 use uuid::Uuid;
 
-use crate::activity::{ActivityBroker, ActivityEvent};
+use crate::{activity::ActivityBroker, db::activity::ActivityRepository};
 
 pub struct ActivityListener {
     pool: PgPool,
@@ -65,16 +64,31 @@ async fn listen_loop(pool: &PgPool, broker: &ActivityBroker, channel: &str) -> a
         let payload: NotificationEnvelope = serde_json::from_str(notification.payload())
             .with_context(|| format!("invalid notification payload: {}", notification.payload()))?;
 
-        let event = ActivityEvent::new(
-            payload.seq,
-            payload.event_id,
-            payload.organization_id,
-            payload.task_id,
-            payload.event_type,
-            payload.task_version,
-            payload.created_at,
-            None,
-        );
+        dbg!("Received notification from DB");
+
+        let event = match ActivityRepository::new(pool)
+            .fetch_by_seq(payload.organization_id, payload.seq)
+            .await
+        {
+            Ok(Some(event)) => event,
+            Ok(None) => {
+                tracing::warn!(
+                    seq = payload.seq,
+                    org_id = %payload.organization_id,
+                    "activity row missing for notification"
+                );
+                continue;
+            }
+            Err(error) => {
+                tracing::error!(
+                    ?error,
+                    seq = payload.seq,
+                    org_id = %payload.organization_id,
+                    "failed to fetch activity payload"
+                );
+                continue;
+            }
+        };
 
         broker.publish(event);
     }
@@ -83,10 +97,5 @@ async fn listen_loop(pool: &PgPool, broker: &ActivityBroker, channel: &str) -> a
 #[derive(Debug, Deserialize)]
 struct NotificationEnvelope {
     seq: i64,
-    event_id: Uuid,
     organization_id: Uuid,
-    task_id: Uuid,
-    event_type: String,
-    task_version: Option<i64>,
-    created_at: DateTime<Utc>,
 }

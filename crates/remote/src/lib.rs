@@ -9,9 +9,10 @@ pub mod ws;
 use std::env;
 
 pub use app::Server;
-pub use config::SharedServerConfig;
+pub use config::RemoteServerConfig;
 pub use state::AppState;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+pub use ws::message::{ClientMessage, ServerMessage};
 
 pub fn init_tracing() {
     if tracing::dispatcher::has_been_set() {

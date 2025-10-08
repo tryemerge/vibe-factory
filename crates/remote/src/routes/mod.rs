@@ -6,13 +6,17 @@ use tower_http::cors::CorsLayer;
 
 use crate::AppState;
 
-mod activity;
+pub mod activity;
 mod organizations;
 mod tasks;
 
 pub fn router(state: AppState) -> Router {
     let api = Router::<AppState>::new()
         .route("/health", get(health))
+        .route(
+            "/v1/organizations",
+            post(organizations::create_organization),
+        )
         .route(
             "/v1/organizations/{org_id}/activity",
             get(activity::get_activity_stream),
@@ -24,7 +28,7 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/tasks/{task_id}", patch(tasks::update_shared_task))
         .route(
             "/v1/tasks/{task_id}/assign",
-            post(tasks::transfer_assignment),
+            post(tasks::transfer_task_assignment),
         );
 
     Router::<AppState>::new()

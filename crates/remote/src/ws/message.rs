@@ -4,14 +4,14 @@ use crate::activity::ActivityEvent;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
-pub enum InboundMessage {
+pub enum ClientMessage {
     #[serde(rename = "ack")]
     Ack { cursor: i64 },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
-pub enum OutboundMessage {
+pub enum ServerMessage {
     #[serde(rename = "activity")]
     Activity(ActivityEvent),
     #[serde(rename = "error")]

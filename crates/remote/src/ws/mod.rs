@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::AppState;
 
-mod message;
+pub mod message;
 mod session;
 
 #[derive(Debug, Deserialize, Clone)]
