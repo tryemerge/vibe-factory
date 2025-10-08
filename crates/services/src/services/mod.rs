@@ -16,4 +16,5 @@ pub mod image;
 pub mod notification;
 pub mod pr_monitor;
 pub mod sentry;
+pub mod shared_tasks;
 pub mod worktree_manager;

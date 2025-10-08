@@ -7,6 +7,7 @@ use tower_http::cors::CorsLayer;
 use crate::AppState;
 
 mod activity;
+mod organizations;
 mod tasks;
 
 pub fn router(state: AppState) -> Router {

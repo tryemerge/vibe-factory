@@ -17,6 +17,7 @@ use services::services::{
     git::GitService,
     image::ImageService,
     sentry::SentryService,
+    shared_tasks::SharedTaskSync,
 };
 use tokio::sync::RwLock;
 use utils::{assets::config_path, msg_store::MsgStore};
@@ -126,6 +127,8 @@ impl Deployment for LocalDeployment {
         container.spawn_worktree_cleanup().await;
 
         let events = EventService::new(db.clone(), events_msg_store, events_entry_count);
+
+        SharedTaskSync::spawn_if_configured(db.clone());
         let drafts = DraftsService::new(db.clone(), image.clone());
         let file_search_cache = Arc::new(FileSearchCache::new());
 

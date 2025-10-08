@@ -1,6 +1,7 @@
 pub mod activity;
 pub mod listener;
 pub mod migrate;
+pub mod organizations;
 pub mod pool;
 pub mod tasks;
 
