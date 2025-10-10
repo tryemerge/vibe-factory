@@ -308,6 +308,13 @@ export const tasksApi = {
     });
     return handleApiResponse<void>(response);
   },
+
+  share: async (taskId: string): Promise<void> => {
+    const response = await makeRequest(`/api/tasks/${taskId}/share`, {
+      method: 'POST',
+    });
+    return handleApiResponse<void>(response);
+  },
 };
 
 // Task Attempts APIs

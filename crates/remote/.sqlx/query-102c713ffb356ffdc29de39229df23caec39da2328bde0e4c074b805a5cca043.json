@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE shared_tasks AS t\n        SET assignee_member_id = $2,\n            version = t.version + 1,\n            updated_at = NOW()\n        WHERE t.id = $1\n          AND t.version = COALESCE($4, t.version)\n          AND ($3::uuid IS NULL OR t.assignee_member_id = $3::uuid)\n        RETURNING\n            t.id                AS \"id!\",\n            t.organization_id   AS \"organization_id!\",\n            t.creator_member_id AS \"creator_member_id?\",\n            t.assignee_member_id AS \"assignee_member_id?\",\n            t.title             AS \"title!\",\n            t.description       AS \"description?\",\n            t.status            AS \"status!: TaskStatus\",\n            t.version           AS \"version!\",\n            t.shared_at         AS \"shared_at?\",\n            t.created_at        AS \"created_at!\",\n            t.updated_at        AS \"updated_at!\"\n        ",
+  "query": "\n        UPDATE shared_tasks AS t\n        SET assignee_member_id = $2,\n            version = t.version + 1,\n            updated_at = NOW()\n        WHERE t.id = $1\n          AND t.version = COALESCE($4, t.version)\n          AND ($3::uuid IS NULL OR t.assignee_member_id = $3::uuid)\n        RETURNING\n            t.id                AS \"id!\",\n            t.organization_id   AS \"organization_id!\",\n            t.project_id        AS \"project_id!\",\n            t.creator_member_id AS \"creator_member_id?\",\n            t.assignee_member_id AS \"assignee_member_id?\",\n            t.title             AS \"title!\",\n            t.description       AS \"description?\",\n            t.status            AS \"status!: TaskStatus\",\n            t.version           AS \"version!\",\n            t.shared_at         AS \"shared_at?\",\n            t.created_at        AS \"created_at!\",\n            t.updated_at        AS \"updated_at!\"\n        ",
   "describe": {
     "columns": [
       {
@@ -15,26 +15,31 @@
       },
       {
         "ordinal": 2,
-        "name": "creator_member_id?",
+        "name": "project_id!",
         "type_info": "Uuid"
       },
       {
         "ordinal": 3,
-        "name": "assignee_member_id?",
+        "name": "creator_member_id?",
         "type_info": "Uuid"
       },
       {
         "ordinal": 4,
+        "name": "assignee_member_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
         "name": "title!",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "description?",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "status!: TaskStatus",
         "type_info": {
           "Custom": {
@@ -52,22 +57,22 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "version!",
         "type_info": "Int8"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "shared_at?",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "created_at!",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "updated_at!",
         "type_info": "Timestamptz"
       }
@@ -83,6 +88,7 @@
     "nullable": [
       false,
       false,
+      false,
       true,
       true,
       false,
@@ -94,5 +100,5 @@
       false
     ]
   },
-  "hash": "4c9e9ec49c731b10a86132c2e0b21cbf6b5d610ca10f03f9685edafae5d30d55"
+  "hash": "102c713ffb356ffdc29de39229df23caec39da2328bde0e4c074b805a5cca043"
 }

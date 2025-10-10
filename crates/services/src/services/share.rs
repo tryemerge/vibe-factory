@@ -1,17 +1,29 @@
 mod config;
 mod processor;
+mod publisher;
 
 use std::sync::{Arc, Mutex as StdMutex};
 
 use async_trait::async_trait;
 use config::RemoteSyncConfig;
-use db::{DBService, models::shared_task::SharedActivityCursor};
+use db::{
+    DBService,
+    models::{
+        shared_task::{SharedActivityCursor, SharedTaskInput},
+        task::TaskStatus,
+    },
+};
 use processor::ActivityProcessor;
-use remote::ServerMessage;
+pub use publisher::ShareTaskPublisher;
+use remote::{
+    ServerMessage,
+    db::tasks::{SharedTask as RemoteSharedTask, TaskStatus as RemoteTaskStatus},
+};
 use thiserror::Error;
 use tokio::{sync::oneshot, task::JoinHandle};
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use utils::ws::{WsClient, WsConfig, WsError, WsHandler, run_ws_client};
+use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum ShareError {
@@ -25,6 +37,16 @@ pub enum ShareError {
     Url(#[from] url::ParseError),
     #[error(transparent)]
     WebSocket(#[from] WsError),
+    #[error("share configuration missing: {0}")]
+    MissingConfig(&'static str),
+    #[error("task {0} not found")]
+    TaskNotFound(Uuid),
+    #[error("project {0} not found")]
+    ProjectNotFound(Uuid),
+    #[error("project {0} is missing GitHub metadata for sharing")]
+    MissingProjectMetadata(Uuid),
+    #[error("invalid response from remote share service")]
+    InvalidResponse,
 }
 
 pub struct RemoteSync {
@@ -186,5 +208,34 @@ impl Drop for RemoteSyncHandleInner {
         if let Some(join) = self.join.lock().unwrap().take() {
             join.abort();
         }
+    }
+}
+
+pub(super) fn convert_remote_task(
+    task: &RemoteSharedTask,
+    last_event_seq: Option<i64>,
+) -> SharedTaskInput {
+    SharedTaskInput {
+        id: task.id,
+        organization_id: task.organization_id,
+        project_id: task.project_id,
+        title: task.title.clone(),
+        description: task.description.clone(),
+        status: convert_remote_status(&task.status),
+        assignee_member_id: task.assignee_member_id,
+        version: task.version,
+        last_event_seq,
+        created_at: task.created_at,
+        updated_at: task.updated_at,
+    }
+}
+
+pub(super) fn convert_remote_status(status: &RemoteTaskStatus) -> TaskStatus {
+    match status {
+        RemoteTaskStatus::Todo => TaskStatus::Todo,
+        RemoteTaskStatus::InProgress => TaskStatus::InProgress,
+        RemoteTaskStatus::InReview => TaskStatus::InReview,
+        RemoteTaskStatus::Done => TaskStatus::Done,
+        RemoteTaskStatus::Cancelled => TaskStatus::Cancelled,
     }
 }

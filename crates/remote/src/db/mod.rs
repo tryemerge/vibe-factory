@@ -1,7 +1,9 @@
 pub mod activity;
 pub mod listener;
 pub mod organizations;
+pub mod projects;
 pub mod tasks;
+pub mod users;
 
 pub use listener::ActivityListener;
 use sqlx::{PgPool, Postgres, Transaction, migrate::MigrateError, postgres::PgPoolOptions};

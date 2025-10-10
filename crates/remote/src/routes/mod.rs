@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    routing::{get, patch, post},
+    routing::{delete, get, patch, post},
 };
 use tower_http::cors::CorsLayer;
 
@@ -9,6 +9,7 @@ use crate::AppState;
 pub mod activity;
 mod organizations;
 mod tasks;
+mod users;
 
 pub fn router(state: AppState) -> Router {
     let api = Router::<AppState>::new()
@@ -16,6 +17,21 @@ pub fn router(state: AppState) -> Router {
         .route(
             "/v1/organizations",
             post(organizations::create_organization),
+        )
+        .route("/v1/users", post(users::create_user))
+        .route(
+            "/v1/users/{user_id}",
+            get(users::get_user)
+                .patch(users::update_user)
+                .delete(users::delete_user),
+        )
+        .route(
+            "/v1/organizations/{org_id}/members",
+            get(users::list_members).post(users::add_member),
+        )
+        .route(
+            "/v1/organizations/{org_id}/members/{member_id}",
+            delete(users::delete_member),
         )
         .route(
             "/v1/organizations/{org_id}/activity",

@@ -1,17 +1,14 @@
 use db::{
     DBService,
-    models::{
-        shared_task::{SharedActivityCursor, SharedTask, SharedTaskInput},
-        task::TaskStatus,
-    },
+    models::shared_task::{SharedActivityCursor, SharedTask},
 };
 use remote::{
     activity::{ActivityEvent, ActivityResponse},
-    db::tasks::{SharedTask as RemoteSharedTask, TaskStatus as RemoteTaskStatus},
+    db::tasks::SharedTask as RemoteSharedTask,
 };
 use reqwest::{Client as HttpClient, Url};
 
-use super::{RemoteSyncConfig, ShareError};
+use super::{RemoteSyncConfig, ShareError, convert_remote_task};
 
 /// Processor for handling activity events and synchronizing shared tasks.
 #[derive(Clone)]
@@ -75,30 +72,5 @@ impl ActivityProcessor {
         let resp = self.http_client.get(url).send().await?.error_for_status()?;
         let resp_body = resp.json::<ActivityResponse>().await?;
         Ok(resp_body.data)
-    }
-}
-
-fn convert_remote_task(task: &RemoteSharedTask, last_event_seq: Option<i64>) -> SharedTaskInput {
-    SharedTaskInput {
-        id: task.id,
-        organization_id: task.organization_id,
-        title: task.title.clone(),
-        description: task.description.clone(),
-        status: convert_remote_status(&task.status),
-        assignee_member_id: task.assignee_member_id,
-        version: task.version,
-        last_event_seq,
-        created_at: task.created_at,
-        updated_at: task.updated_at,
-    }
-}
-
-fn convert_remote_status(status: &RemoteTaskStatus) -> TaskStatus {
-    match status {
-        RemoteTaskStatus::Todo => TaskStatus::Todo,
-        RemoteTaskStatus::InProgress => TaskStatus::InProgress,
-        RemoteTaskStatus::InReview => TaskStatus::InReview,
-        RemoteTaskStatus::Done => TaskStatus::Done,
-        RemoteTaskStatus::Cancelled => TaskStatus::Cancelled,
     }
 }

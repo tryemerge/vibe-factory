@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Play } from 'lucide-react';
+import { Play, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { projectsApi, attemptsApi } from '@/lib/api';
+import { projectsApi, attemptsApi, tasksApi } from '@/lib/api';
 import type {
   GitBranch,
   TaskAttempt,
@@ -17,6 +17,7 @@ import CurrentAttempt from '@/components/tasks/Toolbar/CurrentAttempt.tsx';
 import GitOperations from '@/components/tasks/Toolbar/GitOperations.tsx';
 import { useUserSystem } from '@/components/config-provider';
 import { Card } from '../ui/card';
+import { useMutation } from '@tanstack/react-query';
 
 function TaskDetailsToolbar({
   task,
@@ -47,6 +48,7 @@ function TaskDetailsToolbar({
   // UI state
   const [userForcedCreateMode, setUserForcedCreateMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   // Data state
   const [branches, setBranches] = useState<GitBranch[]>([]);
@@ -138,6 +140,29 @@ function TaskDetailsToolbar({
     setUserForcedCreateMode(true);
   }, []);
 
+  useEffect(() => {
+    setShareSuccess(false);
+    setError(null);
+  }, [task.id]);
+
+  const shareMutation = useMutation({
+    mutationFn: (id: string) => tasksApi.share(id),
+    onMutate: () => {
+      setError(null);
+    },
+    onSuccess: () => {
+      setShareSuccess(true);
+    },
+    onError: (err: unknown) => {
+      setShareSuccess(false);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to share task. Please try again.'
+      );
+    },
+  });
+
   const setIsInCreateAttemptMode = useCallback(
     (value: boolean | ((prev: boolean) => boolean)) => {
       const boolValue =
@@ -182,6 +207,27 @@ function TaskDetailsToolbar({
               Actions
             </Card>
             <div className="p-3">
+              <div className="flex flex-col gap-3 mb-4">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => shareMutation.mutate(task.id)}
+                  disabled={shareMutation.isPending || shareSuccess}
+                >
+                  <Share2 className="h-4 w-4" />
+                  {shareSuccess ? 'Shared' : 'Share Task'}
+                </Button>
+                {shareMutation.isPending && (
+                  <div className="text-xs text-muted-foreground">
+                    Sharing task with your organization…
+                  </div>
+                )}
+                {shareSuccess && (
+                  <div className="text-xs text-green-600">
+                    Task shared successfully.
+                  </div>
+                )}
+              </div>
               {/* Current Attempt Info */}
               <div className="space-y-2">
                 {selectedAttempt ? (

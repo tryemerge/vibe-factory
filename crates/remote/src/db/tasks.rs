@@ -4,7 +4,10 @@ use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::Tx;
+use super::{
+    Tx,
+    projects::{CreateProjectData, ProjectError, ProjectRepository},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "kebab-case")]
@@ -21,6 +24,7 @@ pub enum TaskStatus {
 pub struct SharedTask {
     pub id: Uuid,
     pub organization_id: Uuid,
+    pub project_id: Uuid,
     pub creator_member_id: Option<Uuid>,
     pub assignee_member_id: Option<Uuid>,
     pub title: String,
@@ -33,7 +37,16 @@ pub struct SharedTask {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct CreateSharedTaskProjectData {
+    pub github_repository_id: i64,
+    pub owner: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct CreateSharedTaskData {
+    pub project_id: Uuid,
+    pub project: Option<CreateSharedTaskProjectData>,
     pub title: String,
     pub description: Option<String>,
     pub assignee_member_id: Option<Uuid>,
@@ -71,6 +84,15 @@ impl From<sqlx::Error> for SharedTaskError {
     }
 }
 
+impl From<ProjectError> for SharedTaskError {
+    fn from(error: ProjectError) -> Self {
+        match error {
+            ProjectError::Conflict(message) => SharedTaskError::Conflict(message),
+            ProjectError::Database(err) => SharedTaskError::Database(err),
+        }
+    }
+}
+
 pub struct SharedTaskRepository<'a> {
     pool: &'a PgPool,
 }
@@ -87,33 +109,69 @@ impl<'a> SharedTaskRepository<'a> {
     ) -> Result<SharedTask, SharedTaskError> {
         let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
 
+        dbg!("Received create_shared_task request:", &data);
+
+        let CreateSharedTaskData {
+            project_id,
+            project,
+            title,
+            description,
+            assignee_member_id,
+        } = data;
+
+        let existing_project =
+            ProjectRepository::find_by_id(&mut tx, project_id, organization_id).await?;
+
+        if existing_project.is_none() {
+            let metadata = project.ok_or_else(|| {
+                SharedTaskError::Conflict(
+                    "project metadata required to share task for unknown project".to_string(),
+                )
+            })?;
+
+            ProjectRepository::upsert(
+                &mut tx,
+                CreateProjectData {
+                    id: project_id,
+                    organization_id,
+                    github_repository_id: metadata.github_repository_id,
+                    owner: metadata.owner,
+                    name: metadata.name,
+                },
+            )
+            .await?;
+        }
+
         let task = sqlx::query_as!(
             SharedTask,
             r#"
             INSERT INTO shared_tasks (
                 organization_id,
+                project_id,
                 assignee_member_id,
                 title,
                 description,
                 shared_at
             )
-            VALUES ($1, $2, $3, $4, NOW())
-            RETURNING id                AS "id!",
-                      organization_id   AS "organization_id!",
-                      creator_member_id AS "creator_member_id?",
+            VALUES ($1, $2, $3, $4, $5, NOW())
+            RETURNING id                 AS "id!",
+                      organization_id    AS "organization_id!",
+                      project_id         AS "project_id!",
+                      creator_member_id  AS "creator_member_id?",
                       assignee_member_id AS "assignee_member_id?",
-                      title             AS "title!",
-                      description       AS "description?",
-                      status            AS "status!: TaskStatus",
-                      version           AS "version!",
-                      shared_at         AS "shared_at?",
-                      created_at        AS "created_at!",
-                      updated_at        AS "updated_at!"
+                      title              AS "title!",
+                      description        AS "description?",
+                      status             AS "status!: TaskStatus",
+                      version            AS "version!",
+                      shared_at          AS "shared_at?",
+                      created_at         AS "created_at!",
+                      updated_at         AS "updated_at!"
             "#,
             organization_id,
-            data.assignee_member_id,
-            data.title,
-            data.description
+            project_id,
+            assignee_member_id,
+            title,
+            description
         )
         .fetch_one(&mut *tx)
         .await?;
@@ -148,6 +206,7 @@ impl<'a> SharedTaskRepository<'a> {
         RETURNING
             t.id                AS "id!",
             t.organization_id   AS "organization_id!",
+            t.project_id        AS "project_id!",
             t.creator_member_id AS "creator_member_id?",
             t.assignee_member_id AS "assignee_member_id?",
             t.title             AS "title!",
@@ -198,6 +257,7 @@ impl<'a> SharedTaskRepository<'a> {
         RETURNING
             t.id                AS "id!",
             t.organization_id   AS "organization_id!",
+            t.project_id        AS "project_id!",
             t.creator_member_id AS "creator_member_id?",
             t.assignee_member_id AS "assignee_member_id?",
             t.title             AS "title!",

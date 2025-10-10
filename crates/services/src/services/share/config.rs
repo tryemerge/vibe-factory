@@ -7,6 +7,7 @@ pub struct RemoteSyncConfig {
     pub api_base: String,
     pub websocket_base: String,
     pub organization_id: Uuid,
+    pub member_id: Uuid,
     pub activity_page_limit: u32,
 }
 
@@ -24,10 +25,14 @@ impl RemoteSyncConfig {
             }
         };
 
+        let member_raw = std::env::var("VK_SHARED_MEMBER_ID").ok()?;
+        let member_id = Uuid::parse_str(member_raw.trim()).ok()?;
+
         Some(Self {
             api_base,
             websocket_base,
             organization_id,
+            member_id,
             activity_page_limit: DEFAULT_ACTIVITY_LIMIT,
         })
     }

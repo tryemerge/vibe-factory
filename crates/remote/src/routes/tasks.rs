@@ -10,16 +10,25 @@ use uuid::Uuid;
 use crate::{
     AppState,
     db::tasks::{
-        CreateSharedTaskData, SharedTaskError, SharedTaskRepository, TaskStatus,
-        TransferTaskAssignmentData, UpdateSharedTaskData,
+        CreateSharedTaskData, CreateSharedTaskProjectData, SharedTaskError, SharedTaskRepository,
+        TaskStatus, TransferTaskAssignmentData, UpdateSharedTaskData,
     },
 };
 
 #[derive(Debug, Deserialize)]
 pub struct CreateSharedTaskRequest {
+    pub project_id: Uuid,
+    pub project: Option<CreateSharedTaskProjectRequest>,
     pub title: String,
     pub description: Option<String>,
     pub assignee_member_id: Option<Uuid>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateSharedTaskProjectRequest {
+    pub github_repository_id: i64,
+    pub owner: String,
+    pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -43,13 +52,29 @@ pub async fn create_shared_task(
     Json(payload): Json<CreateSharedTaskRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     let repo = SharedTaskRepository::new(state.pool());
+    let CreateSharedTaskRequest {
+        project_id,
+        project,
+        title,
+        description,
+        assignee_member_id,
+    } = payload;
+
+    let project_metadata = project.map(|p| CreateSharedTaskProjectData {
+        github_repository_id: p.github_repository_id,
+        owner: p.owner,
+        name: p.name,
+    });
+
     let data = CreateSharedTaskData {
-        title: payload.title,
-        description: payload.description,
-        assignee_member_id: payload.assignee_member_id,
+        project_id,
+        project: project_metadata,
+        title,
+        description,
+        assignee_member_id,
     };
 
-    dbg!("Recevied create_shared_task request:", &data);
+    dbg!("Received create_shared_task request:", &data);
 
     match repo.create(org_id, data).await {
         Ok(task) => (StatusCode::CREATED, Json(json!({ "task": task }))),

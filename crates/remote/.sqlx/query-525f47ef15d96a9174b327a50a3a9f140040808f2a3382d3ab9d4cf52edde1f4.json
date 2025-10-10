@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO organization_members (\n            organization_id,\n            user_id,\n            role,\n            status\n        )\n        VALUES ($1, $2, $3::text::org_member_role, $4)\n        ON CONFLICT (organization_id, user_id) DO NOTHING\n        RETURNING\n            id AS \"id!\",\n            organization_id AS \"organization_id!\",\n            user_id AS \"user_id!\",\n            role AS \"role!: OrgMemberRole\",\n            status AS \"status!\",\n            joined_at AS \"joined_at!\",\n            last_seen_at AS \"last_seen_at?\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "organization_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "role!: OrgMemberRole",
+        "type_info": {
+          "Custom": {
+            "name": "org_member_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "member"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "status!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "joined_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_seen_at?",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "525f47ef15d96a9174b327a50a3a9f140040808f2a3382d3ab9d4cf52edde1f4"
+}

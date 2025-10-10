@@ -10,6 +10,7 @@ use super::task::TaskStatus;
 pub struct SharedTask {
     pub id: Uuid,
     pub organization_id: Uuid,
+    pub project_id: Uuid,
     pub title: String,
     pub description: Option<String>,
     pub status: TaskStatus,
@@ -26,6 +27,7 @@ pub struct SharedTask {
 pub struct SharedTaskInput {
     pub id: Uuid,
     pub organization_id: Uuid,
+    pub project_id: Uuid,
     pub title: String,
     pub description: Option<String>,
     pub status: TaskStatus,
@@ -44,6 +46,7 @@ impl SharedTask {
             SELECT
                 id                         AS "id!: Uuid",
                 organization_id            AS "organization_id!: Uuid",
+                project_id                 AS "project_id!: Uuid",
                 title                      AS title,
                 description                AS description,
                 status                     AS "status!: TaskStatus",
@@ -68,6 +71,7 @@ impl SharedTask {
             INSERT INTO shared_tasks (
                 id,
                 organization_id,
+                project_id,
                 title,
                 description,
                 status,
@@ -78,10 +82,11 @@ impl SharedTask {
                 updated_at
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
             )
             ON CONFLICT(id) DO UPDATE SET
                 organization_id     = excluded.organization_id,
+                project_id          = excluded.project_id,
                 title               = excluded.title,
                 description         = excluded.description,
                 status              = excluded.status,
@@ -93,6 +98,7 @@ impl SharedTask {
             RETURNING
                 id                         AS "id!: Uuid",
                 organization_id            AS "organization_id!: Uuid",
+                project_id                 AS "project_id!: Uuid",
                 title                      AS title,
                 description                AS description,
                 status                     AS "status!: TaskStatus",
@@ -104,6 +110,7 @@ impl SharedTask {
             "#,
             data.id,
             data.organization_id,
+            data.project_id,
             data.title,
             data.description,
             status,
@@ -131,6 +138,7 @@ impl SharedTask {
             SELECT
                 id                         AS "id!: Uuid",
                 organization_id            AS "organization_id!: Uuid",
+                project_id                 AS "project_id!: Uuid",
                 title                      AS title,
                 description                AS description,
                 status                     AS "status!: TaskStatus",

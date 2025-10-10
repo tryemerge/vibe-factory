@@ -47,9 +47,24 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
+CREATE TABLE IF NOT EXISTS projects (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    github_repository_id BIGINT NOT NULL,
+    owner                TEXT NOT NULL,
+    name                 TEXT NOT NULL,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (organization_id, github_repository_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_org_owner_name
+    ON projects (organization_id, owner, name);
+
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    project_id           UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     creator_member_id    UUID REFERENCES organization_members(id) ON DELETE SET NULL,
     assignee_member_id   UUID REFERENCES organization_members(id) ON DELETE SET NULL,
     title                TEXT NOT NULL,
@@ -74,6 +89,9 @@ CREATE INDEX IF NOT EXISTS idx_tasks_org_status
 
 CREATE INDEX IF NOT EXISTS idx_tasks_org_assignee
     ON shared_tasks (organization_id, assignee_member_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_project
+    ON shared_tasks (project_id);
 
 
 CREATE TABLE IF NOT EXISTS activity (

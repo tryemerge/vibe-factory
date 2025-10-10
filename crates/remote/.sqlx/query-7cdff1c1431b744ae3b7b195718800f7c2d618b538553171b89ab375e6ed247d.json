@@ -1,0 +1,92 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                m.id AS member_id,\n                m.organization_id,\n                m.user_id,\n                m.role AS \"member_role!: OrgMemberRole\",\n                m.status AS member_status,\n                m.joined_at AS member_joined_at,\n                m.last_seen_at AS member_last_seen_at,\n                u.email AS user_email,\n                u.display_name AS user_display_name,\n                u.created_at AS user_created_at,\n                u.updated_at AS user_updated_at\n            FROM organization_members AS m\n            JOIN users AS u ON u.id = m.user_id\n            WHERE m.organization_id = $1\n            ORDER BY u.display_name\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "member_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "organization_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "member_role!: OrgMemberRole",
+        "type_info": {
+          "Custom": {
+            "name": "org_member_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "member"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "member_status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "member_joined_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "member_last_seen_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "user_email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "user_display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "user_created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "user_updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7cdff1c1431b744ae3b7b195718800f7c2d618b538553171b89ab375e6ed247d"
+}
