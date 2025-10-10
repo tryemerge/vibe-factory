@@ -77,10 +77,10 @@ impl RemoteSync {
     }
 
     async fn request_shutdown(&mut self) {
-        if let Some(client) = self.remote_client.take() {
-            if let Err(err) = client.shutdown() {
-                tracing::warn!(?err, "failed to request websocket shutdown");
-            }
+        if let Some(client) = self.remote_client.take()
+            && let Err(err) = client.shutdown()
+        {
+            tracing::warn!(?err, "failed to request websocket shutdown");
         }
     }
 }
@@ -165,10 +165,15 @@ impl RemoteSyncHandle {
 
     pub async fn shutdown(&self) {
         self.request_shutdown();
-        if let Some(join) = self.inner.join.lock().unwrap().take() {
-            if let Err(err) = join.await {
-                tracing::warn!(?err, "remote sync task join failed");
-            }
+        let join = {
+            let mut guard = self.inner.join.lock().unwrap();
+            guard.take()
+        };
+
+        if let Some(join) = join
+            && let Err(err) = join.await
+        {
+            tracing::warn!(?err, "remote sync task join failed");
         }
     }
 }
