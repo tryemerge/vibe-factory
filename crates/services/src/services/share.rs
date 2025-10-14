@@ -211,10 +211,7 @@ impl Drop for RemoteSyncHandleInner {
     }
 }
 
-pub(super) fn convert_remote_task(
-    task: &RemoteSharedTask,
-    last_event_seq: Option<i64>,
-) -> SharedTaskInput {
+fn convert_remote_task(task: &RemoteSharedTask, last_event_seq: Option<i64>) -> SharedTaskInput {
     SharedTaskInput {
         id: task.id,
         organization_id: task.organization_id,
@@ -230,12 +227,22 @@ pub(super) fn convert_remote_task(
     }
 }
 
-pub(super) fn convert_remote_status(status: &RemoteTaskStatus) -> TaskStatus {
+fn convert_remote_status(status: &RemoteTaskStatus) -> TaskStatus {
     match status {
         RemoteTaskStatus::Todo => TaskStatus::Todo,
         RemoteTaskStatus::InProgress => TaskStatus::InProgress,
         RemoteTaskStatus::InReview => TaskStatus::InReview,
         RemoteTaskStatus::Done => TaskStatus::Done,
         RemoteTaskStatus::Cancelled => TaskStatus::Cancelled,
+    }
+}
+
+fn convert_local_status(status: &TaskStatus) -> RemoteTaskStatus {
+    match status {
+        TaskStatus::Todo => RemoteTaskStatus::Todo,
+        TaskStatus::InProgress => RemoteTaskStatus::InProgress,
+        TaskStatus::InReview => RemoteTaskStatus::InReview,
+        TaskStatus::Done => RemoteTaskStatus::Done,
+        TaskStatus::Cancelled => RemoteTaskStatus::Cancelled,
     }
 }

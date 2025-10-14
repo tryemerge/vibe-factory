@@ -55,7 +55,16 @@ export const useProjectTasks = (projectId: string): UseProjectTasksResult => {
       ...localTasksById,
     };
 
+    const claimedSharedTaskIds = new Set(
+      Object.values(localTasksById)
+        .map((task) => task.shared_task_id)
+        .filter((id): id is string => Boolean(id))
+    );
+
     Object.values(sharedTasksById).forEach((sharedTask: SharedTaskRecord) => {
+      if (claimedSharedTaskIds.has(sharedTask.id)) {
+        return;
+      }
       merged[sharedTask.id] = convertSharedTask(sharedTask);
     });
 
@@ -81,6 +90,7 @@ function convertSharedTask(task: SharedTaskRecord): TaskWithAttemptStatus {
     description: task.description ?? null,
     status: task.status,
     parent_task_attempt: null,
+    shared_task_id: null,
     created_at: toIsoString(task.created_at),
     updated_at: toIsoString(task.updated_at),
     has_in_progress_attempt: false,

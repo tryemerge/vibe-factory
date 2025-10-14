@@ -31,6 +31,7 @@ use services::services::{
     image::{ImageError, ImageService},
     pr_monitor::PrMonitorService,
     sentry::SentryService,
+    share::ShareTaskPublisher,
     worktree_manager::WorktreeError,
 };
 use sqlx::{Error as SqlxError, types::Uuid};
@@ -184,16 +185,33 @@ pub trait Deployment: Clone + Send + Sync + 'static {
                 ExecutionProcessRunReason::CodingAgent
                     | ExecutionProcessRunReason::SetupScript
                     | ExecutionProcessRunReason::CleanupScript
-            ) && let Ok(Some(task_attempt)) =
-                TaskAttempt::find_by_id(&self.db().pool, process.task_attempt_id).await
-                && let Ok(Some(task)) = task_attempt.parent_task(&self.db().pool).await
-                && let Err(e) =
-                    Task::update_status(&self.db().pool, task.id, TaskStatus::InReview).await
-            {
-                tracing::error!(
-                    "Failed to update task status to InReview for orphaned attempt: {}",
-                    e
-                );
+            ) {
+                if let Ok(Some(task_attempt)) =
+                    TaskAttempt::find_by_id(&self.db().pool, process.task_attempt_id).await
+                    && let Ok(Some(task)) = task_attempt.parent_task(&self.db().pool).await
+                {
+                    match Task::update_status(&self.db().pool, task.id, TaskStatus::InReview).await
+                    {
+                        Ok(_) => {
+                            if let Ok(publisher) = ShareTaskPublisher::new(self.db().clone()) {
+                                if let Err(err) = publisher.update_shared_task_by_id(task.id).await
+                                {
+                                    tracing::warn!(
+                                        ?err,
+                                        "Failed to propagate shared task update for {}",
+                                        task.id
+                                    );
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!(
+                                "Failed to update task status to InReview for orphaned attempt: {}",
+                                e
+                            );
+                        }
+                    }
+                }
             }
         }
         Ok(())

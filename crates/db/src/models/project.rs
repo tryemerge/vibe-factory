@@ -76,7 +76,7 @@ pub enum SearchMatchType {
     FullPath,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct ProjectRemoteMetadata {
     pub has_remote: bool,
     pub github_repo_owner: Option<String>,
@@ -350,6 +350,32 @@ impl Project {
         )
         .fetch_one(pool)
         .await
+    }
+
+    pub async fn update_remote_metadata(
+        pool: &SqlitePool,
+        id: Uuid,
+        metadata: &ProjectRemoteMetadata,
+    ) -> Result<(), sqlx::Error> {
+        let owner = metadata.github_repo_owner.clone();
+        let name = metadata.github_repo_name.clone();
+        sqlx::query!(
+            r#"UPDATE projects
+               SET has_remote = $2,
+                   github_repo_owner = $3,
+                   github_repo_name = $4,
+                   github_repo_id = $5
+               WHERE id = $1"#,
+            id,
+            metadata.has_remote,
+            owner,
+            name,
+            metadata.github_repo_id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
     }
 
     pub async fn delete(pool: &SqlitePool, id: Uuid) -> Result<u64, sqlx::Error> {

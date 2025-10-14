@@ -16,6 +16,7 @@ use tracing::{debug, error, info};
 use crate::services::{
     config::Config,
     github_service::{GitHubRepoInfo, GitHubService, GitHubServiceError},
+    share::ShareTaskPublisher,
 };
 
 #[derive(Debug, Error)]
@@ -126,6 +127,18 @@ impl PrMonitorService {
                     pr_merge.pr_info.number, task_attempt.task_id
                 );
                 Task::update_status(&self.db.pool, task_attempt.task_id, TaskStatus::Done).await?;
+                if let Ok(publisher) = ShareTaskPublisher::new(self.db.clone()) {
+                    if let Err(err) = publisher
+                        .update_shared_task_by_id(task_attempt.task_id)
+                        .await
+                    {
+                        tracing::warn!(
+                            ?err,
+                            "Failed to propagate shared task update for {}",
+                            task_attempt.task_id
+                        );
+                    }
+                }
             }
         }
 

@@ -243,6 +243,15 @@ pub async fn update_task(
         TaskImage::associate_many_dedup(&deployment.db().pool, task.id, image_ids).await?;
     }
 
+    if task.shared_task_id.is_some() {
+        let publisher =
+            ShareTaskPublisher::new(deployment.db().clone()).map_err(map_share_error)?;
+        publisher
+            .update_shared_task(&task)
+            .await
+            .map_err(map_share_error)?;
+    }
+
     Ok(ResponseJson(ApiResponse::success(task)))
 }
 
@@ -321,18 +330,30 @@ pub async fn delete_task(
     Ok((StatusCode::ACCEPTED, ResponseJson(ApiResponse::success(()))))
 }
 
+#[derive(Debug, Serialize, Deserialize, TS)]
+pub struct ShareTaskResponse {
+    pub shared_task_id: Uuid,
+}
+
 pub async fn share_task(
     Extension(task): Extension<Task>,
     State(deployment): State<DeploymentImpl>,
-) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
-    let publisher = ShareTaskPublisher::new(deployment.db().clone()).map_err(map_share_error)?;
+) -> Result<ResponseJson<ApiResponse<ShareTaskResponse>>, ApiError> {
+    let publisher = ShareTaskPublisher::new_with_metadata(
+        deployment.db().clone(),
+        deployment.git().clone(),
+        deployment.config().clone(),
+    )
+    .map_err(map_share_error)?;
 
-    publisher
+    let shared_task_id = publisher
         .share_task(task.id)
         .await
         .map_err(map_share_error)?;
 
-    Ok(ResponseJson(ApiResponse::success(())))
+    Ok(ResponseJson(ApiResponse::success(ShareTaskResponse {
+        shared_task_id,
+    })))
 }
 
 fn map_share_error(err: ShareError) -> ApiError {
