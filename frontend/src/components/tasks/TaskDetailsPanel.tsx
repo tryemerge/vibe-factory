@@ -25,6 +25,7 @@ import { RetryUiProvider } from '@/contexts/RetryUiContext';
 import { AttemptHeaderCard } from './AttemptHeaderCard';
 import { inIframe } from '@/vscode/bridge';
 import { TaskRelationshipViewer } from './TaskRelationshipViewer';
+import { AgentInstallNotice } from './TaskDetails/AgentInstallNotice';
 import { useTaskViewManager } from '@/hooks/useTaskViewManager.ts';
 import type { TaskAttempt } from 'shared/types';
 
@@ -201,6 +202,12 @@ export function TaskDetailsPanel({
                                     )}
                                   </div>
 
+                                  {activeTab === 'logs' && selectedAttempt && (
+                                    <AgentInstallNotice
+                                      attemptId={selectedAttempt.id}
+                                    />
+                                  )}
+
                                   <TaskFollowUpSection
                                     task={task}
                                     selectedAttemptId={selectedAttempt?.id}
@@ -241,6 +248,9 @@ export function TaskDetailsPanel({
                               {selectedAttempt && (
                                 <RetryUiProvider attemptId={selectedAttempt.id}>
                                   <LogsTab selectedAttempt={selectedAttempt} />
+                                  <AgentInstallNotice
+                                    attemptId={selectedAttempt.id}
+                                  />
                                   <TaskFollowUpSection
                                     task={task}
                                     selectedAttemptId={selectedAttempt?.id}
