@@ -42,19 +42,12 @@ interface UserSystemContextType {
   environment: Environment | null;
   profiles: Record<string, ExecutorConfig> | null;
   capabilities: Record<string, BaseAgentCapability[]> | null;
+  executorDocs: Record<string, ExecutorDocumentation> | null;
   analyticsUserId: string | null;
   setEnvironment: (env: Environment | null) => void;
   setProfiles: (profiles: Record<string, ExecutorConfig> | null) => void;
   setCapabilities: (caps: Record<string, BaseAgentCapability[]> | null) => void;
-  executorDocs: Record<string, ExecutorDocumentation> | null;
-  analyticsUserId: string | null;
-  executorDocs: Record<string, ExecutorDocumentation> | null;
-  setEnvironment: (env: Environment | null) => void;
-  setProfiles: (profiles: Record<string, ExecutorConfig> | null) => void;
-  setCapabilities: (caps: Record<string, BaseAgentCapability[]> | null) => void;
-  setExecutorDocs: (
-    docs: Record<string, ExecutorDocumentation> | null
-  ) => void;
+  setExecutorDocs: (docs: Record<string, ExecutorDocumentation> | null) => void;
   setAnalyticsUserId: (id: string | null) => void;
 
   // Reload system data
@@ -249,8 +242,6 @@ export function UserSystemProvider({ children }: UserSystemProviderProps) {
       environment,
       profiles,
       capabilities,
-      analyticsUserId,
-      executorDocs,
       analyticsUserId,
       executorDocs,
       updateConfig,
