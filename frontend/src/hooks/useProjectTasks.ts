@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useJsonPatchWsStream } from './useJsonPatchWsStream';
 import type { TaskWithAttemptStatus } from 'shared/types';
-import { useOrganization } from '@clerk/clerk-react';
 
 type SharedTaskRecord = {
   id: string;
@@ -36,7 +35,6 @@ interface UseProjectTasksResult {
  */
 export const useProjectTasks = (projectId: string): UseProjectTasksResult => {
   const endpoint = `/api/tasks/stream/ws?project_id=${encodeURIComponent(projectId)}`;
-  const { organization } = useOrganization();
 
   const initialData = useCallback(
     (): TasksState => ({ tasks: {}, shared_tasks: {} }),
@@ -45,7 +43,7 @@ export const useProjectTasks = (projectId: string): UseProjectTasksResult => {
 
   const { data, isConnected, error } = useJsonPatchWsStream(
     endpoint,
-    !!projectId && !!organization?.id,
+    !!projectId,
     initialData
   );
 

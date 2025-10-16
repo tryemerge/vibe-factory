@@ -18,7 +18,7 @@ import GitOperations from '@/components/tasks/Toolbar/GitOperations.tsx';
 import { useUserSystem } from '@/components/config-provider';
 import { Card } from '../ui/card';
 import { useMutation } from '@tanstack/react-query';
-import { useOrganization } from '@clerk/clerk-react';
+import { SignInButton, useAuth, useOrganization } from '@clerk/clerk-react';
 
 function TaskDetailsToolbar({
   task,
@@ -45,6 +45,7 @@ function TaskDetailsToolbar({
   const { isStopping } = useTaskStopping(task.id);
   const { isAttemptRunning } = useAttemptExecution(selectedAttempt?.id);
   const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
+  const { isSignedIn } = useAuth();
   const { isLoaded: isOrgLoaded, organization } = useOrganization();
 
   // UI state
@@ -210,36 +211,17 @@ function TaskDetailsToolbar({
             </Card>
             <div className="p-3">
               <div className="flex flex-col gap-3 mb-4">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => {
+                <ShareTaskButton
+                  isSignedIn={isSignedIn}
+                  isOrgLoaded={isOrgLoaded}
+                  organizationPresent={!!organization}
+                  isPending={shareMutation.isPending}
+                  shareSuccess={shareSuccess}
+                  onShare={() => {
                     if (!organization) return;
                     shareMutation.mutate(task.id);
                   }}
-                  disabled={
-                    shareMutation.isPending ||
-                    shareSuccess ||
-                    !isOrgLoaded ||
-                    !organization
-                  }
-                  title={
-                    !isOrgLoaded
-                      ? 'Checking organization access…'
-                      : !organization
-                        ? 'Join or select an organization to share tasks'
-                        : undefined
-                  }
-                >
-                  <Share2 className="h-4 w-4" />
-                  {shareSuccess
-                    ? 'Shared'
-                    : !isOrgLoaded
-                      ? 'Checking access…'
-                      : !organization
-                        ? 'Join an organization to share'
-                        : 'Share Task'}
-                </Button>
+                />
                 {shareMutation.isPending && (
                   <div className="text-xs text-muted-foreground">
                     Sharing task with your organization…
@@ -311,3 +293,81 @@ function TaskDetailsToolbar({
 }
 
 export default TaskDetailsToolbar;
+
+interface ShareTaskButtonProps {
+  isSignedIn: boolean;
+  isOrgLoaded: boolean;
+  organizationPresent: boolean;
+  isPending: boolean;
+  shareSuccess: boolean;
+  onShare: () => void;
+}
+
+function ShareTaskButton({
+  isSignedIn,
+  isOrgLoaded,
+  organizationPresent,
+  isPending,
+  shareSuccess,
+  onShare,
+}: ShareTaskButtonProps) {
+  const needsSignIn = !isSignedIn;
+  const checkingOrg = isSignedIn && !isOrgLoaded;
+  const needsOrg = isSignedIn && isOrgLoaded && !organizationPresent;
+
+  let label = 'Share Task';
+  if (shareSuccess) {
+    label = 'Shared';
+  } else if (needsSignIn) {
+    label = 'Sign in to share';
+  } else if (checkingOrg) {
+    label = 'Checking access…';
+  } else if (needsOrg) {
+    label = 'Join an organization to share';
+  }
+
+  let title: string | undefined;
+  if (needsSignIn) {
+    title = 'Sign in with Clerk to share tasks securely.';
+  } else if (checkingOrg) {
+    title = 'Checking your organization access…';
+  } else if (needsOrg) {
+    title = 'Join or select an organization before sharing tasks.';
+  }
+
+  const disabled =
+    shareSuccess ||
+    isPending ||
+    (isSignedIn && (!isOrgLoaded || !organizationPresent));
+
+  const button = (
+    <Button
+      variant="outline"
+      className="gap-2"
+      disabled={needsSignIn ? isPending || shareSuccess : disabled}
+      onClick={() => {
+        if (needsSignIn || needsOrg || checkingOrg) return;
+        onShare();
+      }}
+      title={title}
+    >
+      <Share2 className="h-4 w-4" />
+      {label}
+    </Button>
+  );
+
+  if (needsSignIn) {
+    return (
+      <SignInButton
+        mode="modal"
+        redirectUrl={
+          typeof window !== 'undefined' ? window.location.pathname : '/'
+        }
+      >
+        {button}
+      </SignInButton>
+    );
+  }
+
+  return button;
+}
