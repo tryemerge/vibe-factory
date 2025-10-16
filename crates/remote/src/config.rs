@@ -1,5 +1,7 @@
 use std::env;
 
+use reqwest::Url;
+use secrecy::SecretString;
 use thiserror::Error;
 
 // Default activity items returned in a single query
@@ -14,12 +16,15 @@ pub struct RemoteServerConfig {
     pub activity_channel: String,
     pub activity_default_limit: i64,
     pub activity_max_limit: i64,
+    pub clerk: ClerkConfig,
 }
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
     #[error("environment variable `{0}` is not set")]
     MissingVar(&'static str),
+    #[error("invalid value for environment variable `{0}`")]
+    InvalidVar(&'static str),
 }
 
 impl RemoteServerConfig {
@@ -37,12 +42,42 @@ impl RemoteServerConfig {
         let activity_default_limit = DEFAULT_ACTIVITY_DEFAULT_LIMIT;
         let activity_max_limit = DEFAULT_ACTIVITY_MAX_LIMIT;
 
+        let clerk = ClerkConfig::from_env()?;
+
         Ok(Self {
             database_url,
             listen_addr,
             activity_channel,
             activity_default_limit,
             activity_max_limit,
+            clerk,
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ClerkConfig {
+    secret_key: SecretString,
+    issuer: Url,
+}
+
+impl ClerkConfig {
+    fn from_env() -> Result<Self, ConfigError> {
+        let secret_key = env::var("CLERK_SECRET_KEY")
+            .map_err(|_| ConfigError::MissingVar("CLERK_SECRET_KEY"))
+            .map(|s| SecretString::new(s.into()))?;
+        let issuer = env::var("CLERK_ISSUER")
+            .map_err(|_| ConfigError::MissingVar("CLERK_ISSUER"))?
+            .parse()
+            .map_err(|_| ConfigError::InvalidVar("CLERK_ISSUER"))?;
+        Ok(Self { secret_key, issuer })
+    }
+
+    pub(crate) fn get_secret_key(&self) -> &SecretString {
+        &self.secret_key
+    }
+
+    pub(crate) fn get_issuer(&self) -> &Url {
+        &self.issuer
     }
 }

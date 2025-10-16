@@ -1,10 +1,10 @@
 use axum::{
-    Router,
+    Router, middleware,
     routing::{delete, get, patch, post},
 };
 use tower_http::cors::CorsLayer;
 
-use crate::AppState;
+use crate::{AppState, auth::require_clerk_session};
 
 pub mod activity;
 mod organizations;
@@ -50,6 +50,10 @@ pub fn router(state: AppState) -> Router {
     Router::<AppState>::new()
         .merge(api)
         .merge(crate::ws::router())
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            require_clerk_session,
+        ))
         .layer(CorsLayer::permissive())
         .with_state(state)
 }

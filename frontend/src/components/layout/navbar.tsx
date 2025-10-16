@@ -26,6 +26,14 @@ import { useProject } from '@/contexts/project-context';
 import { showProjectForm } from '@/lib/modals';
 import { useOpenProjectInEditor } from '@/hooks/useOpenProjectInEditor';
 
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignOutButton,
+  UserButton,
+} from '@clerk/clerk-react';
+
 const DISCORD_GUILD_ID = '1423630976524877857';
 
 const INTERNAL_NAV = [
@@ -188,6 +196,20 @@ export function Navbar() {
                 </Button>
               </>
             )}
+
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="btn btn-primary">Sign In</button>
+              </SignInButton>
+            </SignedOut>
+
+            <SignedIn>
+              <UserButton />
+              <SignOutButton>
+                <button className="btn btn-secondary">Sign Out</button>
+              </SignOutButton>
+            </SignedIn>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

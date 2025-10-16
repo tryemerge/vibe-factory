@@ -1,4 +1,4 @@
-use remote::{RemoteServerConfig, Server, init_tracing};
+use remote::{Server, config::RemoteServerConfig, init_tracing};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

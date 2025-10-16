@@ -6,6 +6,7 @@ import { ClickToComponent } from 'click-to-react-component';
 import { VibeKanbanWebCompanion } from 'vibe-kanban-web-companion';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Sentry from '@sentry/react';
+import { ClerkProvider } from '@clerk/clerk-react';
 import NiceModal from '@ebay/nice-modal-react';
 // Import modal type definitions
 import './types/modals';
@@ -89,13 +90,20 @@ const queryClient = new QueryClient({
   },
 });
 
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+if (!CLERK_PUBLISHABLE_KEY) {
+  console.warn('CLERK_PUBLISHABLE_KEY is not set. Authentication is disabled.');
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <Sentry.ErrorBoundary fallback={<p>An error has occurred</p>} showDialog>
         <ClickToComponent />
         <VibeKanbanWebCompanion />
-        <App />
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+          <App />
+        </ClerkProvider>
         {/* <ReactQueryDevtools initialIsOpen={false} /> */}
       </Sentry.ErrorBoundary>
     </QueryClientProvider>
