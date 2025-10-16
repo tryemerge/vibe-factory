@@ -18,6 +18,7 @@ import GitOperations from '@/components/tasks/Toolbar/GitOperations.tsx';
 import { useUserSystem } from '@/components/config-provider';
 import { Card } from '../ui/card';
 import { useMutation } from '@tanstack/react-query';
+import { useOrganization } from '@clerk/clerk-react';
 
 function TaskDetailsToolbar({
   task,
@@ -44,6 +45,7 @@ function TaskDetailsToolbar({
   const { isStopping } = useTaskStopping(task.id);
   const { isAttemptRunning } = useAttemptExecution(selectedAttempt?.id);
   const { data: branchStatus } = useBranchStatus(selectedAttempt?.id);
+  const { isLoaded: isOrgLoaded, organization } = useOrganization();
 
   // UI state
   const [userForcedCreateMode, setUserForcedCreateMode] = useState(false);
@@ -211,11 +213,32 @@ function TaskDetailsToolbar({
                 <Button
                   variant="outline"
                   className="gap-2"
-                  onClick={() => shareMutation.mutate(task.id)}
-                  disabled={shareMutation.isPending || shareSuccess}
+                  onClick={() => {
+                    if (!organization) return;
+                    shareMutation.mutate(task.id);
+                  }}
+                  disabled={
+                    shareMutation.isPending ||
+                    shareSuccess ||
+                    !isOrgLoaded ||
+                    !organization
+                  }
+                  title={
+                    !isOrgLoaded
+                      ? 'Checking organization access…'
+                      : !organization
+                        ? 'Join or select an organization to share tasks'
+                        : undefined
+                  }
                 >
                   <Share2 className="h-4 w-4" />
-                  {shareSuccess ? 'Shared' : 'Share Task'}
+                  {shareSuccess
+                    ? 'Shared'
+                    : !isOrgLoaded
+                      ? 'Checking access…'
+                      : !organization
+                        ? 'Join an organization to share'
+                        : 'Share Task'}
                 </Button>
                 {shareMutation.isPending && (
                   <div className="text-xs text-muted-foreground">

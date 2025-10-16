@@ -82,9 +82,10 @@ impl RemoteSync {
     }
 
     pub async fn run(mut self, shutdown_rx: oneshot::Receiver<()>) -> Result<(), ShareError> {
-        let mut last_seq = SharedActivityCursor::get(&self.db.pool, self.config.organization_id)
-            .await?
-            .map(|cursor| cursor.last_seq);
+        let mut last_seq =
+            SharedActivityCursor::get(&self.db.pool, self.config.organization_id.to_string())
+                .await?
+                .map(|cursor| cursor.last_seq);
         last_seq = self.processor.catch_up(last_seq).await.unwrap_or(last_seq);
 
         let ws_url = self.config.websocket_endpoint(last_seq);
@@ -214,12 +215,12 @@ impl Drop for RemoteSyncHandleInner {
 fn convert_remote_task(task: &RemoteSharedTask, last_event_seq: Option<i64>) -> SharedTaskInput {
     SharedTaskInput {
         id: task.id,
-        organization_id: task.organization_id,
+        organization_id: task.organization_id.clone(),
         project_id: task.project_id,
         title: task.title.clone(),
         description: task.description.clone(),
         status: convert_remote_status(&task.status),
-        assignee_member_id: task.assignee_member_id,
+        assignee_user_id: task.assignee_user_id.clone(),
         version: task.version,
         last_event_seq,
         created_at: task.created_at,

@@ -9,12 +9,12 @@ use super::task::TaskStatus;
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct SharedTask {
     pub id: Uuid,
-    pub organization_id: Uuid,
+    pub organization_id: String,
     pub project_id: Uuid,
     pub title: String,
     pub description: Option<String>,
     pub status: TaskStatus,
-    pub assignee_member_id: Option<Uuid>,
+    pub assignee_user_id: Option<String>,
     pub version: i64,
     pub last_event_seq: Option<i64>,
     #[ts(type = "Date")]
@@ -26,12 +26,12 @@ pub struct SharedTask {
 #[derive(Debug, Clone)]
 pub struct SharedTaskInput {
     pub id: Uuid,
-    pub organization_id: Uuid,
+    pub organization_id: String,
     pub project_id: Uuid,
     pub title: String,
     pub description: Option<String>,
     pub status: TaskStatus,
-    pub assignee_member_id: Option<Uuid>,
+    pub assignee_user_id: Option<String>,
     pub version: i64,
     pub last_event_seq: Option<i64>,
     pub created_at: DateTime<Utc>,
@@ -45,12 +45,12 @@ impl SharedTask {
             r#"
             SELECT
                 id                         AS "id!: Uuid",
-                organization_id            AS "organization_id!: Uuid",
+                organization_id            AS "organization_id!: String",
                 project_id                 AS "project_id!: Uuid",
                 title                      AS title,
                 description                AS description,
                 status                     AS "status!: TaskStatus",
-                assignee_member_id         AS "assignee_member_id: Uuid",
+                assignee_user_id           AS "assignee_user_id: String",
                 version                    AS "version!: i64",
                 last_event_seq             AS "last_event_seq: i64",
                 created_at                 AS "created_at!: DateTime<Utc>",
@@ -75,7 +75,7 @@ impl SharedTask {
                 title,
                 description,
                 status,
-                assignee_member_id,
+                assignee_user_id,
                 version,
                 last_event_seq,
                 created_at,
@@ -90,19 +90,19 @@ impl SharedTask {
                 title               = excluded.title,
                 description         = excluded.description,
                 status              = excluded.status,
-                assignee_member_id  = excluded.assignee_member_id,
+                assignee_user_id    = excluded.assignee_user_id,
                 version             = excluded.version,
                 last_event_seq      = excluded.last_event_seq,
                 created_at          = excluded.created_at,
                 updated_at          = excluded.updated_at
             RETURNING
                 id                         AS "id!: Uuid",
-                organization_id            AS "organization_id!: Uuid",
+                organization_id            AS "organization_id!: String",
                 project_id                 AS "project_id!: Uuid",
                 title                      AS title,
                 description                AS description,
                 status                     AS "status!: TaskStatus",
-                assignee_member_id         AS "assignee_member_id: Uuid",
+                assignee_user_id           AS "assignee_user_id: String",
                 version                    AS "version!: i64",
                 last_event_seq             AS "last_event_seq: i64",
                 created_at                 AS "created_at!: DateTime<Utc>",
@@ -114,7 +114,7 @@ impl SharedTask {
             data.title,
             data.description,
             status,
-            data.assignee_member_id,
+            data.assignee_user_id,
             data.version,
             data.last_event_seq,
             data.created_at,
@@ -137,12 +137,12 @@ impl SharedTask {
             r#"
             SELECT
                 id                         AS "id!: Uuid",
-                organization_id            AS "organization_id!: Uuid",
+                organization_id            AS "organization_id!: String",
                 project_id                 AS "project_id!: Uuid",
                 title                      AS title,
                 description                AS description,
                 status                     AS "status!: TaskStatus",
-                assignee_member_id         AS "assignee_member_id: Uuid",
+                assignee_user_id           AS "assignee_user_id: String",
                 version                    AS "version!: i64",
                 last_event_seq             AS "last_event_seq: i64",
                 created_at                 AS "created_at!: DateTime<Utc>",
@@ -159,7 +159,7 @@ impl SharedTask {
 
 #[derive(Debug, Clone, FromRow)]
 pub struct SharedActivityCursor {
-    pub organization_id: Uuid,
+    pub organization_id: String,
     pub last_seq: i64,
     pub updated_at: DateTime<Utc>,
 }
@@ -167,13 +167,13 @@ pub struct SharedActivityCursor {
 impl SharedActivityCursor {
     pub async fn get(
         pool: &SqlitePool,
-        organization_id: Uuid,
+        organization_id: String,
     ) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             SharedActivityCursor,
             r#"
             SELECT
-                organization_id AS "organization_id!: Uuid",
+                organization_id AS "organization_id!: String",
                 last_seq        AS "last_seq!: i64",
                 updated_at      AS "updated_at!: DateTime<Utc>"
             FROM shared_activity_cursors
@@ -187,7 +187,7 @@ impl SharedActivityCursor {
 
     pub async fn upsert(
         pool: &SqlitePool,
-        organization_id: Uuid,
+        organization_id: String,
         last_seq: i64,
     ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
@@ -207,7 +207,7 @@ impl SharedActivityCursor {
                 last_seq   = excluded.last_seq,
                 updated_at = excluded.updated_at
             RETURNING
-                organization_id AS "organization_id!: Uuid",
+                organization_id AS "organization_id!: String",
                 last_seq        AS "last_seq!: i64",
                 updated_at      AS "updated_at!: DateTime<Utc>"
             "#,
