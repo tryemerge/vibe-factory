@@ -23,10 +23,10 @@ pub enum TaskStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SharedTask {
     pub id: Uuid,
-    pub organization_id: Uuid,
+    pub organization_id: String,
     pub project_id: Uuid,
-    pub creator_member_id: Option<Uuid>,
-    pub assignee_member_id: Option<Uuid>,
+    pub creator_user_id: Option<String>,
+    pub assignee_user_id: Option<String>,
     pub title: String,
     pub description: Option<String>,
     pub status: TaskStatus,
@@ -49,7 +49,8 @@ pub struct CreateSharedTaskData {
     pub project: Option<CreateSharedTaskProjectData>,
     pub title: String,
     pub description: Option<String>,
-    pub assignee_member_id: Option<Uuid>,
+    pub creator_user_id: String,
+    pub assignee_user_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -62,8 +63,8 @@ pub struct UpdateSharedTaskData {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct TransferTaskAssignmentData {
-    pub new_assignee_member_id: Uuid,
-    pub previous_assignee_member_id: Option<Uuid>,
+    pub new_assignee_user_id: Option<String>,
+    pub previous_assignee_user_id: Option<String>,
     pub version: Option<i64>,
 }
 
@@ -104,7 +105,7 @@ impl<'a> SharedTaskRepository<'a> {
 
     pub async fn create(
         &self,
-        organization_id: Uuid,
+        organization_id: &str,
         data: CreateSharedTaskData,
     ) -> Result<SharedTask, SharedTaskError> {
         let mut tx = self.pool.begin().await.map_err(SharedTaskError::from)?;
@@ -116,7 +117,8 @@ impl<'a> SharedTaskRepository<'a> {
             project,
             title,
             description,
-            assignee_member_id,
+            creator_user_id,
+            assignee_user_id,
         } = data;
 
         let existing_project =
@@ -133,7 +135,7 @@ impl<'a> SharedTaskRepository<'a> {
                 &mut tx,
                 CreateProjectData {
                     id: project_id,
-                    organization_id,
+                    organization_id: organization_id.to_string(),
                     github_repository_id: metadata.github_repository_id,
                     owner: metadata.owner,
                     name: metadata.name,
@@ -148,17 +150,18 @@ impl<'a> SharedTaskRepository<'a> {
             INSERT INTO shared_tasks (
                 organization_id,
                 project_id,
-                assignee_member_id,
+                creator_user_id,
+                assignee_user_id,
                 title,
                 description,
                 shared_at
             )
-            VALUES ($1, $2, $3, $4, $5, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
             RETURNING id                 AS "id!",
                       organization_id    AS "organization_id!",
                       project_id         AS "project_id!",
-                      creator_member_id  AS "creator_member_id?",
-                      assignee_member_id AS "assignee_member_id?",
+                      creator_user_id    AS "creator_user_id?",
+                      assignee_user_id   AS "assignee_user_id?",
                       title              AS "title!",
                       description        AS "description?",
                       status             AS "status!: TaskStatus",
@@ -169,7 +172,8 @@ impl<'a> SharedTaskRepository<'a> {
             "#,
             organization_id,
             project_id,
-            assignee_member_id,
+            creator_user_id,
+            assignee_user_id,
             title,
             description
         )
@@ -187,6 +191,7 @@ impl<'a> SharedTaskRepository<'a> {
 
     pub async fn update(
         &self,
+        organization_id: &str,
         task_id: Uuid,
         data: UpdateSharedTaskData,
     ) -> Result<SharedTask, SharedTaskError> {
@@ -202,13 +207,14 @@ impl<'a> SharedTaskRepository<'a> {
             version     = t.version + 1,
             updated_at  = NOW()
         WHERE t.id = $1
+          AND t.organization_id = $6
           AND t.version = COALESCE($5, t.version)
         RETURNING
             t.id                AS "id!",
             t.organization_id   AS "organization_id!",
             t.project_id        AS "project_id!",
-            t.creator_member_id AS "creator_member_id?",
-            t.assignee_member_id AS "assignee_member_id?",
+            t.creator_user_id   AS "creator_user_id?",
+            t.assignee_user_id  AS "assignee_user_id?",
             t.title             AS "title!",
             t.description       AS "description?",
             t.status            AS "status!: TaskStatus",
@@ -221,7 +227,8 @@ impl<'a> SharedTaskRepository<'a> {
             data.title,
             data.description,
             data.status as Option<TaskStatus>,
-            data.version
+            data.version,
+            organization_id
         )
         .fetch_optional(&mut *tx)
         .await?
@@ -239,6 +246,7 @@ impl<'a> SharedTaskRepository<'a> {
 
     pub async fn transfer_task_assignment(
         &self,
+        organization_id: &str,
         task_id: Uuid,
         data: TransferTaskAssignmentData,
     ) -> Result<SharedTask, SharedTaskError> {
@@ -248,18 +256,19 @@ impl<'a> SharedTaskRepository<'a> {
             SharedTask,
             r#"
         UPDATE shared_tasks AS t
-        SET assignee_member_id = $2,
+        SET assignee_user_id = $2,
             version = t.version + 1,
             updated_at = NOW()
         WHERE t.id = $1
+          AND t.organization_id = $5
           AND t.version = COALESCE($4, t.version)
-          AND ($3::uuid IS NULL OR t.assignee_member_id = $3::uuid)
+          AND ($3::text IS NULL OR t.assignee_user_id = $3::text)
         RETURNING
             t.id                AS "id!",
             t.organization_id   AS "organization_id!",
             t.project_id        AS "project_id!",
-            t.creator_member_id AS "creator_member_id?",
-            t.assignee_member_id AS "assignee_member_id?",
+            t.creator_user_id   AS "creator_user_id?",
+            t.assignee_user_id  AS "assignee_user_id?",
             t.title             AS "title!",
             t.description       AS "description?",
             t.status            AS "status!: TaskStatus",
@@ -269,9 +278,10 @@ impl<'a> SharedTaskRepository<'a> {
             t.updated_at        AS "updated_at!"
         "#,
             task_id,
-            data.new_assignee_member_id,
-            data.previous_assignee_member_id,
-            data.version
+            data.new_assignee_user_id,
+            data.previous_assignee_user_id,
+            data.version,
+            organization_id
         )
         .fetch_optional(&mut *tx)
         .await?
@@ -299,14 +309,14 @@ async fn insert_activity(
         r#"
         INSERT INTO activity (
             organization_id,
-            assignee_member_id,
+            assignee_user_id,
             event_type,
             payload
         )
         VALUES ($1, $2, $3, $4) 
         "#,
         task.organization_id,
-        task.assignee_member_id,
+        task.assignee_user_id,
         event_type,
         payload
     )

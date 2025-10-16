@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::{activity::ActivityBroker, auth::ClerkAuth, config::RemoteServerConfig};
+use crate::{
+    activity::ActivityBroker, auth::ClerkAuth, clerk::ClerkService, config::RemoteServerConfig,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,6 +16,7 @@ struct AppStateInner {
     broker: ActivityBroker,
     config: RemoteServerConfig,
     auth: ClerkAuth,
+    clerk: ClerkService,
 }
 
 impl AppState {
@@ -22,6 +25,7 @@ impl AppState {
         broker: ActivityBroker,
         config: RemoteServerConfig,
         auth: ClerkAuth,
+        clerk: ClerkService,
     ) -> Self {
         Self {
             inner: Arc::new(AppStateInner {
@@ -29,6 +33,7 @@ impl AppState {
                 broker,
                 config,
                 auth,
+                clerk,
             }),
         }
     }
@@ -47,5 +52,9 @@ impl AppState {
 
     pub fn auth(&self) -> &ClerkAuth {
         &self.inner.auth
+    }
+
+    pub fn clerk(&self) -> &ClerkService {
+        &self.inner.clerk
     }
 }

@@ -1,12 +1,13 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Extension, Query, State},
     http::StatusCode,
 };
 use serde::Deserialize;
-use uuid::Uuid;
 
-use crate::{AppState, activity::ActivityResponse, db::activity::ActivityRepository};
+use crate::{
+    AppState, activity::ActivityResponse, auth::RequestContext, db::activity::ActivityRepository,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct ActivityQuery {
@@ -18,7 +19,7 @@ pub struct ActivityQuery {
 
 pub(super) async fn get_activity_stream(
     State(state): State<AppState>,
-    Path(org_id): Path<Uuid>,
+    Extension(ctx): Extension<RequestContext>,
     Query(params): Query<ActivityQuery>,
 ) -> Result<Json<ActivityResponse>, StatusCode> {
     let config = state.config();
@@ -29,7 +30,7 @@ pub(super) async fn get_activity_stream(
     let repo = ActivityRepository::new(state.pool());
 
     let events = repo
-        .fetch_since(org_id, params.after, limit)
+        .fetch_since(&ctx.organization.id, params.after, limit)
         .await
         .map_err(|error| {
             tracing::error!(?error, "failed to load activity stream");

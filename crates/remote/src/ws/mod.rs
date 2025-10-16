@@ -1,20 +1,18 @@
 use axum::{
     Router,
-    extract::{Query, State, ws::WebSocketUpgrade},
+    extract::{Extension, Query, State, ws::WebSocketUpgrade},
     response::IntoResponse,
     routing::get,
 };
 use serde::Deserialize;
-use uuid::Uuid;
 
-use crate::AppState;
+use crate::{AppState, auth::RequestContext};
 
 pub mod message;
 mod session;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct WsQueryParams {
-    pub organization_id: Uuid,
     pub cursor: Option<i64>,
 }
 
@@ -25,7 +23,8 @@ pub fn router() -> Router<AppState> {
 async fn upgrade(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
+    Extension(ctx): Extension<RequestContext>,
     Query(params): Query<WsQueryParams>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| session::handle(socket, state, params))
+    ws.on_upgrade(move |socket| session::handle(socket, state, ctx, params))
 }

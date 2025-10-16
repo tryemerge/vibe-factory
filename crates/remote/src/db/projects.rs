@@ -7,7 +7,7 @@ use super::Tx;
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Project {
     pub id: Uuid,
-    pub organization_id: Uuid,
+    pub organization_id: String,
     pub github_repository_id: i64,
     pub owner: String,
     pub name: String,
@@ -18,7 +18,7 @@ pub struct Project {
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateProjectData {
     pub id: Uuid,
-    pub organization_id: Uuid,
+    pub organization_id: String,
     pub github_repository_id: i64,
     pub owner: String,
     pub name: String,
@@ -42,7 +42,7 @@ impl ProjectRepository {
     pub async fn find_by_id(
         tx: &mut Tx<'_>,
         id: Uuid,
-        organization_id: Uuid,
+        organization_id: &str,
     ) -> Result<Option<Project>, ProjectError> {
         sqlx::query_as!(
             Project,

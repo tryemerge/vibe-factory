@@ -11,7 +11,7 @@
       {
         "ordinal": 1,
         "name": "organization_id!",
-        "type_info": "Uuid"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
@@ -42,7 +42,7 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
+        "Text",
         "Int8",
         "Text",
         "Text"

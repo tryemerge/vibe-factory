@@ -59,6 +59,7 @@ impl RemoteServerConfig {
 pub struct ClerkConfig {
     secret_key: SecretString,
     issuer: Url,
+    api_url: Url,
 }
 
 impl ClerkConfig {
@@ -70,7 +71,15 @@ impl ClerkConfig {
             .map_err(|_| ConfigError::MissingVar("CLERK_ISSUER"))?
             .parse()
             .map_err(|_| ConfigError::InvalidVar("CLERK_ISSUER"))?;
-        Ok(Self { secret_key, issuer })
+        let api_url = env::var("CLERK_API_URL")
+            .unwrap_or_else(|_| "https://api.clerk.dev/v1/".to_string())
+            .parse()
+            .map_err(|_| ConfigError::InvalidVar("CLERK_API_URL"))?;
+        Ok(Self {
+            secret_key,
+            issuer,
+            api_url,
+        })
     }
 
     pub(crate) fn get_secret_key(&self) -> &SecretString {
@@ -79,5 +88,9 @@ impl ClerkConfig {
 
     pub(crate) fn get_issuer(&self) -> &Url {
         &self.issuer
+    }
+
+    pub(crate) fn get_api_url(&self) -> &Url {
+        &self.api_url
     }
 }

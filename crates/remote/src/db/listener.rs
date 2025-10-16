@@ -4,7 +4,6 @@ use anyhow::Context;
 use serde::Deserialize;
 use sqlx::{PgPool, postgres::PgListener};
 use tokio::time::sleep;
-use uuid::Uuid;
 
 use crate::{activity::ActivityBroker, db::activity::ActivityRepository};
 
@@ -67,25 +66,16 @@ async fn listen_loop(pool: &PgPool, broker: &ActivityBroker, channel: &str) -> a
         dbg!("Received notification from DB");
 
         let event = match ActivityRepository::new(pool)
-            .fetch_by_seq(payload.organization_id, payload.seq)
+            .fetch_by_seq(&payload.organization_id, payload.seq)
             .await
         {
             Ok(Some(event)) => event,
             Ok(None) => {
-                tracing::warn!(
-                    seq = payload.seq,
-                    org_id = %payload.organization_id,
-                    "activity row missing for notification"
-                );
+                tracing::warn!(seq = payload.seq, org_id = %payload.organization_id, "activity row missing for notification");
                 continue;
             }
             Err(error) => {
-                tracing::error!(
-                    ?error,
-                    seq = payload.seq,
-                    org_id = %payload.organization_id,
-                    "failed to fetch activity payload"
-                );
+                tracing::error!(?error, seq = payload.seq, org_id = %payload.organization_id, "failed to fetch activity payload");
                 continue;
             }
         };
@@ -97,5 +87,5 @@ async fn listen_loop(pool: &PgPool, broker: &ActivityBroker, channel: &str) -> a
 #[derive(Debug, Deserialize)]
 struct NotificationEnvelope {
     seq: i64,
-    organization_id: Uuid,
+    organization_id: String,
 }

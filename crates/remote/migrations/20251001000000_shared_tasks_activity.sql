@@ -1,14 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-DO $$ BEGIN
-    CREATE TYPE org_member_role AS ENUM ('admin', 'member');
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-END $$;
-
 
 CREATE TABLE IF NOT EXISTS organizations (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id         TEXT PRIMARY KEY,
     name       TEXT NOT NULL,
     slug       TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -16,40 +10,36 @@ CREATE TABLE IF NOT EXISTS organizations (
 );
 
 CREATE TABLE IF NOT EXISTS users (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           TEXT PRIMARY KEY,
     email        TEXT NOT NULL UNIQUE,
     display_name TEXT NOT NULL,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS organization_members (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id  UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role             org_member_role NOT NULL DEFAULT 'member',
-    status           TEXT NOT NULL DEFAULT 'active',
-    joined_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_seen_at     TIMESTAMPTZ,
-    UNIQUE (organization_id, user_id),
-    UNIQUE (id, organization_id)
-);
+CREATE TABLE IF NOT EXISTS organization_member_metadata (
+        organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status          TEXT NOT NULL DEFAULT 'active',
+        joined_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_seen_at    TIMESTAMPTZ,
+        PRIMARY KEY (organization_id, user_id)
+    );
 
-CREATE INDEX IF NOT EXISTS idx_org_members_org_role
-    ON organization_members (organization_id, role);
+CREATE INDEX IF NOT EXISTS idx_member_metadata_user
+    ON organization_member_metadata (user_id);
 
-CREATE INDEX IF NOT EXISTS idx_org_members_user
-    ON organization_members (user_id);
-
-DO $$ BEGIN
+DO $$
+BEGIN
     CREATE TYPE task_status AS ENUM ('todo', 'in-progress', 'in-review', 'done', 'cancelled');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
-END $$;
+END
+$$;
 
 CREATE TABLE IF NOT EXISTS projects (
     id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    organization_id      TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     github_repository_id BIGINT NOT NULL,
     owner                TEXT NOT NULL,
     name                 TEXT NOT NULL,
@@ -62,63 +52,58 @@ CREATE INDEX IF NOT EXISTS idx_projects_org_owner_name
     ON projects (organization_id, owner, name);
 
 CREATE TABLE IF NOT EXISTS shared_tasks (
-    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    project_id           UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    creator_member_id    UUID REFERENCES organization_members(id) ON DELETE SET NULL,
-    assignee_member_id   UUID REFERENCES organization_members(id) ON DELETE SET NULL,
-    title                TEXT NOT NULL,
-    description          TEXT,
-    status               task_status NOT NULL DEFAULT 'todo'::task_status,
-    version              BIGINT NOT NULL DEFAULT 1,
-    shared_at            TIMESTAMPTZ DEFAULT NOW(),
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT tasks_creator_org_fk
-        FOREIGN KEY (creator_member_id, organization_id)
-        REFERENCES organization_members(id, organization_id)
-        ON DELETE SET NULL,
-    CONSTRAINT tasks_assignee_org_fk
-        FOREIGN KEY (assignee_member_id, organization_id)
-        REFERENCES organization_members(id, organization_id)
-        ON DELETE SET NULL
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    project_id        UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    creator_user_id   TEXT REFERENCES users(id) ON DELETE SET NULL,
+    assignee_user_id  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    title             TEXT NOT NULL,
+    description       TEXT,
+    status            task_status NOT NULL DEFAULT 'todo'::task_status,
+    version           BIGINT NOT NULL DEFAULT 1,
+    shared_at         TIMESTAMPTZ DEFAULT NOW(),
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_org_status
     ON shared_tasks (organization_id, status);
 
 CREATE INDEX IF NOT EXISTS idx_tasks_org_assignee
-    ON shared_tasks (organization_id, assignee_member_id);
+    ON shared_tasks (organization_id, assignee_user_id);
 
 CREATE INDEX IF NOT EXISTS idx_tasks_project
     ON shared_tasks (project_id);
 
-
 CREATE TABLE IF NOT EXISTS activity (
-    seq                BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    event_id           UUID NOT NULL DEFAULT gen_random_uuid(),
-    organization_id    UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    assignee_member_id UUID REFERENCES organization_members(id) ON DELETE SET NULL,
-    event_type         TEXT NOT NULL,
-    payload            JSONB NOT NULL,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    seq               BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    event_id          UUID NOT NULL DEFAULT gen_random_uuid(),
+    organization_id   TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    assignee_user_id  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    event_type        TEXT NOT NULL,
+    payload           JSONB NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (event_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_activity_org_seq
     ON activity (organization_id, seq DESC);
 
-DO $$ BEGIN
+DO $$
+BEGIN
     DROP TRIGGER IF EXISTS trg_activity_notify ON activity;
 EXCEPTION
     WHEN undefined_object THEN NULL;
-END $$;
+END
+$$;
 
-DO $$ BEGIN
+DO $$
+BEGIN
     DROP FUNCTION IF EXISTS activity_notify();
 EXCEPTION
     WHEN undefined_function THEN NULL;
-END $$;
+END
+$$;
 
 CREATE OR REPLACE FUNCTION activity_notify() RETURNS trigger AS $$
 BEGIN

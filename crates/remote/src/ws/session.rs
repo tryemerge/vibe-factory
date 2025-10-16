@@ -6,22 +6,26 @@ use super::{
     WsQueryParams,
     message::{ClientMessage, ServerMessage},
 };
-use crate::{AppState, activity::ActivityEvent, db::activity::ActivityRepository};
+use crate::{
+    AppState, activity::ActivityEvent, auth::RequestContext, db::activity::ActivityRepository,
+};
 
-pub async fn handle(socket: WebSocket, state: AppState, params: WsQueryParams) {
+pub async fn handle(
+    socket: WebSocket,
+    state: AppState,
+    ctx: RequestContext,
+    params: WsQueryParams,
+) {
     let config = state.config();
     let pool = state.pool().clone();
     let receiver = state.broker().subscribe();
     let mut activity_stream = BroadcastStream::new(receiver);
+    let org_id = ctx.organization.id.clone();
 
     let (mut sender, mut inbound) = socket.split();
 
     if let Ok(history) = ActivityRepository::new(&pool)
-        .fetch_since(
-            params.organization_id,
-            params.cursor,
-            config.activity_default_limit,
-        )
+        .fetch_since(&org_id, params.cursor, config.activity_default_limit)
         .await
     {
         for event in history {
@@ -31,10 +35,7 @@ pub async fn handle(socket: WebSocket, state: AppState, params: WsQueryParams) {
         }
     }
 
-    dbg!(
-        "Starting websocket session for org:",
-        params.organization_id
-    );
+    dbg!("Starting websocket session for org:", &org_id);
 
     loop {
         tokio::select! {
@@ -42,7 +43,7 @@ pub async fn handle(socket: WebSocket, state: AppState, params: WsQueryParams) {
                 match maybe_activity {
                     Some(Ok(event)) => {
                         tracing::info!(?event, "received activity event");
-                        if event.organization_id == params.organization_id
+                        if event.organization_id.as_str() == org_id.as_str()
                             && send_activity(&mut sender, &event).await.is_err() {
                                 break;
                             }
@@ -124,7 +125,7 @@ async fn handle_inbound_message(payload: &str) -> Result<(), serde_json::Error> 
     let message: ClientMessage = serde_json::from_str(payload)?;
     match message {
         ClientMessage::Ack { cursor: _ } => {
-            // No-op for now; future versions can persist cursor acknowledgements.
+            // No-op for now;
         }
     }
     Ok(())

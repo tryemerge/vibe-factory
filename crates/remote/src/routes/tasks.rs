@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
 };
 use serde::Deserialize;
@@ -9,9 +9,13 @@ use uuid::Uuid;
 
 use crate::{
     AppState,
-    db::tasks::{
-        CreateSharedTaskData, CreateSharedTaskProjectData, SharedTaskError, SharedTaskRepository,
-        TaskStatus, TransferTaskAssignmentData, UpdateSharedTaskData,
+    auth::RequestContext,
+    db::{
+        identity::{IdentityError, IdentityRepository},
+        tasks::{
+            CreateSharedTaskData, CreateSharedTaskProjectData, SharedTaskError,
+            SharedTaskRepository, TaskStatus, TransferTaskAssignmentData, UpdateSharedTaskData,
+        },
     },
 };
 
@@ -21,7 +25,7 @@ pub struct CreateSharedTaskRequest {
     pub project: Option<CreateSharedTaskProjectRequest>,
     pub title: String,
     pub description: Option<String>,
-    pub assignee_member_id: Option<Uuid>,
+    pub assignee_user_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -41,24 +45,36 @@ pub struct UpdateSharedTaskRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct TransferSharedTaskAssignmentRequest {
-    pub new_assignee_member_id: Uuid,
-    pub previous_assignee_member_id: Option<Uuid>,
+    pub new_assignee_user_id: Option<String>,
+    pub previous_assignee_user_id: Option<String>,
     pub version: Option<i64>,
 }
 
 pub async fn create_shared_task(
     State(state): State<AppState>,
-    Path(org_id): Path<Uuid>,
+    Extension(ctx): Extension<RequestContext>,
     Json(payload): Json<CreateSharedTaskRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     let repo = SharedTaskRepository::new(state.pool());
+    let identity_repo = IdentityRepository::new(state.pool(), state.clerk());
     let CreateSharedTaskRequest {
         project_id,
         project,
         title,
         description,
-        assignee_member_id,
+        assignee_user_id,
     } = payload;
+
+    if let Some(assignee) = &assignee_user_id {
+        if assignee != &ctx.user.id {
+            if let Err(err) = identity_repo
+                .ensure_user(&ctx.organization.id, assignee)
+                .await
+            {
+                return identity_error_response(err, "assignee not found or inactive");
+            }
+        }
+    }
 
     let project_metadata = project.map(|p| CreateSharedTaskProjectData {
         github_repository_id: p.github_repository_id,
@@ -71,12 +87,13 @@ pub async fn create_shared_task(
         project: project_metadata,
         title,
         description,
-        assignee_member_id,
+        creator_user_id: ctx.user.id.clone(),
+        assignee_user_id,
     };
 
     dbg!("Received create_shared_task request:", &data);
 
-    match repo.create(org_id, data).await {
+    match repo.create(&ctx.organization.id, data).await {
         Ok(task) => (StatusCode::CREATED, Json(json!({ "task": task }))),
         Err(error) => task_error_response(error, "failed to create shared task"),
     }
@@ -84,6 +101,7 @@ pub async fn create_shared_task(
 
 pub async fn update_shared_task(
     State(state): State<AppState>,
+    Extension(ctx): Extension<RequestContext>,
     Path(task_id): Path<Uuid>,
     Json(payload): Json<UpdateSharedTaskRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
@@ -95,7 +113,7 @@ pub async fn update_shared_task(
         version: payload.version,
     };
 
-    match repo.update(task_id, data).await {
+    match repo.update(&ctx.organization.id, task_id, data).await {
         Ok(task) => (StatusCode::OK, Json(json!({ "task": task }))),
         Err(error) => task_error_response(error, "failed to update shared task"),
     }
@@ -103,17 +121,34 @@ pub async fn update_shared_task(
 
 pub async fn transfer_task_assignment(
     State(state): State<AppState>,
+    Extension(ctx): Extension<RequestContext>,
     Path(task_id): Path<Uuid>,
     Json(payload): Json<TransferSharedTaskAssignmentRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     let repo = SharedTaskRepository::new(state.pool());
+    let identity_repo = IdentityRepository::new(state.pool(), state.clerk());
+
+    if let Some(assignee) = payload.new_assignee_user_id.as_ref() {
+        if assignee != &ctx.user.id {
+            if let Err(err) = identity_repo
+                .ensure_user(&ctx.organization.id, assignee)
+                .await
+            {
+                return identity_error_response(err, "assignee not found or inactive");
+            }
+        }
+    }
+
     let data = TransferTaskAssignmentData {
-        new_assignee_member_id: payload.new_assignee_member_id,
-        previous_assignee_member_id: payload.previous_assignee_member_id,
+        new_assignee_user_id: payload.new_assignee_user_id,
+        previous_assignee_user_id: payload.previous_assignee_user_id,
         version: payload.version,
     };
 
-    match repo.transfer_task_assignment(task_id, data).await {
+    match repo
+        .transfer_task_assignment(&ctx.organization.id, task_id, data)
+        .await
+    {
         Ok(task) => (StatusCode::OK, Json(json!({ "task": task }))),
         Err(error) => task_error_response(error, "failed to transfer task assignment"),
     }
@@ -133,6 +168,25 @@ fn task_error_response(
         }
         SharedTaskError::Database(err) => {
             tracing::error!(?err, "{context}", context = context);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "internal server error" })),
+            )
+        }
+    }
+}
+
+fn identity_error_response(
+    error: IdentityError,
+    message: &str,
+) -> (StatusCode, Json<serde_json::Value>) {
+    match error {
+        IdentityError::Clerk(err) => {
+            tracing::debug!(?err, "clerk refused identity lookup");
+            (StatusCode::BAD_REQUEST, Json(json!({ "error": message })))
+        }
+        IdentityError::Database(err) => {
+            tracing::error!(?err, "identity sync failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": "internal server error" })),

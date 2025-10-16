@@ -7,12 +7,11 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, JwkSet},
 };
 use reqwest::Client as HttpClient;
-use secrecy::ExposeSecret;
 use serde::Deserialize;
 use thiserror::Error;
 
 mod middleware;
-pub(crate) use middleware::require_clerk_session;
+pub use middleware::{RequestContext, require_clerk_session};
 
 use crate::config::ClerkConfig;
 
@@ -32,16 +31,14 @@ pub enum ClerkError {
     KeyNotFound(String),
     #[error("invalid expiration: {0}")]
     InvalidExpiry(i64),
-    #[error("session missing organization ID")]
-    MissingOrgId,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ClerkIdentity {
-    pub(crate) user_id: String,
-    pub(crate) org_id: String,
-    pub(crate) session_id: String,
-    pub(crate) expires_at: DateTime<Utc>,
+pub struct ClerkIdentity {
+    pub user_id: String,
+    pub org_id: Option<String>,
+    pub session_id: String,
+    pub expires_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -70,7 +67,7 @@ fn claims_to_identity(token: TokenData<ClerkClaims>) -> Result<ClerkIdentity, Cl
 
     Ok(ClerkIdentity {
         user_id: sub,
-        org_id: organization_id.ok_or(ClerkError::MissingOrgId)?,
+        org_id: organization_id,
         session_id: sid,
         expires_at,
     })
@@ -95,10 +92,11 @@ impl ClerkAuth {
     }
 
     pub(crate) async fn verify(&self, bearer: &str) -> Result<ClerkIdentity, ClerkError> {
-        let token = bearer
-            .strip_prefix("Bearer ")
-            .ok_or(ClerkError::MissingToken)?;
-        let header = decode_header(token)?;
+        if bearer.trim().is_empty() {
+            return Err(ClerkError::MissingToken);
+        }
+
+        let header = decode_header(bearer)?;
         let kid = header.kid.ok_or(ClerkError::MissingKeyId)?;
 
         let decoding_key = if let Some(key) = self.jwks.get(&kid) {
@@ -108,11 +106,10 @@ impl ClerkAuth {
         };
 
         let mut validation = Validation::new(Algorithm::RS256);
-        validation.set_audience(&[self.config.get_secret_key().expose_secret()]);
         validation.set_issuer(&[self.config.get_issuer()]);
         validation.validate_exp = true;
 
-        let claims = decode::<ClerkClaims>(&token, &decoding_key, &validation)?;
+        let claims = decode::<ClerkClaims>(bearer, &decoding_key, &validation)?;
         claims_to_identity(claims)
     }
 

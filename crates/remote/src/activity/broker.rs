@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ActivityResponse {
@@ -11,8 +10,8 @@ pub struct ActivityResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityEvent {
     pub seq: i64,
-    pub event_id: Uuid,
-    pub organization_id: Uuid,
+    pub event_id: uuid::Uuid,
+    pub organization_id: String,
     pub event_type: String,
     pub created_at: DateTime<Utc>,
     pub payload: Option<serde_json::Value>,
@@ -21,8 +20,8 @@ pub struct ActivityEvent {
 impl ActivityEvent {
     pub fn new(
         seq: i64,
-        event_id: Uuid,
-        organization_id: Uuid,
+        event_id: uuid::Uuid,
+        organization_id: String,
         event_type: String,
         created_at: DateTime<Utc>,
         payload: Option<serde_json::Value>,

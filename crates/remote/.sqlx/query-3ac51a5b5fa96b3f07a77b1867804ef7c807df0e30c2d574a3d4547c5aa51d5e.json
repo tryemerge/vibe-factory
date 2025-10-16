@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE shared_tasks AS t\n        SET title       = COALESCE($2, t.title),\n            description = COALESCE($3, t.description),\n            status      = COALESCE($4, t.status),\n            version     = t.version + 1,\n            updated_at  = NOW()\n        WHERE t.id = $1\n          AND t.version = COALESCE($5, t.version)\n        RETURNING\n            t.id                AS \"id!\",\n            t.organization_id   AS \"organization_id!\",\n            t.project_id        AS \"project_id!\",\n            t.creator_member_id AS \"creator_member_id?\",\n            t.assignee_member_id AS \"assignee_member_id?\",\n            t.title             AS \"title!\",\n            t.description       AS \"description?\",\n            t.status            AS \"status!: TaskStatus\",\n            t.version           AS \"version!\",\n            t.shared_at         AS \"shared_at?\",\n            t.created_at        AS \"created_at!\",\n            t.updated_at        AS \"updated_at!\"\n        ",
+  "query": "\n        UPDATE shared_tasks AS t\n        SET title       = COALESCE($2, t.title),\n            description = COALESCE($3, t.description),\n            status      = COALESCE($4, t.status),\n            version     = t.version + 1,\n            updated_at  = NOW()\n        WHERE t.id = $1\n          AND t.organization_id = $6\n          AND t.version = COALESCE($5, t.version)\n        RETURNING\n            t.id                AS \"id!\",\n            t.organization_id   AS \"organization_id!\",\n            t.project_id        AS \"project_id!\",\n            t.creator_user_id   AS \"creator_user_id?\",\n            t.assignee_user_id  AS \"assignee_user_id?\",\n            t.title             AS \"title!\",\n            t.description       AS \"description?\",\n            t.status            AS \"status!: TaskStatus\",\n            t.version           AS \"version!\",\n            t.shared_at         AS \"shared_at?\",\n            t.created_at        AS \"created_at!\",\n            t.updated_at        AS \"updated_at!\"\n        ",
   "describe": {
     "columns": [
       {
@@ -11,7 +11,7 @@
       {
         "ordinal": 1,
         "name": "organization_id!",
-        "type_info": "Uuid"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
@@ -20,13 +20,13 @@
       },
       {
         "ordinal": 3,
-        "name": "creator_member_id?",
-        "type_info": "Uuid"
+        "name": "creator_user_id?",
+        "type_info": "Text"
       },
       {
         "ordinal": 4,
-        "name": "assignee_member_id?",
-        "type_info": "Uuid"
+        "name": "assignee_user_id?",
+        "type_info": "Text"
       },
       {
         "ordinal": 5,
@@ -96,7 +96,8 @@
             }
           }
         },
-        "Int8"
+        "Int8",
+        "Text"
       ]
     },
     "nullable": [
@@ -114,5 +115,5 @@
       false
     ]
   },
-  "hash": "71391117cc253f1ee219565a68cd85f9d4dd7fb5a9b446a6023f9b2c8266c5b1"
+  "hash": "3ac51a5b5fa96b3f07a77b1867804ef7c807df0e30c2d574a3d4547c5aa51d5e"
 }

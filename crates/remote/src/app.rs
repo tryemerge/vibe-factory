@@ -3,7 +3,8 @@ use std::net::SocketAddr;
 use anyhow::Context;
 
 use crate::{
-    AppState, activity::ActivityBroker, auth::ClerkAuth, config::RemoteServerConfig, db, routes,
+    AppState, activity::ActivityBroker, auth::ClerkAuth, clerk::ClerkService,
+    config::RemoteServerConfig, db, routes,
 };
 
 pub struct Server;
@@ -20,7 +21,8 @@ impl Server {
 
         let broker = ActivityBroker::default();
         let auth = ClerkAuth::new(&config.clerk)?;
-        let state = AppState::new(pool.clone(), broker.clone(), config.clone(), auth);
+        let clerk = ClerkService::new(&config.clerk)?;
+        let state = AppState::new(pool.clone(), broker.clone(), config.clone(), auth, clerk);
 
         let listener =
             db::ActivityListener::new(pool.clone(), broker, config.activity_channel.clone());
