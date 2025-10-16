@@ -15,13 +15,6 @@ pub struct ClerkService {
 }
 
 #[derive(Debug, Clone)]
-pub struct ClerkOrganization {
-    pub id: String,
-    pub name: String,
-    pub slug: Option<String>,
-}
-
-#[derive(Debug, Clone)]
 pub struct ClerkUser {
     pub id: String,
     pub email: String,
@@ -49,35 +42,18 @@ impl ClerkService {
         })
     }
 
-    pub async fn get_organization(
-        &self,
-        organization_id: &str,
-    ) -> Result<ClerkOrganization, ClerkServiceError> {
-        let url = self.endpoint(&format!("organizations/{organization_id}"))?;
-        let response = self
-            .client
-            .get(url)
-            .bearer_auth(&self.secret_key)
-            .send()
-            .await?;
-
-        if response.status() == StatusCode::NOT_FOUND {
-            return Err(ClerkServiceError::NotFound(organization_id.to_string()));
-        }
-
-        let response = response.error_for_status()?;
-        let body: OrganizationResponse = response.json().await?;
-        Ok(body.into())
-    }
-
     pub async fn get_user(&self, user_id: &str) -> Result<ClerkUser, ClerkServiceError> {
         let url = self.endpoint(&format!("users/{user_id}"))?;
+        dbg!(&self.secret_key);
+        dbg!(&url);
         let response = self
             .client
             .get(url)
             .bearer_auth(&self.secret_key)
             .send()
             .await?;
+
+        dbg!(&response.status());
 
         if response.status() == StatusCode::NOT_FOUND {
             return Err(ClerkServiceError::NotFound(user_id.to_string()));
@@ -92,23 +68,6 @@ impl ClerkService {
         self.api_url
             .join(path)
             .map_err(|err| ClerkServiceError::InvalidResponse(err.to_string()))
-    }
-}
-
-#[derive(Debug, Deserialize)]
-struct OrganizationResponse {
-    id: String,
-    name: String,
-    slug: Option<String>,
-}
-
-impl From<OrganizationResponse> for ClerkOrganization {
-    fn from(value: OrganizationResponse) -> Self {
-        Self {
-            id: value.id,
-            name: value.name,
-            slug: value.slug,
-        }
     }
 }
 

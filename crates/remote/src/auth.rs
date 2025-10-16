@@ -37,8 +37,20 @@ pub enum ClerkError {
 pub struct ClerkIdentity {
     pub user_id: String,
     pub org_id: Option<String>,
+    pub org_slug: Option<String>,
     pub session_id: String,
     pub expires_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ClerkOrganizationClaim {
+    id: String,
+    #[serde(default)]
+    slg: Option<String>,
+    #[serde(default)]
+    rol: Option<String>,
+    #[serde(default)]
+    per: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -47,17 +59,13 @@ struct ClerkClaims {
     sid: String,
     iss: String,
     exp: i64,
-    #[serde(default, rename = "organization_id")]
-    organization_id: Option<String>,
+    #[serde(default)]
+    o: Option<ClerkOrganizationClaim>,
 }
 
 fn claims_to_identity(token: TokenData<ClerkClaims>) -> Result<ClerkIdentity, ClerkError> {
     let ClerkClaims {
-        sub,
-        sid,
-        exp,
-        organization_id,
-        ..
+        sub, sid, exp, o, ..
     } = token.claims;
 
     let expires_at = Utc
@@ -65,9 +73,15 @@ fn claims_to_identity(token: TokenData<ClerkClaims>) -> Result<ClerkIdentity, Cl
         .single()
         .ok_or_else(|| ClerkError::InvalidExpiry(exp))?;
 
+    let (org_id, org_slug) = match o {
+        Some(org) => (Some(org.id.clone()), org.slg),
+        None => (None, None),
+    };
+
     Ok(ClerkIdentity {
         user_id: sub,
-        org_id: organization_id,
+        org_id,
+        org_slug,
         session_id: sid,
         expires_at,
     })
@@ -106,7 +120,8 @@ impl ClerkAuth {
         };
 
         let mut validation = Validation::new(Algorithm::RS256);
-        validation.set_issuer(&[self.config.get_issuer()]);
+        let issuer = self.config.get_issuer().as_str().trim_end_matches('/');
+        validation.set_issuer(&[issuer]);
         validation.validate_exp = true;
 
         let claims = decode::<ClerkClaims>(bearer, &decoding_key, &validation)?;
