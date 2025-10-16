@@ -29,6 +29,7 @@ import { OpenInIdeButton } from '@/components/ide/OpenInIdeButton';
 import { useDiscordOnlineCount } from '@/hooks/useDiscordOnlineCount';
 
 import {
+  OrganizationSwitcher,
   SignedIn,
   SignedOut,
   SignInButton,
@@ -168,6 +169,18 @@ export function Navbar() {
             </SignedOut>
 
             <SignedIn>
+              <OrganizationSwitcher
+                hidePersonal
+                afterCreateOrganizationUrl="/"
+                afterSelectOrganizationUrl="/"
+                afterLeaveOrganizationUrl="/"
+                appearance={{
+                  elements: {
+                    organizationSwitcherTrigger:
+                      'h-8 px-3 text-sm border-muted',
+                  },
+                }}
+              />
               <UserButton />
               <SignOutButton>
                 <button className="btn btn-secondary">Sign Out</button>
