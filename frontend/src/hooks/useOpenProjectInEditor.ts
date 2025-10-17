@@ -16,14 +16,14 @@ export function useOpenProjectInEditor(
         await projectsApi.openEditor(project.id, editorType);
       } catch (err: any) {
         console.error('Failed to open project in editor:', err);
-        
+
         // Show error message to user
         const message = err?.message || 'Failed to open project in editor';
         await showError({
           title: 'Cannot Open Editor',
           message,
         });
-        
+
         // If no editor type was specified, show editor selection dialog
         if (!editorType) {
           if (onShowEditorDialog) {

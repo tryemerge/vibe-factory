@@ -69,7 +69,10 @@ export function showProjectForm(
  * @returns Promise that resolves when the dialog is closed
  */
 export function showError(props: ErrorDialogProps): Promise<void> {
-  return showModal<void>('error-dialog', props as unknown as Record<string, unknown>);
+  return showModal<void>(
+    'error-dialog',
+    props as unknown as Record<string, unknown>
+  );
 }
 
 /**
