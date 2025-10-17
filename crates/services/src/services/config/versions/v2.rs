@@ -345,17 +345,16 @@ impl EditorConfig {
         }
 
         let cli_command = &command[0];
+        let resolved_cli_path = utils::shell::resolve_executable_path(cli_command);
 
-        // Check if the command exists using `which`
-        if utils::shell::resolve_executable_path(cli_command).is_none() {
+        if let Some(resolved_cli_path) = resolved_cli_path {
+            // Particularly important for windows
+            command[0] = resolved_cli_path;
+        } else {
             return Err(OpenEditorError::IdeCliNotFound {
                 editor_type: self.editor_type.clone(),
                 cli_command: cli_command.clone(),
             });
-        }
-
-        if cfg!(windows) {
-            command[0] = utils::shell::resolve_executable_path(cli_command).unwrap();
         }
 
         let mut cmd = std::process::Command::new(&command[0]);
