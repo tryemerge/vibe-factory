@@ -124,6 +124,16 @@ impl IntoResponse for ApiError {
             ApiError::Conflict(_) => (StatusCode::CONFLICT, "ConflictError"),
         };
 
+        match &self {
+            // Handle OpenEditor error specially to return structured error_data
+            ApiError::OpenEditor(open_editor_err) => {
+                let response =
+                    ApiResponse::<(), OpenEditorError>::error_with_data(open_editor_err.clone());
+                return (status_code, Json(response)).into_response();
+            }
+            _ => {}
+        };
+
         let error_message = match &self {
             ApiError::Image(img_err) => match img_err {
                 ImageError::InvalidFormat => "This file type is not supported. Please upload an image file (PNG, JPG, GIF, WebP, or BMP).".to_string(),
@@ -157,13 +167,6 @@ impl IntoResponse for ApiError {
             },
             _ => format!("{}: {}", error_type, self),
         };
-
-        // Handle OpenEditor error specially to return structured error_data
-        if let ApiError::OpenEditor(ref open_editor_err) = self {
-            let response =
-                ApiResponse::<(), OpenEditorError>::error_with_data(open_editor_err.clone());
-            return (status_code, Json(response)).into_response();
-        }
 
         let response = ApiResponse::<()>::error(&error_message);
         (status_code, Json(response)).into_response()
