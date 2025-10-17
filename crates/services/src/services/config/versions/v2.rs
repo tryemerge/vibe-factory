@@ -8,6 +8,22 @@ use utils::{assets::SoundAssets, cache_dir};
 
 use crate::services::config::versions::v1;
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[ts(tag = "type", rename_all = "snake_case", export)]
+pub enum OpenEditorError {
+    IdeCliNotFound {
+        editor_type: EditorType,
+        cli_command: String,
+    },
+    InvalidConfig {
+        message: String,
+    },
+    Io {
+        message: String,
+    },
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct Config {
     pub config_version: String,
@@ -316,57 +332,6 @@ impl Default for EditorConfig {
     }
 }
 
-fn get_cli_installation_instructions(editor_type: &EditorType, cli_command: &str) -> String {
-    match editor_type {
-        EditorType::VsCode => {
-            "To install the 'code' command:\n\
-            1. Download, install and open Visual Studio Code\n\
-            2. Open the Command Palette (⌘ + ⇧ + P on Mac, Ctrl + Shift + P on Windows/Linux)\n\
-            3. Type 'shell command' to find 'Shell Command: Install 'code' command in PATH'\n\
-            4. Run the command and restart your terminal".to_string()
-        }
-        EditorType::Cursor => {
-            "To install the 'cursor' command:\n\
-            1. Download, install and open Cursor\n\
-            2. Open the Command Palette (⌘ + ⇧ + P on Mac, Ctrl + Shift + P on Windows/Linux)\n\
-            3. Type 'shell command' to find 'Shell Command: Install 'cursor' command in PATH'\n\
-            4. Run the command and restart your terminal".to_string()
-        }
-        EditorType::Windsurf => {
-            "To install the 'windsurf' command:\n\
-            1. Download, install and open Windsurf\n\
-            2. Open the Command Palette (⌘ + ⇧ + P on Mac, Ctrl + Shift + P on Windows/Linux)\n\
-            3. Type 'shell command' to find 'Shell Command: Install 'windsurf' command in PATH'\n\
-            4. Run the command and restart your terminal".to_string()
-        }
-        EditorType::Zed => {
-            "To install the 'zed' command:\n\
-            1. Download and install Zed from https://zed.dev\n\
-            2. The CLI is documented at https://zed.dev/features#cli\n\
-            3. Follow the instructions for your platform".to_string()
-        }
-        EditorType::IntelliJ => {
-            "To install the 'idea' command:\n\
-            1. Download and install IntelliJ IDEA\n\
-            2. Follow the instructions at https://www.jetbrains.com/help/idea/working-with-the-ide-features-from-command-line.html\n\
-            3. The command line launcher should be set up during installation".to_string()
-        }
-        EditorType::Xcode => {
-            "To install the 'xed' command:\n\
-            1. Install Xcode from the Mac App Store\n\
-            2. The 'xed' command should be automatically available after installation\n\
-            3. If not, you may need to run: sudo xcode-select --install".to_string()
-        }
-        EditorType::Custom => {
-            format!(
-                "Custom command '{}' not found in PATH.\n\
-                Please ensure the command is installed and available in your system PATH.",
-                cli_command
-            )
-        }
-    }
-}
-
 impl EditorConfig {
     pub fn get_command(&self) -> Vec<String> {
         match &self.editor_type {
@@ -386,28 +351,23 @@ impl EditorConfig {
         }
     }
 
-    pub fn open_file(&self, path: &str) -> Result<(), std::io::Error> {
+    pub fn open_file(&self, path: &str) -> Result<(), OpenEditorError> {
         let mut command = self.get_command();
 
         if command.is_empty() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "No editor command configured",
-            ));
+            return Err(OpenEditorError::InvalidConfig {
+                message: "No editor command configured".to_string(),
+            });
         }
 
         let cli_command = &command[0];
 
         // Check if the command exists using `which`
         if utils::shell::resolve_executable_path(cli_command).is_none() {
-            let instructions = get_cli_installation_instructions(&self.editor_type, cli_command);
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "IDE CLI command '{}' not found in PATH.\n\n{}",
-                    cli_command, instructions
-                ),
-            ));
+            return Err(OpenEditorError::IdeCliNotFound {
+                editor_type: self.editor_type.clone(),
+                cli_command: cli_command.clone(),
+            });
         }
 
         if cfg!(windows) {
@@ -419,7 +379,10 @@ impl EditorConfig {
             cmd.arg(arg);
         }
         cmd.arg(path);
-        cmd.spawn()?;
+        cmd.spawn()
+            .map_err(|e| OpenEditorError::Io {
+                message: e.to_string(),
+            })?;
         Ok(())
     }
 

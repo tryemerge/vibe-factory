@@ -827,7 +827,10 @@ pub async fn open_task_attempt_in_editor(
     Extension(task_attempt): Extension<TaskAttempt>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<Option<OpenEditorRequest>>,
-) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+) -> Result<
+    ResponseJson<ApiResponse<(), services::services::config::OpenEditorError>>,
+    ApiError,
+> {
     // Get the task attempt to access the worktree path
     let base_path_buf = ensure_worktree_path(&deployment, &task_attempt).await?;
     let base_path = base_path_buf.as_path();
@@ -867,13 +870,11 @@ pub async fn open_task_attempt_in_editor(
         }
         Err(e) => {
             tracing::error!(
-                "Failed to open editor for attempt {}: {}",
+                "Failed to open editor for attempt {}: {:?}",
                 task_attempt.id,
                 e
             );
-            Err(ApiError::TaskAttempt(TaskAttemptError::ValidationError(
-                format!("Failed to open editor: {}", e),
-            )))
+            Ok(ResponseJson(ApiResponse::error_with_data(e)))
         }
     }
 }
