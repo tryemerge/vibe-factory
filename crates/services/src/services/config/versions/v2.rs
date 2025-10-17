@@ -6,8 +6,7 @@ use strum_macros::EnumString;
 use ts_rs::TS;
 use utils::{assets::SoundAssets, cache_dir};
 
-use crate::services::config::versions::v1;
-use crate::services::config::errors::OpenEditorError;
+use crate::services::config::{errors::OpenEditorError, versions::v1};
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct Config {

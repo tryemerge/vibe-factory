@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-mod versions;
 mod errors;
+mod versions;
 
 pub use errors::OpenEditorError;
 
