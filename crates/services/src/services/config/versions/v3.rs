@@ -1,7 +1,10 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-pub use v2::{EditorConfig, EditorType, GitHubConfig, NotificationConfig, OpenEditorError, SoundFile, ThemeMode};
+pub use v2::{
+    EditorConfig, EditorType, GitHubConfig, NotificationConfig, OpenEditorError, SoundFile,
+    ThemeMode,
+};
 
 use crate::services::config::versions::v2;
 

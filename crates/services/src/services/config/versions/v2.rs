@@ -379,10 +379,9 @@ impl EditorConfig {
             cmd.arg(arg);
         }
         cmd.arg(path);
-        cmd.spawn()
-            .map_err(|e| OpenEditorError::Io {
-                message: e.to_string(),
-            })?;
+        cmd.spawn().map_err(|e| OpenEditorError::Io {
+            message: e.to_string(),
+        })?;
         Ok(())
     }
 

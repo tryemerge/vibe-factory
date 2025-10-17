@@ -268,7 +268,8 @@ pub async fn open_project_in_editor(
     Extension(project): Extension<Project>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<Option<OpenEditorRequest>>,
-) -> Result<ResponseJson<ApiResponse<(), services::services::config::OpenEditorError>>, StatusCode> {
+) -> Result<ResponseJson<ApiResponse<(), services::services::config::OpenEditorError>>, StatusCode>
+{
     let path = project.git_repo_path.to_string_lossy();
 
     let editor_config = {
