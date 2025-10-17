@@ -11,8 +11,13 @@ use deployment::DeploymentError;
 use executors::executors::ExecutorError;
 use git2::Error as Git2Error;
 use services::services::{
-    auth::AuthError, config::{ConfigError, OpenEditorError}, container::ContainerError, drafts::DraftsServiceError,
-    git::GitServiceError, github_service::GitHubServiceError, image::ImageError,
+    auth::AuthError,
+    config::{ConfigError, OpenEditorError},
+    container::ContainerError,
+    drafts::DraftsServiceError,
+    git::GitServiceError,
+    github_service::GitHubServiceError,
+    image::ImageError,
     worktree_manager::WorktreeError,
 };
 use thiserror::Error;
@@ -155,7 +160,8 @@ impl IntoResponse for ApiError {
 
         // Handle OpenEditor error specially to return structured error_data
         if let ApiError::OpenEditor(ref open_editor_err) = self {
-            let response = ApiResponse::<(), OpenEditorError>::error_with_data(open_editor_err.clone());
+            let response =
+                ApiResponse::<(), OpenEditorError>::error_with_data(open_editor_err.clone());
             return (status_code, Json(response)).into_response();
         }
 
