@@ -294,8 +294,9 @@ pub async fn open_project_in_editor(
             Ok(ResponseJson(ApiResponse::success(())))
         }
         Err(e) => {
+            let error_message = format!("Failed to open editor: {}", e);
             tracing::error!("Failed to open editor for project {}: {}", project.id, e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            Ok(ResponseJson(ApiResponse::error(&error_message)))
         }
     }
 }
