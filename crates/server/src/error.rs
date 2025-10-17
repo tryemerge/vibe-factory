@@ -124,14 +124,11 @@ impl IntoResponse for ApiError {
             ApiError::Conflict(_) => (StatusCode::CONFLICT, "ConflictError"),
         };
 
-        match &self {
-            // Handle OpenEditor error specially to return structured error_data
-            ApiError::OpenEditor(open_editor_err) => {
-                let response =
-                    ApiResponse::<(), OpenEditorError>::error_with_data(open_editor_err.clone());
-                return (status_code, Json(response)).into_response();
-            }
-            _ => {}
+        // Handle OpenEditor error specially to return structured error_data
+        if let ApiError::OpenEditor(open_editor_err) = &self {
+            let response =
+                ApiResponse::<(), OpenEditorError>::error_with_data(open_editor_err.clone());
+            return (status_code, Json(response)).into_response();
         };
 
         let error_message = match &self {
