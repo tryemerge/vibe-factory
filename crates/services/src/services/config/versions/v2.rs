@@ -7,22 +7,7 @@ use ts_rs::TS;
 use utils::{assets::SoundAssets, cache_dir};
 
 use crate::services::config::versions::v1;
-
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[serde(tag = "type", rename_all = "snake_case")]
-#[ts(tag = "type", rename_all = "snake_case", export)]
-pub enum OpenEditorError {
-    IdeCliNotFound {
-        editor_type: EditorType,
-        cli_command: String,
-    },
-    InvalidConfig {
-        message: String,
-    },
-    Io {
-        message: String,
-    },
-}
+use crate::services::config::errors::OpenEditorError;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct Config {

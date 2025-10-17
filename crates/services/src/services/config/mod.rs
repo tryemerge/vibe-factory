@@ -3,6 +3,9 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 mod versions;
+mod errors;
+
+pub use errors::OpenEditorError;
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -22,7 +25,6 @@ pub type SoundFile = versions::v7::SoundFile;
 pub type EditorType = versions::v7::EditorType;
 pub type GitHubConfig = versions::v7::GitHubConfig;
 pub type UiLanguage = versions::v7::UiLanguage;
-pub type OpenEditorError = versions::v7::OpenEditorError;
 
 /// Will always return config, trying old schemas or eventually returning default
 pub async fn load_config_from_file(config_path: &PathBuf) -> Config {

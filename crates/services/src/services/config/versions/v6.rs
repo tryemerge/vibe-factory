@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use utils;
 pub use v5::{
-    EditorConfig, EditorType, GitHubConfig, NotificationConfig, OpenEditorError, SoundFile,
+    EditorConfig, EditorType, GitHubConfig, NotificationConfig, SoundFile,
     ThemeMode,
 };
 
