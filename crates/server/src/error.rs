@@ -11,7 +11,7 @@ use deployment::DeploymentError;
 use executors::executors::ExecutorError;
 use git2::Error as Git2Error;
 use services::services::{
-    auth::AuthError, config::ConfigError, container::ContainerError, drafts::DraftsServiceError,
+    auth::AuthError, config::{ConfigError, OpenEditorError}, container::ContainerError, drafts::DraftsServiceError,
     git::GitServiceError, github_service::GitHubServiceError, image::ImageError,
     worktree_manager::WorktreeError,
 };
@@ -45,6 +45,8 @@ pub enum ApiError {
     Worktree(#[from] WorktreeError),
     #[error(transparent)]
     Config(#[from] ConfigError),
+    #[error(transparent)]
+    OpenEditor(#[from] OpenEditorError),
     #[error(transparent)]
     Image(#[from] ImageError),
     #[error(transparent)]
@@ -92,6 +94,7 @@ impl IntoResponse for ApiError {
             ApiError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DatabaseError"),
             ApiError::Worktree(_) => (StatusCode::INTERNAL_SERVER_ERROR, "WorktreeError"),
             ApiError::Config(_) => (StatusCode::INTERNAL_SERVER_ERROR, "ConfigError"),
+            ApiError::OpenEditor(_) => (StatusCode::INTERNAL_SERVER_ERROR, "OpenEditorError"),
             ApiError::Image(img_err) => match img_err {
                 ImageError::InvalidFormat => (StatusCode::BAD_REQUEST, "InvalidImageFormat"),
                 ImageError::TooLarge(_, _) => (StatusCode::PAYLOAD_TOO_LARGE, "ImageTooLarge"),
@@ -149,6 +152,13 @@ impl IntoResponse for ApiError {
             },
             _ => format!("{}: {}", error_type, self),
         };
+
+        // Handle OpenEditor error specially to return structured error_data
+        if let ApiError::OpenEditor(ref open_editor_err) = self {
+            let response = ApiResponse::<(), OpenEditorError>::error_with_data(open_editor_err.clone());
+            return (status_code, Json(response)).into_response();
+        }
+
         let response = ApiResponse::<()>::error(&error_message);
         (status_code, Json(response)).into_response()
     }
