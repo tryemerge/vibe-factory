@@ -270,11 +270,11 @@ impl DroidLogProcessor {
 
                     match serde_json::from_str::<DroidJson>(trimmed) {
                         Ok(droid_json) => {
-                            if !session_id_extracted {
-                                if let Some(session_id) = Self::extract_session_id(&droid_json) {
-                                    msg_store.push_session_id(session_id);
-                                    session_id_extracted = true;
-                                }
+                            if !session_id_extracted
+                                && let Some(session_id) = Self::extract_session_id(&droid_json)
+                            {
+                                msg_store.push_session_id(session_id);
+                                session_id_extracted = true;
                             }
 
                             let patches =

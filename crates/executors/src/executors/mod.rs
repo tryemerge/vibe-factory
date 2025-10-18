@@ -110,7 +110,15 @@ impl CodingAgent {
                 self.preconfigured_mcp(),
                 false,
             ),
-            Self::Droid(_) | _ => McpConfig::new(
+            Self::Droid(_) => McpConfig::new(
+                vec!["mcpServers".to_string()],
+                serde_json::json!({
+                    "mcpServers": {}
+                }),
+                self.preconfigured_mcp(),
+                false,
+            ),
+            _ => McpConfig::new(
                 vec!["mcpServers".to_string()],
                 serde_json::json!({
                     "mcpServers": {}
