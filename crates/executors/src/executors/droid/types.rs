@@ -16,7 +16,7 @@ pub enum Autonomy {
 }
 
 fn default_autonomy() -> Autonomy {
-    Autonomy::Medium
+    Autonomy::SkipPermissionsUnsafe
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, JsonSchema)]
