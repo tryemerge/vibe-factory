@@ -456,6 +456,12 @@ impl DroidLogProcessor {
                             } else {
                                 info.action_type.clone()
                             }
+                        } else if matches!(info.action_type, ActionType::FileEdit { .. })
+                            && info.tool_name == "ApplyPatch"
+                        {
+                            // For ApplyPatch, parse the JSON result to extract file_path and diff
+                            Self::parse_apply_patch_result(value, &info.action_type)
+                                .unwrap_or_else(|| info.action_type.clone())
                         } else {
                             info.action_type.clone()
                         };
@@ -601,6 +607,65 @@ impl DroidLogProcessor {
             }
         }
         String::new()
+    }
+
+    fn parse_apply_patch_result(
+        value: &serde_json::Value,
+        _fallback_action: &ActionType,
+    ) -> Option<ActionType> {
+        use crate::logs::FileChange;
+
+        // Try to parse the result JSON structure: {"value": {"file_path": "...", "diff": "...", ...}}
+        // Check if value is a JSON string that needs parsing, or if it's already an object
+        let parsed_value;
+        let result_obj = if value.is_object() {
+            // Value is already the object
+            value
+        } else if let Some(s) = value.as_str() {
+            // Value is a JSON string, try to parse it
+            parsed_value = serde_json::from_str::<serde_json::Value>(s).ok()?;
+            &parsed_value
+        } else {
+            return None;
+        };
+
+        // Extract file_path and diff from the value object
+        let file_path = result_obj
+            .get("file_path")
+            .or_else(|| result_obj.get("value").and_then(|v| v.get("file_path")))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())?;
+
+        let diff = result_obj
+            .get("diff")
+            .or_else(|| result_obj.get("value").and_then(|v| v.get("diff")))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let content = result_obj
+            .get("content")
+            .or_else(|| result_obj.get("value").and_then(|v| v.get("content")))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        // Create FileChange from the diff if available, otherwise use content for Write
+        let changes = if let Some(diff_text) = diff {
+            vec![FileChange::Edit {
+                unified_diff: diff_text,
+                has_line_numbers: true,
+            }]
+        } else if let Some(content_text) = content {
+            vec![FileChange::Write {
+                content: content_text,
+            }]
+        } else {
+            vec![]
+        };
+
+        Some(ActionType::FileEdit {
+            path: file_path,
+            changes,
+        })
     }
 }
 
@@ -749,5 +814,170 @@ mod tests {
         assert!(parsed_system.is_ok(), "System message should parse");
         assert!(parsed_user.is_ok(), "User message should parse");
         assert!(parsed_tool.is_ok(), "Tool call should parse");
+    }
+
+    #[test]
+    fn test_parse_apply_patch_with_diff() {
+        let value = serde_json::json!({
+            "success": true,
+            "file_path": "/test/file.py",
+            "diff": "--- previous\t\n+++ current\t\n@@ -1,3 +1,5 @@\n def hello():\n+    print('world')\n     pass"
+        });
+
+        let result = DroidLogProcessor::parse_apply_patch_result(
+            &value,
+            &ActionType::FileEdit {
+                path: String::new(),
+                changes: vec![],
+            },
+        );
+
+        assert!(result.is_some());
+        if let Some(ActionType::FileEdit { path, changes }) = result {
+            assert_eq!(path, "/test/file.py");
+            assert_eq!(changes.len(), 1);
+            if let crate::logs::FileChange::Edit {
+                unified_diff,
+                has_line_numbers,
+            } = &changes[0]
+            {
+                assert!(unified_diff.contains("def hello()"));
+                assert!(unified_diff.contains("print('world')"));
+                assert!(has_line_numbers);
+            } else {
+                panic!("Expected FileChange::Edit");
+            }
+        } else {
+            panic!("Expected ActionType::FileEdit");
+        }
+    }
+
+    #[test]
+    fn test_parse_apply_patch_with_content() {
+        let value = serde_json::json!({
+            "success": true,
+            "file_path": "/test/new_file.txt",
+            "content": "Hello, world!"
+        });
+
+        let result = DroidLogProcessor::parse_apply_patch_result(
+            &value,
+            &ActionType::FileEdit {
+                path: String::new(),
+                changes: vec![],
+            },
+        );
+
+        assert!(result.is_some());
+        if let Some(ActionType::FileEdit { path, changes }) = result {
+            assert_eq!(path, "/test/new_file.txt");
+            assert_eq!(changes.len(), 1);
+            if let crate::logs::FileChange::Write { content } = &changes[0] {
+                assert_eq!(content, "Hello, world!");
+            } else {
+                panic!("Expected FileChange::Write");
+            }
+        } else {
+            panic!("Expected ActionType::FileEdit");
+        }
+    }
+
+    #[test]
+    fn test_parse_apply_patch_with_nested_value() {
+        let value = serde_json::json!({
+            "value": {
+                "success": true,
+                "file_path": "/test/nested.py",
+                "diff": "--- a\n+++ b\n@@ -1 +1,2 @@\n line1\n+line2"
+            }
+        });
+
+        let result = DroidLogProcessor::parse_apply_patch_result(
+            &value,
+            &ActionType::FileEdit {
+                path: String::new(),
+                changes: vec![],
+            },
+        );
+
+        assert!(result.is_some());
+        if let Some(ActionType::FileEdit { path, changes }) = result {
+            assert_eq!(path, "/test/nested.py");
+            assert_eq!(changes.len(), 1);
+        } else {
+            panic!("Expected ActionType::FileEdit");
+        }
+    }
+
+    #[test]
+    fn test_parse_apply_patch_from_json_string() {
+        let value = serde_json::json!(
+            r#"{"success":true,"file_path":"/test/file.txt","content":"test content"}"#
+        );
+
+        let result = DroidLogProcessor::parse_apply_patch_result(
+            &value,
+            &ActionType::FileEdit {
+                path: String::new(),
+                changes: vec![],
+            },
+        );
+
+        assert!(result.is_some());
+        if let Some(ActionType::FileEdit { path, changes }) = result {
+            assert_eq!(path, "/test/file.txt");
+            assert_eq!(changes.len(), 1);
+        } else {
+            panic!("Expected ActionType::FileEdit");
+        }
+    }
+
+    #[test]
+    fn test_parse_apply_patch_missing_file_path() {
+        let value = serde_json::json!({
+            "success": true,
+            "content": "some content"
+        });
+
+        let result = DroidLogProcessor::parse_apply_patch_result(
+            &value,
+            &ActionType::FileEdit {
+                path: String::new(),
+                changes: vec![],
+            },
+        );
+
+        assert!(
+            result.is_none(),
+            "Should return None when file_path is missing"
+        );
+    }
+
+    #[test]
+    fn test_parse_apply_patch_no_diff_or_content() {
+        let value = serde_json::json!({
+            "success": true,
+            "file_path": "/test/empty.txt"
+        });
+
+        let result = DroidLogProcessor::parse_apply_patch_result(
+            &value,
+            &ActionType::FileEdit {
+                path: String::new(),
+                changes: vec![],
+            },
+        );
+
+        assert!(result.is_some());
+        if let Some(ActionType::FileEdit { path, changes }) = result {
+            assert_eq!(path, "/test/empty.txt");
+            assert_eq!(
+                changes.len(),
+                0,
+                "Should have empty changes when neither diff nor content is present"
+            );
+        } else {
+            panic!("Expected ActionType::FileEdit");
+        }
     }
 }
