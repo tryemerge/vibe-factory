@@ -494,99 +494,78 @@ impl DroidLogProcessor {
     }
 
     fn map_tool_to_action(tool_name: &str, params: &serde_json::Value) -> ActionType {
-        match tool_name {
-            "Read" => ActionType::FileRead {
-                path: params
-                    .get("file_path")
-                    .or_else(|| params.get("path"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
+        // Construct JSON object with toolName and parameters
+        let tool_json = serde_json::json!({
+            "toolName": tool_name,
+            "parameters": params
+        });
+
+        // Deserialize into DroidToolData
+        let tool_data: DroidToolData = match serde_json::from_value(tool_json) {
+            Ok(data) => data,
+            Err(_) => {
+                return ActionType::Other {
+                    description: tool_name.to_string(),
+                };
+            }
+        };
+
+        // Pattern match on DroidToolData variants
+        match tool_data {
+            DroidToolData::Read { file_path } => ActionType::FileRead { path: file_path },
+            DroidToolData::LS { directory_path, .. } => ActionType::FileRead {
+                path: directory_path,
             },
-            "LS" => ActionType::FileRead {
-                path: params
-                    .get("directory_path")
-                    .or_else(|| params.get("path"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
+            DroidToolData::Glob { folder, .. } => ActionType::FileRead { path: folder },
+            DroidToolData::Grep { path, .. } => ActionType::FileRead {
+                path: path.unwrap_or_default(),
             },
-            "Glob" => ActionType::FileRead {
-                path: params
-                    .get("folder")
-                    .or_else(|| params.get("path"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
-            },
-            "Grep" => ActionType::FileRead {
-                path: params
-                    .get("path")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
-            },
-            "Execute" => ActionType::CommandRun {
-                command: params
-                    .get("command")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
+            DroidToolData::Execute { command, .. } => ActionType::CommandRun {
+                command,
                 result: None,
             },
-            "Edit" | "MultiEdit" | "Create" => ActionType::FileEdit {
-                path: params
-                    .get("file_path")
-                    .or_else(|| params.get("path"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
+            DroidToolData::Edit { file_path, .. } => ActionType::FileEdit {
+                path: file_path,
                 changes: vec![],
             },
-            "ApplyPatch" => ActionType::FileEdit {
-                path: Self::extract_path_from_patch(params),
+            DroidToolData::MultiEdit { file_path, .. } => ActionType::FileEdit {
+                path: file_path,
                 changes: vec![],
             },
-            "TodoWrite" => {
-                let todos = params
-                    .get("todos")
-                    .and_then(|v| v.as_array())
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|item| {
-                                Some(TodoItem {
-                                    content: item.get("content")?.as_str()?.to_string(),
-                                    status: item.get("status")?.as_str()?.to_string(),
-                                    priority: item
-                                        .get("priority")
-                                        .and_then(|p| p.as_str())
-                                        .map(|s| s.to_string()),
-                                })
-                            })
-                            .collect()
+            DroidToolData::Create { file_path, .. } => ActionType::FileEdit {
+                path: file_path,
+                changes: vec![],
+            },
+            DroidToolData::ApplyPatch { input } => {
+                let path = Self::extract_path_from_patch(&serde_json::json!({ "input": input }));
+                ActionType::FileEdit {
+                    path,
+                    changes: vec![],
+                }
+            }
+            DroidToolData::TodoWrite { todos } => {
+                let todo_items = todos
+                    .into_iter()
+                    .map(|item| TodoItem {
+                        content: item.content,
+                        status: item.status,
+                        priority: item.priority,
                     })
-                    .unwrap_or_default();
-
+                    .collect();
                 ActionType::TodoManagement {
-                    todos,
+                    todos: todo_items,
                     operation: "update".to_string(),
                 }
             }
-            "WebSearch" => ActionType::WebFetch {
-                url: params
-                    .get("query")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
+            DroidToolData::WebSearch { query, .. } => ActionType::WebFetch { url: query },
+            DroidToolData::FetchUrl { url, .. } => ActionType::WebFetch { url },
+            DroidToolData::ExitSpecMode { .. } => ActionType::Other {
+                description: "ExitSpecMode".to_string(),
             },
-            "FetchUrl" => ActionType::WebFetch {
-                url: params
-                    .get("url")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
+            DroidToolData::SlackPostMessage { .. } => ActionType::Other {
+                description: "SlackPostMessage".to_string(),
             },
-            _ => ActionType::Other {
+            DroidToolData::Unknown { .. } => ActionType::Other {
                 description: tool_name.to_string(),
             },
         }
@@ -605,6 +584,134 @@ impl DroidLogProcessor {
             }
         }
         String::new()
+    }
+}
+
+/// Structured tool data for Droid tools based on JSON samples
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[serde(tag = "toolName", content = "parameters")]
+pub enum DroidToolData {
+    Read {
+        #[serde(alias = "path")]
+        file_path: String,
+    },
+    LS {
+        directory_path: String,
+        #[serde(default)]
+        #[serde(rename = "ignorePatterns")]
+        ignore_patterns: Option<Vec<String>>,
+    },
+    Glob {
+        folder: String,
+        patterns: Vec<String>,
+        #[serde(default)]
+        #[serde(rename = "excludePatterns")]
+        exclude_patterns: Option<Vec<String>>,
+    },
+    Grep {
+        pattern: String,
+        #[serde(default)]
+        path: Option<String>,
+        #[serde(default)]
+        #[serde(rename = "caseSensitive")]
+        case_sensitive: Option<bool>,
+    },
+    Execute {
+        command: String,
+        #[serde(default)]
+        timeout: Option<u64>,
+        #[serde(default)]
+        #[serde(rename = "riskLevel")]
+        risk_level: Option<serde_json::Value>,
+    },
+    Edit {
+        #[serde(alias = "path")]
+        file_path: String,
+        #[serde(alias = "old_str")]
+        old_string: String,
+        #[serde(alias = "new_str")]
+        new_string: String,
+    },
+    MultiEdit {
+        #[serde(alias = "path")]
+        file_path: String,
+        edits: Vec<DroidEditItem>,
+    },
+    Create {
+        #[serde(alias = "path")]
+        file_path: String,
+        content: String,
+    },
+    ApplyPatch {
+        input: String,
+    },
+    TodoWrite {
+        todos: Vec<DroidTodoItem>,
+    },
+    WebSearch {
+        query: String,
+        #[serde(default)]
+        max_results: Option<u32>,
+    },
+    FetchUrl {
+        url: String,
+        #[serde(default)]
+        method: Option<String>,
+    },
+    ExitSpecMode {
+        #[serde(default)]
+        reason: Option<String>,
+    },
+    #[serde(rename = "slack_post_message")]
+    SlackPostMessage {
+        channel: String,
+        text: String,
+    },
+    #[serde(untagged)]
+    Unknown {
+        #[serde(flatten)]
+        data: std::collections::HashMap<String, serde_json::Value>,
+    },
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct DroidTodoItem {
+    #[serde(default)]
+    pub id: Option<String>,
+    pub content: String,
+    pub status: String,
+    #[serde(default)]
+    pub priority: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct DroidEditItem {
+    pub old_string: Option<String>,
+    pub new_string: Option<String>,
+}
+
+impl DroidToolData {
+    pub fn get_name(&self) -> &str {
+        match self {
+            DroidToolData::Read { .. } => "Read",
+            DroidToolData::LS { .. } => "LS",
+            DroidToolData::Glob { .. } => "Glob",
+            DroidToolData::Grep { .. } => "Grep",
+            DroidToolData::Execute { .. } => "Execute",
+            DroidToolData::Edit { .. } => "Edit",
+            DroidToolData::MultiEdit { .. } => "MultiEdit",
+            DroidToolData::Create { .. } => "Create",
+            DroidToolData::ApplyPatch { .. } => "ApplyPatch",
+            DroidToolData::TodoWrite { .. } => "TodoWrite",
+            DroidToolData::WebSearch { .. } => "WebSearch",
+            DroidToolData::FetchUrl { .. } => "FetchUrl",
+            DroidToolData::ExitSpecMode { .. } => "ExitSpecMode",
+            DroidToolData::SlackPostMessage { .. } => "slack_post_message",
+            DroidToolData::Unknown { data } => data
+                .get("toolName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown"),
+        }
     }
 }
 
