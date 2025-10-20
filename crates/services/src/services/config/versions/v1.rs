@@ -33,7 +33,6 @@ pub(super) enum ExecutorConfig {
     CharmOpencode,
     #[serde(alias = "opencode")]
     SstOpencode,
-    Droid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
