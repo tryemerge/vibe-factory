@@ -22,7 +22,7 @@
         "high",
         "skip-permissions-unsafe"
       ],
-      "default": "medium"
+      "default": "skip-permissions-unsafe"
     },
     "model": {
       "title": "Model",
