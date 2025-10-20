@@ -253,7 +253,7 @@ mod tests {
         let state = ProcessorState::default();
         let mut patch_emitter = PatchEmitter::new();
         let fake_index = FakeIndexProvider::new();
-        let worktree_path = Path::new("/Users/britannio/projects/vibe-kanban");
+        let worktree_path = Path::new("/tmp/vibe-kanban");
 
         let tool_call = DroidJson::ToolCall {
             id: "call_W4t4W4TDhrZFiM9DxVox21PW".to_string(),
@@ -261,7 +261,7 @@ mod tests {
             tool_id: "Execute".to_string(),
             tool_name: "Execute".to_string(),
             parameters: serde_json::json!({
-                "command": "printf 'a' > \"/Users/britannio/projects/vibe-kanban/a.txt\"",
+                "command": "printf 'a' > \"/tmp/vibe-kanban/a.txt\"",
                 "riskLevel": {"value": "medium", "reason": "Command creates/overwrites a file in the repository."}
             }),
             timestamp: 1760806562636,
