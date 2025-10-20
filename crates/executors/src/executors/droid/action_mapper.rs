@@ -42,7 +42,9 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value) -> ActionType {
         DroidToolData::LS { directory_path, .. } => ActionType::FileRead {
             path: directory_path,
         },
-        DroidToolData::Glob { folder, .. } => ActionType::FileRead { path: folder },
+        DroidToolData::Glob { patterns, .. } => ActionType::Search {
+            query: patterns.join(", "),
+        },
         DroidToolData::Grep { path, .. } => ActionType::FileRead {
             path: path.unwrap_or_default(),
         },
