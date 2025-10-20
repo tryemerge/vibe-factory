@@ -232,6 +232,7 @@ struct ToolCallInfo {
 
 struct DroidLogProcessor {
     tool_map: HashMap<String, ToolCallInfo>,
+    model_reported: bool,
 }
 
 impl DroidLogProcessor {
@@ -246,6 +247,7 @@ impl DroidLogProcessor {
             let mut session_id_extracted = false;
             let mut processor = Self {
                 tool_map: HashMap::new(),
+                model_reported: false,
             };
 
             while let Some(Ok(msg)) = stream.next().await {
@@ -335,8 +337,23 @@ impl DroidLogProcessor {
         entry_index_provider: &EntryIndexProvider,
     ) -> Vec<json_patch::Patch> {
         match json {
-            DroidJson::System { .. } => {
-                vec![]
+            DroidJson::System { model, .. } => {
+                if !self.model_reported
+                    && let Some(model) = model.as_ref()
+                {
+                    self.model_reported = true;
+                    vec![ConversationPatch::add_normalized_entry(
+                        entry_index_provider.next(),
+                        NormalizedEntry {
+                            timestamp: None,
+                            entry_type: NormalizedEntryType::SystemMessage,
+                            content: format!("model: {model}"),
+                            metadata: None,
+                        },
+                    )]
+                } else {
+                    vec![]
+                }
             }
             DroidJson::Message { role, text, .. } => {
                 let entry_type = match role.as_str() {
