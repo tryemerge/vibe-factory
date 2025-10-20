@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import MarkdownRenderer from '@/components/ui/markdown-renderer.tsx';
-import MermaidRenderer from '@/components/ui/mermaid-renderer.tsx';
 import {
   ActionType,
   NormalizedEntry,
@@ -32,6 +31,9 @@ import UserMessage from './UserMessage';
 import PendingApprovalEntry from './PendingApprovalEntry';
 import { cn } from '@/lib/utils';
 import { useRetryUi } from '@/contexts/RetryUiContext';
+import { toolRendererRegistry } from './renderers';
+import './renderers/mermaid-renderer';
+import './renderers/playwright-screenshot-renderer';
 
 type Props = {
   entry: NormalizedEntry | ProcessStartPayload;
@@ -439,15 +441,23 @@ const ToolCallCard: React.FC<{
   const { t } = useTranslation('common');
   const at: any = entryType?.action_type || action;
 
-  const isMermaidTool =
-    (entryType?.action_type?.action === 'tool' || at?.action === 'tool') &&
-    (entryType?.tool_name || at?.tool_name)?.toLowerCase?.() === 'mermaid';
+  const customRenderer =
+    entryType?.action_type?.action === 'tool' || at?.action === 'tool'
+      ? toolRendererRegistry.findRenderer({
+          toolName: entryType?.tool_name || at?.tool_name || '',
+          arguments:
+            (entryType?.action_type as any)?.arguments ||
+            (at as any)?.arguments,
+          result:
+            (entryType?.action_type as any)?.result || (at as any)?.result,
+        })
+      : null;
 
   const [expanded, toggle] = useExpandable(
     `tool-entry:${expansionKey}`,
-    defaultExpanded
+    defaultExpanded || (customRenderer?.shouldAutoExpand ?? false)
   );
-  const effectiveExpanded = forceExpanded || isMermaidTool || expanded;
+  const effectiveExpanded = forceExpanded || expanded;
 
   const label =
     at?.action === 'command_run'
@@ -477,8 +487,8 @@ const ToolCallCard: React.FC<{
     argsText = (fromArgs || fallback).trim();
   }
 
-  const hasExpandableDetails = isMermaidTool
-    ? false
+  const hasExpandableDetails = customRenderer
+    ? (customRenderer.collapsible ?? false)
     : isCommand
       ? Boolean(argsText) || Boolean(output)
       : hasArgs || hasResult;
@@ -523,10 +533,19 @@ const ToolCallCard: React.FC<{
         <div
           className={cn(
             'border',
-            isMermaidTool ? '' : 'max-h-[200px] overflow-y-auto'
+            customRenderer ? '' : 'max-h-[200px] overflow-y-auto'
           )}
         >
-          {isCommand ? (
+          {customRenderer ? (
+            customRenderer.render({
+              toolName: entryType?.tool_name || at?.tool_name || '',
+              arguments:
+                (entryType?.action_type as any)?.arguments ||
+                (at as any)?.arguments,
+              result:
+                (entryType?.action_type as any)?.result || (at as any)?.result,
+            })
+          ) : isCommand ? (
             <>
               {argsText && (
                 <>
@@ -552,39 +571,25 @@ const ToolCallCard: React.FC<{
             <>
               {entryType?.action_type.action === 'tool' && (
                 <>
-                  {entryType.tool_name?.toLowerCase() === 'mermaid' &&
-                  typeof entryType.action_type.arguments === 'object' &&
-                  entryType.action_type.arguments !== null &&
-                  'code' in entryType.action_type.arguments ? (
-                    <div className="px-2 py-1">
-                      <MermaidRenderer
-                        code={String(entryType.action_type.arguments.code)}
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
-                        {t('conversation.args')}
-                      </div>
-                      <div className="px-2 py-1">
-                        {renderJson(entryType.action_type.arguments)}
-                      </div>
-                      <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
-                        {t('conversation.result')}
-                      </div>
-                      <div className="px-2 py-1">
-                        {entryType.action_type.result?.type.type ===
-                          'markdown' &&
-                          entryType.action_type.result.value && (
-                            <MarkdownRenderer
-                              content={entryType.action_type.result.value?.toString()}
-                            />
-                          )}
-                        {entryType.action_type.result?.type.type === 'json' &&
-                          renderJson(entryType.action_type.result.value)}
-                      </div>
-                    </>
-                  )}
+                  <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
+                    {t('conversation.args')}
+                  </div>
+                  <div className="px-2 py-1">
+                    {renderJson(entryType.action_type.arguments)}
+                  </div>
+                  <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
+                    {t('conversation.result')}
+                  </div>
+                  <div className="px-2 py-1">
+                    {entryType.action_type.result?.type.type === 'markdown' &&
+                      entryType.action_type.result.value && (
+                        <MarkdownRenderer
+                          content={entryType.action_type.result.value?.toString()}
+                        />
+                      )}
+                    {entryType.action_type.result?.type.type === 'json' &&
+                      renderJson(entryType.action_type.result.value)}
+                  </div>
                 </>
               )}
             </>
