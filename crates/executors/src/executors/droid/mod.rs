@@ -79,9 +79,13 @@ impl StandardCodingAgentExecutor for Droid {
         Ok(child.into())
     }
 
-    fn normalize_logs(&self, msg_store: Arc<MsgStore>, _current_dir: &Path) {
+    fn normalize_logs(&self, msg_store: Arc<MsgStore>, current_dir: &Path) {
         let entry_index_provider = EntryIndexProvider::start_from(&msg_store);
-        DroidLogProcessor::process_logs(msg_store.clone(), entry_index_provider.clone());
+        DroidLogProcessor::process_logs(
+            msg_store.clone(),
+            current_dir,
+            entry_index_provider.clone(),
+        );
 
         normalize_stderr_logs(msg_store, entry_index_provider);
     }

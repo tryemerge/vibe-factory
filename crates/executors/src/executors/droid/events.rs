@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use super::{
     action_mapper,
@@ -46,6 +46,7 @@ pub enum DomainEvent {
 pub fn process_event(
     state: ProcessorState,
     event: &DroidJson,
+    worktree_path: &Path,
 ) -> (ProcessorState, Vec<DomainEvent>) {
     let mut state = state;
     let mut events = Vec::new();
@@ -88,7 +89,8 @@ pub fn process_event(
             timestamp,
             ..
         } => {
-            let action_type = action_mapper::map_tool_to_action(tool_name, parameters);
+            let action_type =
+                action_mapper::map_tool_to_action(tool_name, parameters, worktree_path);
             let content = action_mapper::generate_concise_content(tool_name, &action_type);
 
             state.tool_map.insert(
@@ -251,6 +253,7 @@ mod tests {
         let state = ProcessorState::default();
         let mut patch_emitter = PatchEmitter::new();
         let fake_index = FakeIndexProvider::new();
+        let worktree_path = Path::new("/Users/britannio/projects/vibe-kanban");
 
         let tool_call = DroidJson::ToolCall {
             id: "call_W4t4W4TDhrZFiM9DxVox21PW".to_string(),
@@ -265,7 +268,7 @@ mod tests {
             session_id: "608a704f-8a2d-45ef-8ac5-647ec9d48806".to_string(),
         };
 
-        let (state, events) = process_event(state, &tool_call);
+        let (state, events) = process_event(state, &tool_call, worktree_path);
         let patches = patch_emitter.emit_patches(events, &fake_index);
 
         assert_eq!(patches.len(), 1);
@@ -276,7 +279,7 @@ mod tests {
         let tool_result: DroidJson =
             serde_json::from_str(tool_result_json).expect("should parse error result");
 
-        let (_new_state, events) = process_event(state, &tool_result);
+        let (_new_state, events) = process_event(state, &tool_result, worktree_path);
         let patches = patch_emitter.emit_patches(events, &fake_index);
 
         assert_eq!(patches.len(), 1, "should produce a patch for error result");

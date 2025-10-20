@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use futures::{Stream, StreamExt};
 use workspace_utils::{log_msg::LogMsg, msg_store::MsgStore};
@@ -81,6 +81,7 @@ fn parse_lines(lines: impl Stream<Item = String>) -> impl Stream<Item = ParsedLi
 async fn process_parsed_items(
     parsed_items: impl Stream<Item = ParsedLine>,
     msg_store: Arc<MsgStore>,
+    worktree_path: &Path,
     entry_index_provider: EntryIndexProvider,
 ) {
     let mut parsed_items = std::pin::pin!(parsed_items);
@@ -96,7 +97,7 @@ async fn process_parsed_items(
                     session_id_extracted = true;
                 }
 
-                let (new_state, events) = process_event(state, &droid_json);
+                let (new_state, events) = process_event(state, &droid_json, worktree_path);
                 state = new_state;
 
                 let patches = patch_emitter.emit_patches(events, &entry_index_provider);
@@ -124,13 +125,24 @@ async fn process_parsed_items(
 pub struct DroidLogProcessor;
 
 impl DroidLogProcessor {
-    pub fn process_logs(msg_store: Arc<MsgStore>, entry_index_provider: EntryIndexProvider) {
+    pub fn process_logs(
+        msg_store: Arc<MsgStore>,
+        worktree_path: &Path,
+        entry_index_provider: EntryIndexProvider,
+    ) {
+        let worktree_path = worktree_path.to_path_buf();
         tokio::spawn(async move {
             let stream = msg_store.history_plus_stream();
             let lines = lines_from_stream(stream);
             let parsed_items = parse_lines(lines);
 
-            process_parsed_items(parsed_items, msg_store, entry_index_provider).await;
+            process_parsed_items(
+                parsed_items,
+                msg_store,
+                &worktree_path,
+                entry_index_provider,
+            )
+            .await;
         });
     }
 }

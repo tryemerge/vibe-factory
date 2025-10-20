@@ -1,4 +1,7 @@
+use std::path::Path;
+
 use serde_json::Value;
+use workspace_utils::path::make_path_relative;
 
 use super::types::DroidToolData;
 use crate::logs::{ActionType, FileChange, TodoItem};
@@ -16,7 +19,7 @@ pub fn generate_concise_content(tool_name: &str, action_type: &ActionType) -> St
     }
 }
 
-pub fn map_tool_to_action(tool_name: &str, params: &Value) -> ActionType {
+pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path) -> ActionType {
     let tool_json = serde_json::json!({
         "toolName": tool_name,
         "parameters": params
@@ -31,37 +34,43 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value) -> ActionType {
         }
     };
 
+    let worktree_path_str = worktree_path.to_string_lossy();
+
     match tool_data {
-        DroidToolData::Read { file_path } => ActionType::FileRead { path: file_path },
+        DroidToolData::Read { file_path } => ActionType::FileRead {
+            path: make_path_relative(&file_path, &worktree_path_str),
+        },
         DroidToolData::LS { directory_path, .. } => ActionType::FileRead {
-            path: directory_path,
+            path: make_path_relative(&directory_path, &worktree_path_str),
         },
         DroidToolData::Glob { patterns, .. } => ActionType::Search {
             query: patterns.join(", "),
         },
         DroidToolData::Grep { path, .. } => ActionType::FileRead {
-            path: path.unwrap_or_default(),
+            path: path
+                .map(|p| make_path_relative(&p, &worktree_path_str))
+                .unwrap_or_default(),
         },
         DroidToolData::Execute { command, .. } => ActionType::CommandRun {
             command,
             result: None,
         },
         DroidToolData::Edit { file_path, .. } => ActionType::FileEdit {
-            path: file_path,
+            path: make_path_relative(&file_path, &worktree_path_str),
             changes: vec![],
         },
         DroidToolData::MultiEdit { file_path, .. } => ActionType::FileEdit {
-            path: file_path,
+            path: make_path_relative(&file_path, &worktree_path_str),
             changes: vec![],
         },
         DroidToolData::Create { file_path, .. } => ActionType::FileEdit {
-            path: file_path,
+            path: make_path_relative(&file_path, &worktree_path_str),
             changes: vec![],
         },
         DroidToolData::ApplyPatch { input } => {
             let path = extract_path_from_patch(&serde_json::json!({ "input": input }));
             ActionType::FileEdit {
-                path,
+                path: make_path_relative(&path, &worktree_path_str),
                 changes: vec![],
             }
         }
