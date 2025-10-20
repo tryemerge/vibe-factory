@@ -10,13 +10,7 @@ pub fn generate_concise_content(tool_name: &str, action_type: &ActionType) -> St
         ActionType::CommandRun { command, .. } => format!("`{command}`"),
         ActionType::Search { query } => format!("`{query}`"),
         ActionType::WebFetch { url } => format!("`{url}`"),
-        ActionType::TodoManagement { todos, .. } => {
-            if todos.is_empty() {
-                "Todo list".to_string()
-            } else {
-                format!("{} todo items", todos.len())
-            }
-        }
+        ActionType::TodoManagement { .. } => "TODO list updated".to_string(),
         ActionType::Other { description } => description.clone(),
         _ => tool_name.to_string(),
     }
