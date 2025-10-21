@@ -27,7 +27,12 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
 
     let tool_data: DroidToolData = match serde_json::from_value(tool_json) {
         Ok(data) => data,
-        Err(_) => {
+        Err(e) => {
+            tracing::warn!(
+                tool_name = %tool_name,
+                error = %e,
+                "Failed to parse DroidToolData from tool parameters"
+            );
             return ActionType::Other {
                 description: tool_name.to_string(),
             };
@@ -122,9 +127,25 @@ pub fn parse_apply_patch_result(value: &Value) -> Option<ActionType> {
     let result_obj = if value.is_object() {
         value
     } else if let Some(s) = value.as_str() {
-        parsed_value = serde_json::from_str::<Value>(s).ok()?;
-        &parsed_value
+        match serde_json::from_str::<Value>(s) {
+            Ok(v) => {
+                parsed_value = v;
+                &parsed_value
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    input = %s,
+                    "Failed to parse apply_patch result string as JSON"
+                );
+                return None;
+            }
+        }
     } else {
+        tracing::warn!(
+            value_type = ?value,
+            "apply_patch result is neither object nor string"
+        );
         return None;
     };
 
@@ -132,7 +153,17 @@ pub fn parse_apply_patch_result(value: &Value) -> Option<ActionType> {
         .get("file_path")
         .or_else(|| result_obj.get("value").and_then(|v| v.get("file_path")))
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string())?;
+        .map(|s| s.to_string());
+
+    if file_path.is_none() {
+        tracing::warn!(
+            result = ?result_obj,
+            "apply_patch result missing file_path field"
+        );
+        return None;
+    }
+
+    let file_path = file_path?;
 
     let diff = result_obj
         .get("diff")
