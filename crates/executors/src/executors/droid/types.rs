@@ -34,14 +34,14 @@ pub struct Droid {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(
         title = "Model",
-        description = "Model to use (e.g., gpt-5-codex, claude-sonnet-4)"
+        description = "Model to use (e.g., gpt-5-codex, claude-sonnet-4-5-20250929, gpt-5-2025-08-07, claude-opus-4-1-20250805, claude-haiku-4-5-20251001, glm-4.6)"
     )]
     pub model: Option<String>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(
         title = "Reasoning Effort",
-        description = "Reasoning effort level: off, low, medium, high"
+        description = "Reasoning effort level: none, dynamic, off, low, medium, high"
     )]
     pub reasoning_effort: Option<String>,
 
