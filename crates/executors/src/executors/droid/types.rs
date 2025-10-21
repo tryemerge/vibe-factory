@@ -91,23 +91,6 @@ pub enum ToolResultPayload {
     Error { error: ToolError },
 }
 
-impl ToolResultPayload {
-    pub fn value(&self) -> Option<&Value> {
-        match self {
-            ToolResultPayload::Value { value } => Some(value),
-            _ => None,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn error(&self) -> Option<&ToolError> {
-        match self {
-            ToolResultPayload::Error { error } => Some(error),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum DroidJson {
@@ -257,32 +240,6 @@ pub enum DroidToolData {
         #[serde(flatten)]
         data: std::collections::HashMap<String, Value>,
     },
-}
-
-impl DroidToolData {
-    #[allow(dead_code)]
-    pub fn get_name(&self) -> &str {
-        match self {
-            DroidToolData::Read { .. } => "Read",
-            DroidToolData::LS { .. } => "LS",
-            DroidToolData::Glob { .. } => "Glob",
-            DroidToolData::Grep { .. } => "Grep",
-            DroidToolData::Execute { .. } => "Execute",
-            DroidToolData::Edit { .. } => "Edit",
-            DroidToolData::MultiEdit { .. } => "MultiEdit",
-            DroidToolData::Create { .. } => "Create",
-            DroidToolData::ApplyPatch { .. } => "ApplyPatch",
-            DroidToolData::TodoWrite { .. } => "TodoWrite",
-            DroidToolData::WebSearch { .. } => "WebSearch",
-            DroidToolData::FetchUrl { .. } => "FetchUrl",
-            DroidToolData::ExitSpecMode { .. } => "ExitSpecMode",
-            DroidToolData::SlackPostMessage { .. } => "slack_post_message",
-            DroidToolData::Unknown { data } => data
-                .get("toolName")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Unknown"),
-        }
-    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]

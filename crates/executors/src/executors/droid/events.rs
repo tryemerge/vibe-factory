@@ -174,7 +174,7 @@ fn compute_updated_action_type(
     payload: &ToolResultPayload,
     is_error: bool,
 ) -> ActionType {
-    if let Some(value) = payload.value() {
+    if let ToolResultPayload::Value { value } = payload {
         let result_str = if let Some(s) = value.as_str() {
             s.to_string()
         } else {
