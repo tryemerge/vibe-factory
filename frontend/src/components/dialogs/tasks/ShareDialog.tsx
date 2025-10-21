@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -36,14 +36,11 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
   const [shareError, setShareError] = useState<string | null>(null);
   const [shareComplete, setShareComplete] = useState(false);
   const [shouldRedirectToSignIn, setShouldRedirectToSignIn] = useState(false);
-  const [githubConnectedOverride, setGithubConnectedOverride] = useState(false);
-
-  const isGitHubConnected = useMemo(() => {
-    if (githubConnectedOverride) return true;
-    if (!config?.github) return false;
-    if (githubTokenInvalid) return false;
-    return Boolean(config.github.username && config.github.oauth_token);
-  }, [config?.github, githubTokenInvalid, githubConnectedOverride]);
+  const isGitHubConnected = Boolean(
+    config?.github?.username &&
+      config?.github?.oauth_token &&
+      !githubTokenInvalid
+  );
 
   const shareMutation = useMutation({
     mutationFn: () => tasksApi.share(task.id),
@@ -53,7 +50,6 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
   });
 
   const handleClose = () => {
-    setGithubConnectedOverride(false);
     modal.resolve(shareComplete);
     modal.hide();
   };
@@ -68,13 +64,12 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
           ? (err as { status?: number }).status
           : undefined;
 
-      if (status === 401) {
+      if (status === 401 && !isGitHubConnected) {
         try {
           const success = await NiceModal.show('github-login');
           if (success) {
             shareMutation.reset();
             await reloadSystem();
-            setGithubConnectedOverride(true);
             await shareMutation.mutateAsync();
             return;
           }
@@ -85,7 +80,9 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
 
       const message =
         status === 401
-          ? t('shareDialog.githubRequired.description')
+          ? err instanceof Error && err.message
+            ? err.message
+            : t('shareDialog.githubRequired.description')
           : err instanceof Error
             ? err.message
             : t('shareDialog.genericError');
@@ -98,7 +95,6 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
       const success = await NiceModal.show('github-login');
       if (success) {
         await reloadSystem();
-        setGithubConnectedOverride(true);
       }
     } catch {
       // Swallow cancellation errors
