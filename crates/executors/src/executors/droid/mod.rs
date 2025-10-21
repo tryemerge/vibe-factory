@@ -11,10 +11,10 @@ use crate::{
 };
 
 mod action_mapper;
-mod events;
+pub mod events;
 mod patch_emitter;
 mod processor;
-mod types;
+pub mod types;
 
 use processor::DroidLogProcessor;
 pub use types::{Autonomy, Droid};
