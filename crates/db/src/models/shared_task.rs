@@ -63,6 +63,35 @@ impl SharedTask {
         .await
     }
 
+    pub async fn list_by_project_id(
+        pool: &SqlitePool,
+        project_id: Uuid,
+    ) -> Result<Vec<Self>, sqlx::Error> {
+        sqlx::query_as!(
+            SharedTask,
+            r#"
+            SELECT
+                id                         AS "id!: Uuid",
+                organization_id            AS "organization_id!: String",
+                project_id                 AS "project_id!: Uuid",
+                title                      AS title,
+                description                AS description,
+                status                     AS "status!: TaskStatus",
+                assignee_user_id           AS "assignee_user_id: String",
+                version                    AS "version!: i64",
+                last_event_seq             AS "last_event_seq: i64",
+                created_at                 AS "created_at!: DateTime<Utc>",
+                updated_at                 AS "updated_at!: DateTime<Utc>"
+            FROM shared_tasks
+            WHERE project_id = $1
+            ORDER BY updated_at DESC
+            "#,
+            project_id
+        )
+        .fetch_all(pool)
+        .await
+    }
+
     pub async fn upsert(pool: &SqlitePool, data: SharedTaskInput) -> Result<Self, sqlx::Error> {
         let status = data.status.clone();
         sqlx::query_as!(
@@ -121,6 +150,31 @@ impl SharedTask {
             data.updated_at
         )
         .fetch_one(pool)
+        .await
+    }
+
+    pub async fn find_by_id(pool: &SqlitePool, id: Uuid) -> Result<Option<Self>, sqlx::Error> {
+        sqlx::query_as!(
+            SharedTask,
+            r#"
+            SELECT
+                id                         AS "id!: Uuid",
+                organization_id            AS "organization_id!: String",
+                project_id                 AS "project_id!: Uuid",
+                title                      AS title,
+                description                AS description,
+                status                     AS "status!: TaskStatus",
+                assignee_user_id           AS "assignee_user_id: String",
+                version                    AS "version!: i64",
+                last_event_seq             AS "last_event_seq: i64",
+                created_at                 AS "created_at!: DateTime<Utc>",
+                updated_at                 AS "updated_at!: DateTime<Utc>"
+            FROM shared_tasks
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(pool)
         .await
     }
 

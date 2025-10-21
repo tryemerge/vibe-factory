@@ -120,10 +120,10 @@ fn resolve_primary_email(
     primary_id: &Option<String>,
     addresses: &[UserEmailAddress],
 ) -> Option<String> {
-    if let Some(primary_id) = primary_id {
-        if let Some(primary) = addresses.iter().find(|address| address.id == *primary_id) {
-            return Some(primary.email_address.clone());
-        }
+    if let Some(primary_id) = primary_id
+        && let Some(primary) = addresses.iter().find(|address| address.id == *primary_id)
+    {
+        return Some(primary.email_address.clone());
     }
 
     addresses.first().map(|addr| addr.email_address.clone())
