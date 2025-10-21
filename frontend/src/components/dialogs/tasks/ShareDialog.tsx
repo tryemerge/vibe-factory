@@ -15,10 +15,9 @@ import NiceModal, { useModal } from '@ebay/nice-modal-react';
 import { useTranslation } from 'react-i18next';
 import { useUserSystem } from '@/components/config-provider';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
-import { Github, Loader2, LogIn, Share2 } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 import type { TaskWithAttemptStatus } from 'shared/types';
 import { useMutation } from '@tanstack/react-query';
-import { cn } from '@/lib/utils';
 
 export interface ShareDialogProps {
   task: TaskWithAttemptStatus;
@@ -37,36 +36,61 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
   const [shareError, setShareError] = useState<string | null>(null);
   const [shareComplete, setShareComplete] = useState(false);
   const [shouldRedirectToSignIn, setShouldRedirectToSignIn] = useState(false);
+  const [githubConnectedOverride, setGithubConnectedOverride] = useState(false);
 
   const isGitHubConnected = useMemo(() => {
+    if (githubConnectedOverride) return true;
     if (!config?.github) return false;
     if (githubTokenInvalid) return false;
     return Boolean(config.github.username && config.github.oauth_token);
-  }, [config?.github, githubTokenInvalid]);
+  }, [config?.github, githubTokenInvalid, githubConnectedOverride]);
 
   const shareMutation = useMutation({
     mutationFn: () => tasksApi.share(task.id),
-    onMutate: () => {
-      setShareError(null);
-    },
     onSuccess: () => {
       setShareComplete(true);
-    },
-    onError: (err: unknown) => {
-      const message =
-        err instanceof Error ? err.message : t('shareDialog.genericError');
-      setShareError(message);
     },
   });
 
   const handleClose = () => {
+    setGithubConnectedOverride(false);
     modal.resolve(shareComplete);
     modal.hide();
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     setShareError(null);
-    shareMutation.mutate();
+    try {
+      await shareMutation.mutateAsync();
+    } catch (err) {
+      const status =
+        err && typeof err === 'object' && 'status' in err
+          ? (err as { status?: number }).status
+          : undefined;
+
+      if (status === 401) {
+        try {
+          const success = await NiceModal.show('github-login');
+          if (success) {
+            shareMutation.reset();
+            await reloadSystem();
+            setGithubConnectedOverride(true);
+            await shareMutation.mutateAsync();
+            return;
+          }
+        } catch {
+          // Swallow cancellation errors
+        }
+      }
+
+      const message =
+        status === 401
+          ? t('shareDialog.githubRequired.description')
+          : err instanceof Error
+            ? err.message
+            : t('shareDialog.genericError');
+      setShareError(message);
+    }
   };
 
   const handleGitHubConnect = async () => {
@@ -74,14 +98,14 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
       const success = await NiceModal.show('github-login');
       if (success) {
         await reloadSystem();
+        setGithubConnectedOverride(true);
       }
     } catch {
       // Swallow cancellation errors
     }
   };
 
-  const isShareDisabled =
-    systemLoading || !isGitHubConnected || shareMutation.isPending;
+  const isShareDisabled = systemLoading || shareMutation.isPending;
 
   return (
     <Dialog
@@ -147,7 +171,6 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
                 <div className="space-y-4">
                   {!isGitHubConnected && (
                     <Alert variant="default" className="flex items-start gap-3">
-                      <Github className="h-5 w-5 mt-0.5 text-muted-foreground" />
                       <div className="space-y-2">
                         <div className="font-medium">
                           {t('shareDialog.githubRequired.title')}
@@ -166,23 +189,6 @@ const ShareDialog = NiceModal.create<ShareDialogProps>(({ task }) => {
                       </div>
                     </Alert>
                   )}
-
-                  <Alert
-                    variant="default"
-                    className={cn('flex items-start gap-3', {
-                      'opacity-60': isShareDisabled,
-                    })}
-                  >
-                    <Share2 className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">
-                        {t('shareDialog.confirmationTitle')}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {t('shareDialog.confirmationBody')}
-                      </p>
-                    </div>
-                  </Alert>
                 </div>
               )}
             </>
