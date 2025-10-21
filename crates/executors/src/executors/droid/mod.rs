@@ -33,7 +33,7 @@ async fn exec_command_with_prompt(
         .stderr(Stdio::piped())
         .current_dir(current_dir)
         .arg(shell_arg)
-        .arg(&cmd);
+        .arg(cmd);
 
     let mut child = command.group_spawn()?;
 
