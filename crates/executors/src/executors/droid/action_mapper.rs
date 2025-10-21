@@ -122,7 +122,7 @@ fn extract_path_from_patch(params: &Value) -> String {
     String::new()
 }
 
-pub fn parse_apply_patch_result(value: &Value) -> Option<ActionType> {
+pub fn parse_apply_patch_result(value: &Value, worktree_path: &str) -> Option<ActionType> {
     let parsed_value;
     let result_obj = if value.is_object() {
         value
@@ -191,7 +191,7 @@ pub fn parse_apply_patch_result(value: &Value) -> Option<ActionType> {
     };
 
     Some(ActionType::FileEdit {
-        path: file_path,
+        path: make_path_relative(&file_path, worktree_path),
         changes,
     })
 }
@@ -208,11 +208,11 @@ mod tests {
             "diff": "--- previous\t\n+++ current\t\n@@ -1,3 +1,5 @@\n def hello():\n+    print('world')\n     pass"
         });
 
-        let result = parse_apply_patch_result(&value);
+        let result = parse_apply_patch_result(&value, "/test");
 
         assert!(result.is_some());
         if let Some(ActionType::FileEdit { path, changes }) = result {
-            assert_eq!(path, "/test/file.py");
+            assert_eq!(path, "file.py");
             assert_eq!(changes.len(), 1);
             if let FileChange::Edit {
                 unified_diff,
@@ -238,11 +238,11 @@ mod tests {
             "content": "Hello, world!"
         });
 
-        let result = parse_apply_patch_result(&value);
+        let result = parse_apply_patch_result(&value, "/test");
 
         assert!(result.is_some());
         if let Some(ActionType::FileEdit { path, changes }) = result {
-            assert_eq!(path, "/test/new_file.txt");
+            assert_eq!(path, "new_file.txt");
             assert_eq!(changes.len(), 1);
             if let FileChange::Write { content } = &changes[0] {
                 assert_eq!(content, "Hello, world!");
@@ -264,11 +264,11 @@ mod tests {
             }
         });
 
-        let result = parse_apply_patch_result(&value);
+        let result = parse_apply_patch_result(&value, "/test");
 
         assert!(result.is_some());
         if let Some(ActionType::FileEdit { path, changes }) = result {
-            assert_eq!(path, "/test/nested.py");
+            assert_eq!(path, "nested.py");
             assert_eq!(changes.len(), 1);
         } else {
             panic!("Expected ActionType::FileEdit");
@@ -281,11 +281,11 @@ mod tests {
             r#"{"success":true,"file_path":"/test/file.txt","content":"test content"}"#
         );
 
-        let result = parse_apply_patch_result(&value);
+        let result = parse_apply_patch_result(&value, "/test");
 
         assert!(result.is_some());
         if let Some(ActionType::FileEdit { path, changes }) = result {
-            assert_eq!(path, "/test/file.txt");
+            assert_eq!(path, "file.txt");
             assert_eq!(changes.len(), 1);
         } else {
             panic!("Expected ActionType::FileEdit");
@@ -299,7 +299,7 @@ mod tests {
             "content": "some content"
         });
 
-        let result = parse_apply_patch_result(&value);
+        let result = parse_apply_patch_result(&value, "/test");
 
         assert!(
             result.is_none(),
@@ -314,11 +314,11 @@ mod tests {
             "file_path": "/test/empty.txt"
         });
 
-        let result = parse_apply_patch_result(&value);
+        let result = parse_apply_patch_result(&value, "/test");
 
         assert!(result.is_some());
         if let Some(ActionType::FileEdit { path, changes }) = result {
-            assert_eq!(path, "/test/empty.txt");
+            assert_eq!(path, "empty.txt");
             assert_eq!(
                 changes.len(),
                 0,

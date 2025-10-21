@@ -144,7 +144,8 @@ pub fn process_event(
                     ToolStatus::Success
                 };
 
-                let updated_action_type = compute_updated_action_type(&call, payload, *is_error);
+                let updated_action_type =
+                    compute_updated_action_type(&call, payload, *is_error, worktree_path);
 
                 events.push(DomainEvent::UpdateToolCall {
                     tool_call_id: id.clone(),
@@ -181,6 +182,7 @@ fn compute_updated_action_type(
     call: &PendingToolCall,
     payload: &ToolResultPayload,
     is_error: bool,
+    worktree_path: &Path,
 ) -> ActionType {
     if let ToolResultPayload::Value { value } = payload {
         let result_str = if let Some(s) = value.as_str() {
@@ -218,7 +220,8 @@ fn compute_updated_action_type(
         } else if matches!(call.action_type, ActionType::FileEdit { .. })
             && call.tool_name == "ApplyPatch"
         {
-            action_mapper::parse_apply_patch_result(value)
+            let worktree_path_str = worktree_path.to_string_lossy();
+            action_mapper::parse_apply_patch_result(value, &worktree_path_str)
                 .unwrap_or_else(|| call.action_type.clone())
         } else {
             call.action_type.clone()
