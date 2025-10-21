@@ -28,7 +28,7 @@ fn process_jsonl_file(file_path: &str) -> SessionSnapshot {
         let event: DroidJson = match serde_json::from_str(line) {
             Ok(e) => e,
             Err(e) => {
-                eprintln!("Failed to parse line: {}\nError: {}", line, e);
+                eprintln!("Failed to parse line: {line}\nError: {e}");
                 continue;
             }
         };
