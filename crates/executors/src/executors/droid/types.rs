@@ -53,7 +53,8 @@ impl Droid {
     pub fn build_command_builder(&self) -> crate::command::CommandBuilder {
         use crate::command::{CommandBuilder, apply_overrides};
 
-        let mut builder = CommandBuilder::new("droid exec").params(["--output-format=stream-json"]);
+        let mut builder =
+            CommandBuilder::new("droid exec").params(["--output-format", "stream-json"]);
 
         let autonomy_args: Vec<&str> = match &self.autonomy {
             Autonomy::Normal => vec![],
