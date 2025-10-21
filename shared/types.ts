@@ -182,9 +182,11 @@ export type Opencode = { append_prompt: AppendPrompt, model?: string | null, age
 
 export type QwenCode = { append_prompt: AppendPrompt, yolo?: boolean | null, base_command_override?: string | null, additional_params?: Array<string> | null, };
 
-export type Droid = { append_prompt: AppendPrompt, autonomy: Autonomy, model?: string | null, reasoning_effort?: string | null, base_command_override?: string | null, additional_params?: Array<string> | null, };
+export type Droid = { append_prompt: AppendPrompt, autonomy: Autonomy, model?: string | null, reasoning_effort?: DroidReasoningEffort | null, base_command_override?: string | null, additional_params?: Array<string> | null, };
 
 export type Autonomy = "normal" | "low" | "medium" | "high" | "skip-permissions-unsafe";
+
+export type DroidReasoningEffort = "none" | "dynamic" | "off" | "low" | "medium" | "high";
 
 export type AppendPrompt = string | null;
 

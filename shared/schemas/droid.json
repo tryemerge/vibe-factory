@@ -38,6 +38,15 @@
       "type": [
         "string",
         "null"
+      ],
+      "enum": [
+        "none",
+        "dynamic",
+        "off",
+        "low",
+        "medium",
+        "high",
+        null
       ]
     },
     "base_command_override": {

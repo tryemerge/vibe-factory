@@ -17,7 +17,7 @@ mod processor;
 pub mod types;
 
 use processor::DroidLogProcessor;
-pub use types::{Autonomy, Droid};
+pub use types::{Autonomy, Droid, ReasoningEffortLevel};
 
 async fn exec_command_with_prompt(
     cmd: &String,

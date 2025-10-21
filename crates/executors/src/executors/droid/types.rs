@@ -20,6 +20,18 @@ fn default_autonomy() -> Autonomy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[ts(rename = "DroidReasoningEffort")]
+pub enum ReasoningEffortLevel {
+    None,
+    Dynamic,
+    Off,
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, JsonSchema)]
 pub struct Droid {
     #[serde(default)]
     pub append_prompt: AppendPrompt,
@@ -43,7 +55,7 @@ pub struct Droid {
         title = "Reasoning Effort",
         description = "Reasoning effort level: none, dynamic, off, low, medium, high"
     )]
-    pub reasoning_effort: Option<String>,
+    pub reasoning_effort: Option<ReasoningEffortLevel>,
 
     #[serde(flatten)]
     pub cmd: CmdOverrides,
@@ -70,7 +82,15 @@ impl Droid {
         }
 
         if let Some(ref effort) = self.reasoning_effort {
-            builder = builder.extend_params(["--reasoning-effort", effort]);
+            let effort_str = match effort {
+                ReasoningEffortLevel::None => "none",
+                ReasoningEffortLevel::Dynamic => "dynamic",
+                ReasoningEffortLevel::Off => "off",
+                ReasoningEffortLevel::Low => "low",
+                ReasoningEffortLevel::Medium => "medium",
+                ReasoningEffortLevel::High => "high",
+            };
+            builder = builder.extend_params(["--reasoning-effort", effort_str]);
         }
 
         apply_overrides(builder, &self.cmd)
@@ -385,7 +405,7 @@ mod tests {
             append_prompt: AppendPrompt::default(),
             autonomy: Autonomy::SkipPermissionsUnsafe,
             model: None,
-            reasoning_effort: Some("high".to_string()),
+            reasoning_effort: Some(ReasoningEffortLevel::High),
             cmd: CmdOverrides::default(),
         };
 
@@ -404,7 +424,7 @@ mod tests {
             append_prompt: AppendPrompt::default(),
             autonomy: Autonomy::Medium,
             model: Some("claude-sonnet-4-5-20250929".to_string()),
-            reasoning_effort: Some("dynamic".to_string()),
+            reasoning_effort: Some(ReasoningEffortLevel::Dynamic),
             cmd: CmdOverrides::default(),
         };
 
@@ -467,7 +487,7 @@ mod tests {
             append_prompt: AppendPrompt::default(),
             autonomy: Autonomy::Low,
             model: Some("glm-4.6".to_string()),
-            reasoning_effort: Some("off".to_string()),
+            reasoning_effort: Some(ReasoningEffortLevel::Off),
             cmd: CmdOverrides {
                 base_command_override: Some("/usr/local/bin/droid".to_string()),
                 additional_params: Some(vec!["--timeout".to_string(), "300".to_string()]),
