@@ -66,7 +66,12 @@ pub fn process_event(
             }
         }
 
-        DroidJson::Message { role, text, .. } => {
+        DroidJson::Message {
+            role,
+            text,
+            timestamp,
+            ..
+        } => {
             let entry_type = match role.as_str() {
                 "user" => NormalizedEntryType::UserMessage,
                 "assistant" => NormalizedEntryType::AssistantMessage,
@@ -74,7 +79,7 @@ pub fn process_event(
             };
 
             events.push(DomainEvent::AddEntry(NormalizedEntry {
-                timestamp: None,
+                timestamp: Some(timestamp.to_string()),
                 entry_type,
                 content: text.clone(),
                 metadata: None,
@@ -129,6 +134,7 @@ pub fn process_event(
             id,
             is_error,
             payload,
+            timestamp,
             ..
         } => {
             if let Some(call) = state.tool_map.remove(id) {
@@ -143,7 +149,7 @@ pub fn process_event(
                 events.push(DomainEvent::UpdateToolCall {
                     tool_call_id: id.clone(),
                     entry: NormalizedEntry {
-                        timestamp: None,
+                        timestamp: Some(timestamp.to_string()),
                         entry_type: NormalizedEntryType::ToolUse {
                             tool_name: call.tool_name,
                             action_type: updated_action_type,
@@ -156,9 +162,11 @@ pub fn process_event(
             }
         }
 
-        DroidJson::Error { message, .. } => {
+        DroidJson::Error {
+            message, timestamp, ..
+        } => {
             events.push(DomainEvent::AddEntry(NormalizedEntry {
-                timestamp: None,
+                timestamp: Some(timestamp.to_string()),
                 entry_type: NormalizedEntryType::ErrorMessage,
                 content: message.clone(),
                 metadata: None,

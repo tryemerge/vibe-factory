@@ -13,7 +13,7 @@ events:
       content: "model: gpt-5-codex"
       metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760806536533"
       entry_type:
         type: user_message
       content: "create a text file called 'a.txt' with the character 'a' inside"
@@ -37,7 +37,7 @@ events:
   - UpdateToolCall:
       tool_call_id: call_WaiIpWDOVLcWkCDEJKogOzrl
       entry:
-        timestamp: ~
+        timestamp: "1760806545524"
         entry_type:
           type: tool_use
           tool_name: Read
@@ -75,7 +75,7 @@ events:
   - UpdateToolCall:
       tool_call_id: call_ULikm3YyJS9DBwHRcEck7ejc
       entry:
-        timestamp: ~
+        timestamp: "1760806551946"
         entry_type:
           type: tool_use
           tool_name: TodoWrite
@@ -113,7 +113,7 @@ events:
   - UpdateToolCall:
       tool_call_id: call_W4t4W4TDhrZFiM9DxVox21PW
       entry:
-        timestamp: ~
+        timestamp: "1760806562640"
         entry_type:
           type: tool_use
           tool_name: Execute
@@ -126,13 +126,13 @@ events:
         content: "`printf 'a' > \"/Users/tempuser/projects/vibe-kanban/a.txt\"`"
         metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760806562640"
       entry_type:
         type: assistant_message
       content: "Exec ended early: insufficient permission to proceed. Re-run with --auto medium or --auto high. For destructive commands, use --skip-permissions-unsafe."
       metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760806562644"
       entry_type:
         type: error_message
       content: "Exec ended early: insufficient permission to proceed. Re-run with --auto medium or --auto high. For destructive commands, use --skip-permissions-unsafe."

@@ -13,7 +13,7 @@ events:
       content: "model: gpt-5-codex"
       metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760962903699"
       entry_type:
         type: user_message
       content: create random.txt with a single sentence
@@ -43,7 +43,7 @@ events:
   - UpdateToolCall:
       tool_call_id: call_KieOKRNN6UAhPNI6ACkjJTrS
       entry:
-        timestamp: ~
+        timestamp: "1760962914235"
         entry_type:
           type: tool_use
           tool_name: LS
@@ -78,7 +78,7 @@ events:
   - UpdateToolCall:
       tool_call_id: call_sVOzJJ2NFxqj415lDanupmuz
       entry:
-        timestamp: ~
+        timestamp: "1760962924242"
         entry_type:
           type: tool_use
           tool_name: Glob
@@ -116,7 +116,7 @@ events:
   - UpdateToolCall:
       tool_call_id: call_sNK1Fd9RCpgD7o6ItsgxKUWw
       entry:
-        timestamp: ~
+        timestamp: "1760962931747"
         entry_type:
           type: tool_use
           tool_name: TodoWrite
@@ -154,7 +154,7 @@ events:
   - UpdateToolCall:
       tool_call_id: call_4ReFFWqaXZ4EgWF9wRuMtOqS
       entry:
-        timestamp: ~
+        timestamp: "1760962946094"
         entry_type:
           type: tool_use
           tool_name: Execute
@@ -167,13 +167,13 @@ events:
         content: "`echo \"This is a single sentence.\" > /Users/tempuser/projects/aws/random.txt`"
         metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760962946095"
       entry_type:
         type: assistant_message
       content: "Exec ended early: insufficient permission to proceed. Re-run with --auto medium or --auto high. For destructive commands, use --skip-permissions-unsafe."
       metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760962946111"
       entry_type:
         type: error_message
       content: "Exec ended early: insufficient permission to proceed. Re-run with --auto medium or --auto high. For destructive commands, use --skip-permissions-unsafe."

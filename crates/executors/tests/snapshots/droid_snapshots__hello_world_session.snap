@@ -13,13 +13,13 @@ events:
       content: "model: gpt-5-codex"
       metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760806427595"
       entry_type:
         type: user_message
       content: hello world
       metadata: ~
   - AddEntry:
-      timestamp: ~
+      timestamp: "1760806437677"
       entry_type:
         type: assistant_message
       content: "# Hello world!"
