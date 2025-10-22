@@ -27,10 +27,9 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
     isError: isAttemptsError,
   } = useTaskAttempts(task?.id);
 
-  const {
-    data: parentAttempt,
-    isLoading: isParentLoading,
-  } = useTaskAttempt(task?.parent_task_attempt || undefined);
+  const { data: parentAttempt, isLoading: isParentLoading } = useTaskAttempt(
+    task?.parent_task_attempt || undefined
+  );
 
   const formatTimeAgo = (iso: string) => {
     const d = new Date(iso);
