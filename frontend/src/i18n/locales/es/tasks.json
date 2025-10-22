@@ -9,7 +9,8 @@
     "duplicate": "Duplicate",
     "openInIde": "Open attempt in IDE",
     "task": "Task",
-    "viewProcesses": "View processes"
+    "viewProcesses": "View processes",
+    "viewRelatedTasks": "View related tasks"
   },
   "attempt": {
     "actions": {
@@ -42,7 +43,8 @@
   },
   "attemptHeaderActions": {
     "diffs": "Diffs",
-    "preview": "Preview"
+    "preview": "Preview",
+    "relatedTasks": "Related tasks"
   },
   "branches": {
     "changeTarget": {
@@ -240,6 +242,17 @@
   },
   "viewProcessesDialog": {
     "title": "Execution processes"
+  },
+  "viewRelatedTasksDialog": {
+    "title": "Related tasks",
+    "empty": "No related tasks for this attempt",
+    "error": "Failed to load related tasks",
+    "tasksCount": "Tasks ({{count}})",
+    "columns": {
+      "title": "Title",
+      "description": "Description",
+      "status": "Status"
+    }
   },
   "showcases": {
     "taskPanel": {
