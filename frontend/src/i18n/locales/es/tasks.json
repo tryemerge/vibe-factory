@@ -27,7 +27,8 @@
       "agent": "Agente",
       "attempt": "Intento",
       "branch": "Rama",
-      "diffs": "Diferencias"
+      "diffs": "Diferencias",
+      "summaryAndActions": "Resumen y Acciones"
     },
     "newAttempt": "New Attempt",
     "openInEditor": "Open in {{editor}}",

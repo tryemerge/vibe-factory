@@ -159,7 +159,8 @@
       "attempt": "Attempt",
       "agent": "Agent",
       "branch": "Branch",
-      "diffs": "Diffs"
+      "diffs": "Diffs",
+      "summaryAndActions": "Summary & Actions"
     },
     "agent": "Agent",
     "path": "Path",

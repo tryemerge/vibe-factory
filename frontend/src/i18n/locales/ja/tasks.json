@@ -27,7 +27,8 @@
       "agent": "エージェント",
       "attempt": "試行",
       "branch": "ブランチ",
-      "diffs": "差分"
+      "diffs": "差分",
+      "summaryAndActions": "概要とアクション"
     },
     "newAttempt": "New Attempt",
     "openInEditor": "Open in {{editor}}",

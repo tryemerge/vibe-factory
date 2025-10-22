@@ -72,7 +72,7 @@ export function NextActionCard({
   return (
     <div className="pt-4 pb-8">
       <div className="px-3 py-1 bg-foreground text-background flex">
-        <span className="font-semibold flex-1">Summary & Actions</span>
+        <span className="font-semibold flex-1">{t('attempt.labels.summaryAndActions')}</span>
       </div>
       <div className="border border-foreground px-3 py-2 flex items-center gap-3 min-w-0">
         {/* Left: Diff summary */}
