@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { useProject } from '@/contexts/project-context';
 import { useTaskAttempts } from '@/hooks/useTaskAttempts';
+import { useTaskAttempt } from '@/hooks/useTaskAttempt';
 import { useNavigateWithSearch } from '@/hooks';
 import { paths } from '@/lib/paths';
-import type { TaskWithAttemptStatus } from 'shared/types';
+import type { TaskWithAttemptStatus, TaskAttempt } from 'shared/types';
 import { NewCardContent } from '../ui/new-card';
 import { Button } from '../ui/button';
+import { Card } from '../ui/card';
 import { PlusIcon } from 'lucide-react';
 import NiceModal from '@ebay/nice-modal-react';
 import MarkdownRenderer from '@/components/ui/markdown-renderer';
@@ -24,6 +26,11 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
     isLoading: isAttemptsLoading,
     isError: isAttemptsError,
   } = useTaskAttempts(task?.id);
+
+  const {
+    data: parentAttempt,
+    isLoading: isParentLoading,
+  } = useTaskAttempt(task?.parent_task_attempt || undefined);
 
   const formatTimeAgo = (iso: string) => {
     const d = new Date(iso);
@@ -77,6 +84,23 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
         <div className="p-6 flex flex-col h-full max-h-[calc(100vh-8rem)]">
           <div className="space-y-3 overflow-y-auto flex-shrink min-h-0">
             <MarkdownRenderer content={titleContent} />
+
+            {task.parent_task_attempt && (
+              <div className="mt-2">
+                {isParentLoading && (
+                  <div className="h-14 w-full bg-muted/30 rounded-md animate-pulse border border-dashed" />
+                )}
+                {!isParentLoading && parentAttempt && (
+                  <ParentAttemptInline
+                    attempt={parentAttempt}
+                    projectId={projectId}
+                    navigate={navigate}
+                    formatTimeAgo={formatTimeAgo}
+                  />
+                )}
+              </div>
+            )}
+
             {descriptionContent && (
               <MarkdownRenderer content={descriptionContent} />
             )}
@@ -165,5 +189,47 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
     </>
   );
 };
+
+function ParentAttemptInline({
+  attempt,
+  projectId,
+  navigate,
+  formatTimeAgo,
+}: {
+  attempt: TaskAttempt;
+  projectId: string | undefined;
+  navigate: ReturnType<typeof useNavigateWithSearch>;
+  formatTimeAgo: (iso: string) => string;
+}) {
+  return (
+    <Card
+      className="border-dashed bg-muted/30 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        if (projectId) {
+          navigate(paths.attempt(projectId, attempt.task_id, attempt.id));
+        }
+      }}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && projectId) {
+          e.preventDefault();
+          navigate(paths.attempt(projectId, attempt.task_id, attempt.id));
+        }
+      }}
+    >
+      <div className="text-xs uppercase text-muted-foreground tracking-wide mb-1">
+        Parent Attempt
+      </div>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span>{attempt.executor || 'Base Agent'}</span>
+        <span>•</span>
+        <span>{attempt.branch || '—'}</span>
+        <span>•</span>
+        <span>{formatTimeAgo(attempt.created_at)}</span>
+      </div>
+    </Card>
+  );
+}
 
 export default TaskPanel;
