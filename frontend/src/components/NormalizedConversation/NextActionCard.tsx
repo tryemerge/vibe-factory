@@ -72,19 +72,15 @@ export function NextActionCard({
   return (
     <div className="border bg-[hsl(var(--card))] border-[hsl(var(--border))] px-3 py-2 flex items-center gap-3 min-w-0">
       {/* Left: Diff summary */}
-      <div className="flex items-center gap-1.5 text-sm shrink-0">
-        {error ? (
-          <span className="opacity-70">diff unavailable</span>
-        ) : (
-          <>
-            <span>{t('diff.filesChanged', { count: fileCount })}</span>
-            <span className="opacity-50">•</span>
-            <span className="text-green-600 dark:text-green-400">+{added}</span>
-            <span className="opacity-50">•</span>
-            <span className="text-red-600 dark:text-red-400">-{deleted}</span>
-          </>
-        )}
-      </div>
+      {!error && (
+        <div className="flex items-center gap-1.5 text-sm shrink-0">
+          <span>{t('diff.filesChanged', { count: fileCount })}</span>
+          <span className="opacity-50">•</span>
+          <span className="text-green-600 dark:text-green-400">+{added}</span>
+          <span className="opacity-50">•</span>
+          <span className="text-red-600 dark:text-red-400">-{deleted}</span>
+        </div>
+      )}
 
       <div className="flex-1" />
 
