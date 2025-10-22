@@ -7,7 +7,6 @@ import { paths } from '@/lib/paths';
 import type { TaskWithAttemptStatus, TaskAttempt } from 'shared/types';
 import { NewCardContent } from '../ui/new-card';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 import { PlusIcon } from 'lucide-react';
 import NiceModal from '@ebay/nice-modal-react';
 import MarkdownRenderer from '@/components/ui/markdown-renderer';
@@ -83,105 +82,43 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
         <div className="p-6 flex flex-col h-full max-h-[calc(100vh-8rem)]">
           <div className="space-y-3 overflow-y-auto flex-shrink min-h-0">
             <MarkdownRenderer content={titleContent} />
-
-            {task.parent_task_attempt && (
-              <div className="mt-2">
-                {isParentLoading && (
-                  <div className="h-14 w-full bg-muted/30 rounded-md animate-pulse border border-dashed" />
-                )}
-                {!isParentLoading && parentAttempt && (
-                  <ParentAttemptInline
-                    attempt={parentAttempt}
-                    projectId={projectId}
-                    navigate={navigate}
-                    formatTimeAgo={formatTimeAgo}
-                  />
-                )}
-              </div>
-            )}
-
             {descriptionContent && (
               <MarkdownRenderer content={descriptionContent} />
             )}
           </div>
 
-          <div className="mt-6 flex-shrink-0">
-            {isAttemptsLoading && (
-              <div className="text-muted-foreground">
-                {t('taskPanel.loadingAttempts')}
-              </div>
+          <div className="mt-6 flex-shrink-0 space-y-4">
+            {task.parent_task_attempt && (
+              <ParentAttemptTable
+                parentAttempt={parentAttempt}
+                isLoading={isParentLoading}
+                navigateToAttempt={(attempt) => {
+                  if (projectId) {
+                    navigate(paths.attempt(projectId, attempt.task_id, attempt.id));
+                  }
+                }}
+                formatTimeAgo={formatTimeAgo}
+              />
             )}
-            {isAttemptsError && (
-              <div className="text-destructive">
-                {t('taskPanel.errorLoadingAttempts')}
-              </div>
-            )}
-            {!isAttemptsLoading && !isAttemptsError && (
-              <table className="w-full text-sm">
-                <thead className="uppercase text-muted-foreground">
-                  <tr>
-                    <th colSpan={3}>
-                      <div className="w-full flex text-left">
-                        <span className="flex-1">
-                          {t('taskPanel.attemptsCount', {
-                            count: displayedAttempts.length,
-                          })}
-                        </span>
-                        <span>
-                          <Button
-                            variant="icon"
-                            onClick={() =>
-                              NiceModal.show('create-attempt', {
-                                taskId: task.id,
-                                latestAttempt,
-                              })
-                            }
-                          >
-                            <PlusIcon size={16} />
-                          </Button>
-                        </span>
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayedAttempts.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="py-2 text-muted-foreground border-t"
-                      >
-                        {t('taskPanel.noAttempts')}
-                      </td>
-                    </tr>
-                  ) : (
-                    displayedAttempts.map((attempt) => (
-                      <tr
-                        key={attempt.id}
-                        className="border-t cursor-pointer hover:bg-muted"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          if (projectId && task.id && attempt.id) {
-                            navigate(
-                              paths.attempt(projectId, task.id, attempt.id)
-                            );
-                          }
-                        }}
-                      >
-                        <td className="py-2 pr-4">
-                          {attempt.executor || 'Base Agent'}
-                        </td>
-                        <td className="py-2 pr-4">{attempt.branch || '—'}</td>
-                        <td className="py-2 pr-0 text-right">
-                          {formatTimeAgo(attempt.created_at)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )}
+
+            <AttemptsTable
+              attempts={displayedAttempts}
+              isLoading={isAttemptsLoading}
+              isError={isAttemptsError}
+              onCreate={() => {
+                NiceModal.show('create-attempt', {
+                  taskId: task.id,
+                  latestAttempt,
+                });
+              }}
+              navigateToAttempt={(attempt) => {
+                if (projectId && task.id) {
+                  navigate(paths.attempt(projectId, task.id, attempt.id));
+                }
+              }}
+              formatTimeAgo={formatTimeAgo}
+              t={t}
+            />
           </div>
         </div>
       </NewCardContent>
@@ -189,45 +126,142 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
   );
 };
 
-function ParentAttemptInline({
+function AttemptRow({
   attempt,
-  projectId,
-  navigate,
+  onClick,
   formatTimeAgo,
 }: {
   attempt: TaskAttempt;
-  projectId: string | undefined;
-  navigate: ReturnType<typeof useNavigateWithSearch>;
+  onClick: () => void;
   formatTimeAgo: (iso: string) => string;
 }) {
   return (
-    <Card
-      className="border border-dashed bg-muted/30 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+    <tr
+      className="border-t cursor-pointer hover:bg-muted"
       role="button"
       tabIndex={0}
-      onClick={() => {
-        if (projectId) {
-          navigate(paths.attempt(projectId, attempt.task_id, attempt.id));
-        }
-      }}
+      onClick={onClick}
       onKeyDown={(e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && projectId) {
+        if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          navigate(paths.attempt(projectId, attempt.task_id, attempt.id));
+          onClick();
         }
       }}
     >
-      <div className="text-xs uppercase text-muted-foreground tracking-wide mb-1">
-        Parent Attempt
+      <td className="py-2 pr-4">{attempt.executor || 'Base Agent'}</td>
+      <td className="py-2 pr-4">{attempt.branch || '—'}</td>
+      <td className="py-2 pr-0 text-right">
+        {formatTimeAgo(attempt.created_at)}
+      </td>
+    </tr>
+  );
+}
+
+function ParentAttemptTable({
+  parentAttempt,
+  isLoading,
+  navigateToAttempt,
+  formatTimeAgo,
+}: {
+  parentAttempt: TaskAttempt | undefined;
+  isLoading: boolean;
+  navigateToAttempt: (attempt: TaskAttempt) => void;
+  formatTimeAgo: (iso: string) => string;
+}) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="uppercase text-muted-foreground">
+        <tr>
+          <th colSpan={3} className="text-left">
+            Parent Attempt
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {isLoading ? (
+          <tr>
+            <td colSpan={3} className="py-2 border-t">
+              <div className="h-5 w-full bg-muted/30 rounded animate-pulse" />
+            </td>
+          </tr>
+        ) : parentAttempt ? (
+          <AttemptRow
+            attempt={parentAttempt}
+            formatTimeAgo={formatTimeAgo}
+            onClick={() => navigateToAttempt(parentAttempt)}
+          />
+        ) : null}
+      </tbody>
+    </table>
+  );
+}
+
+function AttemptsTable({
+  attempts,
+  isLoading,
+  isError,
+  onCreate,
+  navigateToAttempt,
+  formatTimeAgo,
+  t,
+}: {
+  attempts: TaskAttempt[];
+  isLoading: boolean;
+  isError: boolean;
+  onCreate: () => void;
+  navigateToAttempt: (attempt: TaskAttempt) => void;
+  formatTimeAgo: (iso: string) => string;
+  t: (key: string, options?: any) => string;
+}) {
+  if (isLoading) {
+    return (
+      <div className="text-muted-foreground">{t('taskPanel.loadingAttempts')}</div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="text-destructive">
+        {t('taskPanel.errorLoadingAttempts')}
       </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>{attempt.executor || 'Base Agent'}</span>
-        <span>•</span>
-        <span>{attempt.branch || '—'}</span>
-        <span>•</span>
-        <span>{formatTimeAgo(attempt.created_at)}</span>
-      </div>
-    </Card>
+    );
+  }
+  return (
+    <table className="w-full text-sm">
+      <thead className="uppercase text-muted-foreground">
+        <tr>
+          <th colSpan={3}>
+            <div className="w-full flex text-left">
+              <span className="flex-1">
+                {t('taskPanel.attemptsCount', { count: attempts.length })}
+              </span>
+              <span>
+                <Button variant="icon" onClick={onCreate}>
+                  <PlusIcon size={16} />
+                </Button>
+              </span>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {attempts.length === 0 ? (
+          <tr>
+            <td colSpan={3} className="py-2 text-muted-foreground border-t">
+              {t('taskPanel.noAttempts')}
+            </td>
+          </tr>
+        ) : (
+          attempts.map((attempt) => (
+            <AttemptRow
+              key={attempt.id}
+              attempt={attempt}
+              formatTimeAgo={formatTimeAgo}
+              onClick={() => navigateToAttempt(attempt)}
+            />
+          ))
+        )}
+      </tbody>
+    </table>
   );
 }
 
