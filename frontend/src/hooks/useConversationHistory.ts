@@ -45,10 +45,37 @@ interface UseConversationHistoryParams {
   onEntriesUpdated: OnEntriesUpdated;
 }
 
-interface UseConversationHistoryResult {}
+interface UseConversationHistoryResult { }
 
 const MIN_INITIAL_ENTRIES = 10;
 const REMAINING_BATCH_SIZE = 50;
+
+const loadingPatch: PatchTypeWithKey = {
+  type: 'NORMALIZED_ENTRY',
+  content: {
+    entry_type: {
+      type: 'loading',
+    },
+    content: '',
+    timestamp: null,
+  },
+  patchKey: 'loading',
+  executionProcessId: '',
+};
+
+const nextActionPatch: PatchTypeWithKey = {
+  type: 'NORMALIZED_ENTRY',
+  content: {
+    entry_type: {
+      type: 'next_action',
+    },
+    content: '',
+    timestamp: null,
+  },
+  patchKey: 'next_action',
+  executionProcessId: '',
+};
+
 
 export const useConversationHistory = ({
   attempt,
@@ -183,9 +210,9 @@ export const useConversationHistory = ({
       .filter(
         (p) =>
           p.executionProcess.executor_action.typ.type ===
-            'CodingAgentFollowUpRequest' ||
+          'CodingAgentFollowUpRequest' ||
           p.executionProcess.executor_action.typ.type ===
-            'CodingAgentInitialRequest'
+          'CodingAgentInitialRequest'
       )
       .sort(
         (a, b) =>
@@ -197,22 +224,11 @@ export const useConversationHistory = ({
       .flatMap((p) => p.entries);
   };
 
-  const loadingPatch: PatchTypeWithKey = {
-    type: 'NORMALIZED_ENTRY',
-    content: {
-      entry_type: {
-        type: 'loading',
-      },
-      content: '',
-      timestamp: null,
-    },
-    patchKey: 'loading',
-    executionProcessId: '',
-  };
-
   const flattenEntriesForEmit = (
     executionProcessState: ExecutionProcessStateStore
   ): PatchTypeWithKey[] => {
+    let hasPendingApproval = false;
+
     // Create user messages + tool calls for setup/cleanup scripts
     const allEntries = Object.values(executionProcessState)
       .sort(
@@ -226,9 +242,9 @@ export const useConversationHistory = ({
         const entries: PatchTypeWithKey[] = [];
         if (
           p.executionProcess.executor_action.typ.type ===
-            'CodingAgentInitialRequest' ||
+          'CodingAgentInitialRequest' ||
           p.executionProcess.executor_action.typ.type ===
-            'CodingAgentFollowUpRequest'
+          'CodingAgentFollowUpRequest'
         ) {
           // New user message
           const userNormalizedEntry: NormalizedEntry = {
@@ -265,6 +281,10 @@ export const useConversationHistory = ({
             );
           });
 
+          if (hasPendingApprovalEntry) {
+            hasPendingApproval = true;
+          }
+
           entries.push(...entriesExcludingUser);
           const isProcessRunning =
             getLiveExecutionProcess(p.executionProcess.id)?.status ===
@@ -298,9 +318,9 @@ export const useConversationHistory = ({
             executionProcess?.status === 'running'
               ? null
               : {
-                  type: 'exit_code',
-                  code: exitCode,
-                };
+                type: 'exit_code',
+                code: exitCode,
+              };
 
           const toolStatus: ToolStatus =
             executionProcess?.status === ExecutionProcessStatus.running
@@ -343,6 +363,14 @@ export const useConversationHistory = ({
 
         return entries;
       });
+
+    const anyProcessesRunning = executionProcesses?.current.some(
+      (p) => p.status === ExecutionProcessStatus.running
+    );
+
+    if (!anyProcessesRunning && !hasPendingApproval) {
+      allEntries.push(nextActionPatch);
+    }
 
     return allEntries;
   };

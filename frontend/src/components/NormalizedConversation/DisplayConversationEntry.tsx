@@ -214,9 +214,8 @@ const MessageCard: React.FC<{
 
   return (
     <div
-      className={`${frameBase} ${
-        variant === 'system' ? systemTheme : errorTheme
-      }`}
+      className={`${frameBase} ${variant === 'system' ? systemTheme : errorTheme
+        }`}
       onClick={onToggle}
     >
       <div className="flex items-center gap-1.5">
@@ -252,9 +251,8 @@ const ExpandChevron: React.FC<{
   return (
     <ChevronDown
       onClick={onClick}
-      className={`h-4 w-4 cursor-pointer transition-transform ${color} ${
-        expanded ? '' : '-rotate-90'
-      }`}
+      className={`h-4 w-4 cursor-pointer transition-transform ${color} ${expanded ? '' : '-rotate-90'
+        }`}
     />
   );
 };
@@ -359,62 +357,62 @@ const PlanPresentationCard: React.FC<{
   defaultExpanded = false,
   statusAppearance = 'default',
 }) => {
-  const { t } = useTranslation('common');
-  const [expanded, toggle] = useExpandable(
-    `plan-entry:${expansionKey}`,
-    defaultExpanded
-  );
-  const tone = PLAN_APPEARANCE[statusAppearance];
+    const { t } = useTranslation('common');
+    const [expanded, toggle] = useExpandable(
+      `plan-entry:${expansionKey}`,
+      defaultExpanded
+    );
+    const tone = PLAN_APPEARANCE[statusAppearance];
 
-  return (
-    <div className="inline-block w-full">
-      <div
-        className={cn('border w-full overflow-hidden rounded-sm', tone.border)}
-      >
-        <button
-          onClick={(e: React.MouseEvent) => {
-            e.preventDefault();
-            toggle();
-          }}
-          title={
-            expanded
-              ? t('conversation.planToggle.hide')
-              : t('conversation.planToggle.show')
-          }
-          className={cn(
-            'w-full px-2 py-1.5 flex items-center gap-1.5 text-left border-b',
-            tone.headerBg,
-            tone.headerText,
-            tone.border
-          )}
+    return (
+      <div className="inline-block w-full">
+        <div
+          className={cn('border w-full overflow-hidden rounded-sm', tone.border)}
         >
-          <span className=" min-w-0 truncate">
-            <span className="font-semibold">{t('conversation.plan')}</span>
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            <ExpandChevron
-              expanded={expanded}
-              onClick={toggle}
-              variant={statusAppearance === 'denied' ? 'error' : 'system'}
-            />
-          </div>
-        </button>
-
-        {expanded && (
-          <div className={cn('px-3 py-2', tone.contentBg)}>
-            <div className={cn('text-sm', tone.contentText)}>
-              <MarkdownRenderer
-                content={plan}
-                className="whitespace-pre-wrap break-words"
-                enableCopyButton
+          <button
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              toggle();
+            }}
+            title={
+              expanded
+                ? t('conversation.planToggle.hide')
+                : t('conversation.planToggle.show')
+            }
+            className={cn(
+              'w-full px-2 py-1.5 flex items-center gap-1.5 text-left border-b',
+              tone.headerBg,
+              tone.headerText,
+              tone.border
+            )}
+          >
+            <span className=" min-w-0 truncate">
+              <span className="font-semibold">{t('conversation.plan')}</span>
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <ExpandChevron
+                expanded={expanded}
+                onClick={toggle}
+                variant={statusAppearance === 'denied' ? 'error' : 'system'}
               />
             </div>
-          </div>
-        )}
+          </button>
+
+          {expanded && (
+            <div className={cn('px-3 py-2', tone.contentBg)}>
+              <div className={cn('text-sm', tone.contentText)}>
+                <MarkdownRenderer
+                  content={plan}
+                  className="whitespace-pre-wrap break-words"
+                  enableCopyButton
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 const ToolCallCard: React.FC<{
   entryType?: Extract<NormalizedEntryType, { type: 'tool_use' }>;
@@ -435,51 +433,51 @@ const ToolCallCard: React.FC<{
   defaultExpanded = false,
   forceExpanded = false,
 }) => {
-  const { t } = useTranslation('common');
-  const at: any = entryType?.action_type || action;
-  const [expanded, toggle] = useExpandable(
-    `tool-entry:${expansionKey}`,
-    defaultExpanded
-  );
-  const effectiveExpanded = forceExpanded || expanded;
+    const { t } = useTranslation('common');
+    const at: any = entryType?.action_type || action;
+    const [expanded, toggle] = useExpandable(
+      `tool-entry:${expansionKey}`,
+      defaultExpanded
+    );
+    const effectiveExpanded = forceExpanded || expanded;
 
-  const label =
-    at?.action === 'command_run'
-      ? 'Ran'
-      : entryType?.tool_name || at?.tool_name || 'Tool';
+    const label =
+      at?.action === 'command_run'
+        ? 'Ran'
+        : entryType?.tool_name || at?.tool_name || 'Tool';
 
-  const isCommand = at?.action === 'command_run';
+    const isCommand = at?.action === 'command_run';
 
-  const inlineText = (entryContent || content || '').trim();
-  const isSingleLine = inlineText !== '' && !/\r?\n/.test(inlineText);
-  const showInlineSummary = isSingleLine;
+    const inlineText = (entryContent || content || '').trim();
+    const isSingleLine = inlineText !== '' && !/\r?\n/.test(inlineText);
+    const showInlineSummary = isSingleLine;
 
-  const hasArgs = at?.action === 'tool' && !!at?.arguments;
-  const hasResult = at?.action === 'tool' && !!at?.result;
+    const hasArgs = at?.action === 'tool' && !!at?.arguments;
+    const hasResult = at?.action === 'tool' && !!at?.result;
 
-  const output: string | null = isCommand ? (at?.result?.output ?? null) : null;
-  let argsText: string | null = null;
-  if (isCommand) {
-    const fromArgs =
-      typeof at?.arguments === 'string'
-        ? at.arguments
-        : at?.arguments != null
-          ? JSON.stringify(at.arguments, null, 2)
-          : '';
+    const output: string | null = isCommand ? (at?.result?.output ?? null) : null;
+    let argsText: string | null = null;
+    if (isCommand) {
+      const fromArgs =
+        typeof at?.arguments === 'string'
+          ? at.arguments
+          : at?.arguments != null
+            ? JSON.stringify(at.arguments, null, 2)
+            : '';
 
-    const fallback = (entryContent || content || '').trim();
-    argsText = (fromArgs || fallback).trim();
-  }
+      const fallback = (entryContent || content || '').trim();
+      argsText = (fromArgs || fallback).trim();
+    }
 
-  const hasExpandableDetails = isCommand
-    ? Boolean(argsText) || Boolean(output)
-    : hasArgs || hasResult;
+    const hasExpandableDetails = isCommand
+      ? Boolean(argsText) || Boolean(output)
+      : hasArgs || hasResult;
 
-  const HeaderWrapper: React.ElementType = hasExpandableDetails
-    ? 'button'
-    : 'div';
-  const headerProps = hasExpandableDetails
-    ? {
+    const HeaderWrapper: React.ElementType = hasExpandableDetails
+      ? 'button'
+      : 'div';
+    const headerProps = hasExpandableDetails
+      ? {
         onClick: (e: React.MouseEvent) => {
           e.preventDefault();
           toggle();
@@ -488,85 +486,85 @@ const ToolCallCard: React.FC<{
           ? t('conversation.toolDetailsToggle.hide')
           : t('conversation.toolDetailsToggle.show'),
       }
-    : {};
+      : {};
 
-  const headerClassName = cn(
-    'w-full flex items-center gap-1.5 text-left text-secondary-foreground'
-  );
-  return (
-    <div className="inline-block w-full flex flex-col gap-4">
-      <HeaderWrapper {...headerProps} className={headerClassName}>
-        <span className=" min-w-0 flex items-center gap-1.5">
-          {entryType ? (
-            <span>
-              {getStatusIndicator(entryType)}
-              {getEntryIcon(entryType)}
-            </span>
-          ) : (
-            <span className="font-normal flex">{label}</span>
-          )}
-          {showInlineSummary && (
-            <span className="font-light">{inlineText}</span>
-          )}
-        </span>
-      </HeaderWrapper>
+    const headerClassName = cn(
+      'w-full flex items-center gap-1.5 text-left text-secondary-foreground'
+    );
+    return (
+      <div className="inline-block w-full flex flex-col gap-4">
+        <HeaderWrapper {...headerProps} className={headerClassName}>
+          <span className=" min-w-0 flex items-center gap-1.5">
+            {entryType ? (
+              <span>
+                {getStatusIndicator(entryType)}
+                {getEntryIcon(entryType)}
+              </span>
+            ) : (
+              <span className="font-normal flex">{label}</span>
+            )}
+            {showInlineSummary && (
+              <span className="font-light">{inlineText}</span>
+            )}
+          </span>
+        </HeaderWrapper>
 
-      {effectiveExpanded && (
-        <div className="max-h-[200px] overflow-y-auto border">
-          {isCommand ? (
-            <>
-              {argsText && (
-                <>
-                  <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
-                    {t('conversation.args')}
-                  </div>
-                  <div className="px-2 py-1">{argsText}</div>
-                </>
-              )}
+        {effectiveExpanded && (
+          <div className="max-h-[200px] overflow-y-auto border">
+            {isCommand ? (
+              <>
+                {argsText && (
+                  <>
+                    <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
+                      {t('conversation.args')}
+                    </div>
+                    <div className="px-2 py-1">{argsText}</div>
+                  </>
+                )}
 
-              {output && (
-                <>
-                  <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
-                    {t('conversation.output')}
-                  </div>
-                  <div className="px-2 py-1">
-                    <RawLogText content={output} />
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {entryType?.action_type.action === 'tool' && (
-                <>
-                  <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
-                    {t('conversation.args')}
-                  </div>
-                  <div className="px-2 py-1">
-                    {renderJson(entryType.action_type.arguments)}
-                  </div>
-                  <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
-                    {t('conversation.result')}
-                  </div>
-                  <div className="px-2 py-1">
-                    {entryType.action_type.result?.type.type === 'markdown' &&
-                      entryType.action_type.result.value && (
-                        <MarkdownRenderer
-                          content={entryType.action_type.result.value?.toString()}
-                        />
-                      )}
-                    {entryType.action_type.result?.type.type === 'json' &&
-                      renderJson(entryType.action_type.result.value)}
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+                {output && (
+                  <>
+                    <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
+                      {t('conversation.output')}
+                    </div>
+                    <div className="px-2 py-1">
+                      <RawLogText content={output} />
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {entryType?.action_type.action === 'tool' && (
+                  <>
+                    <div className="font-normal uppercase bg-background border-b border-dashed px-2 py-1">
+                      {t('conversation.args')}
+                    </div>
+                    <div className="px-2 py-1">
+                      {renderJson(entryType.action_type.arguments)}
+                    </div>
+                    <div className="font-normal uppercase bg-background border-y border-dashed px-2 py-1">
+                      {t('conversation.result')}
+                    </div>
+                    <div className="px-2 py-1">
+                      {entryType.action_type.result?.type.type === 'markdown' &&
+                        entryType.action_type.result.value && (
+                          <MarkdownRenderer
+                            content={entryType.action_type.result.value?.toString()}
+                          />
+                        )}
+                      {entryType.action_type.result?.type.type === 'json' &&
+                        renderJson(entryType.action_type.result.value)}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
 const LoadingCard = () => {
   return (
@@ -575,6 +573,14 @@ const LoadingCard = () => {
       <div className="flex-1 h-3 bg-foreground/10"></div>
       <div className="flex-1 h-3"></div>
       <div className="flex-1 h-3"></div>
+    </div>
+  );
+};
+
+const NextActionCard = () => {
+  return (
+    <div className="px-4 py-2 text-sm">
+      <p>NEXT ACTION</p>
     </div>
   );
 };
@@ -641,6 +647,7 @@ function DisplayConversationEntry({
   const isUserMessage = entryType.type === 'user_message';
   const isUserFeedback = entryType.type === 'user_feedback';
   const isLoading = entryType.type === 'loading';
+  const isNextAction = entryType.type === 'next_action';
   const isFileEdit = (a: ActionType): a is FileEditAction =>
     a.action === 'file_edit';
 
@@ -779,6 +786,14 @@ function DisplayConversationEntry({
     return (
       <div className="px-4 py-2 text-sm">
         <LoadingCard />
+      </div>
+    );
+  }
+
+  if (isNextAction) {
+    return (
+      <div className="px-4 py-2 text-sm">
+        <NextActionCard />
       </div>
     );
   }
