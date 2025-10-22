@@ -166,7 +166,7 @@
     "path": "Path",
     "openInEditor": "Open in {{editor}}",
     "copied": "Copied!",
-    "clickToCopy": "Click to copy worktree path",
+    "clickToCopy": "Copy worktree path",
     "stopDev": "Stop Dev",
     "pauseDev": "Pause Dev",
     "startDev": "Start Dev",

@@ -19,7 +19,7 @@
       "stopDevServer": "Detener servidor de desarrollo"
     },
     "agent": "Agent",
-    "clickToCopy": "Click to copy worktree path",
+    "clickToCopy": "Copiar ruta del worktree",
     "copied": "Copied!",
     "createSubtask": "Create Subtask",
     "diffs": "Diffs",

@@ -19,7 +19,7 @@
       "stopDevServer": "開発サーバーを停止"
     },
     "agent": "Agent",
-    "clickToCopy": "Click to copy worktree path",
+    "clickToCopy": "ワークツリーパスをコピー",
     "copied": "Copied!",
     "createSubtask": "Create Subtask",
     "diffs": "Diffs",

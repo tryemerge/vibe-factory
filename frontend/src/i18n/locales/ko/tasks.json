@@ -19,7 +19,7 @@
       "stopDevServer": "개발 서버 중지"
     },
     "agent": "Agent",
-    "clickToCopy": "Click to copy worktree path",
+    "clickToCopy": "작업 트리 경로 복사",
     "copied": "Copied!",
     "createSubtask": "Create Subtask",
     "diffs": "Diffs",

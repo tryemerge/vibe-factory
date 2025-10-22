@@ -11,6 +11,12 @@ import { IdeIcon } from '@/components/ide/IdeIcon';
 import { useUserSystem } from '@/components/config-provider';
 import { getIdeName } from '@/components/ide/IdeIcon';
 import { useProject } from '@/contexts/project-context';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type NextActionCardProps = {
   attemptId?: string;
@@ -75,11 +81,12 @@ export function NextActionCard({
   const editorName = getIdeName(config?.editor?.editor_type);
 
   return (
-    <div className="pt-4 pb-8">
-      <div className="px-3 py-1 bg-foreground text-background flex">
-        <span className="font-semibold flex-1">{t('attempt.labels.summaryAndActions')}</span>
-      </div>
-      <div className="border border-foreground px-3 py-2 flex items-center gap-3 min-w-0">
+    <TooltipProvider>
+      <div className="pt-4 pb-8">
+        <div className="px-3 py-1 bg-foreground text-background flex">
+          <span className="font-semibold flex-1">{t('attempt.labels.summaryAndActions')}</span>
+        </div>
+        <div className="border border-foreground px-3 py-2 flex items-center gap-3 min-w-0">
         {/* Left: Diff summary */}
         {!error && (
           <div className="flex items-center gap-1.5 text-sm shrink-0">
@@ -95,86 +102,111 @@ export function NextActionCard({
 
         {/* Right: Icon buttons */}
         <div className="flex items-center gap-1 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            onClick={handleOpenDiffs}
-            title={t('attempt.diffs')}
-            aria-label={t('attempt.diffs')}
-          >
-            <FileDiff className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={handleOpenDiffs}
+                aria-label={t('attempt.diffs')}
+              >
+                <FileDiff className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('attempt.diffs')}</TooltipContent>
+          </Tooltip>
 
           {containerRef && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={handleCopy}
-              title={t('attempt.clickToCopy')}
-              aria-label={t('attempt.clickToCopy')}
-            >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-green-600" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={handleCopy}
+                  aria-label={t('attempt.clickToCopy')}
+                >
+                  {copied ? (
+                    <Check className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {copied ? t('attempt.copied') : t('attempt.clickToCopy')}
+              </TooltipContent>
+            </Tooltip>
           )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            onClick={handleOpenInEditor}
-            disabled={!attemptId}
-            title={t('attempt.openInEditor', { editor: editorName })}
-            aria-label={t('attempt.openInEditor', { editor: editorName })}
-          >
-            <IdeIcon
-              editorType={config?.editor?.editor_type}
-              className="h-3.5 w-3.5"
-            />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={handleOpenInEditor}
+                disabled={!attemptId}
+                aria-label={t('attempt.openInEditor', { editor: editorName })}
+              >
+                <IdeIcon
+                  editorType={config?.editor?.editor_type}
+                  className="h-3.5 w-3.5"
+                />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('attempt.openInEditor', { editor: editorName })}
+            </TooltipContent>
+          </Tooltip>
 
           {canShowStartStop && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={runningDevServer ? () => stop() : () => start()}
-              disabled={(runningDevServer ? isStopping : isStarting) || !attemptId}
-              title={
-                runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')
-              }
-              aria-label={
-                runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')
-              }
-            >
-              {runningDevServer ? (
-                <Pause className="h-3.5 w-3.5 text-destructive" />
-              ) : (
-                <Play className="h-3.5 w-3.5" />
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={runningDevServer ? () => stop() : () => start()}
+                  disabled={(runningDevServer ? isStopping : isStarting) || !attemptId}
+                  aria-label={
+                    runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')
+                  }
+                >
+                  {runningDevServer ? (
+                    <Pause className="h-3.5 w-3.5 text-destructive" />
+                  ) : (
+                    <Play className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')}
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {latestDevServerProcess && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={handleViewLogs}
-              disabled={!attemptId}
-              title={t('attempt.viewDevLogs')}
-              aria-label={t('attempt.viewDevLogs')}
-            >
-              <Terminal className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={handleViewLogs}
+                  disabled={!attemptId}
+                  aria-label={t('attempt.viewDevLogs')}
+                >
+                  <Terminal className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('attempt.viewDevLogs')}</TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
