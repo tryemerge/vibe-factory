@@ -202,7 +202,7 @@ function ParentAttemptInline({
 }) {
   return (
     <Card
-      className="border-dashed bg-muted/30 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+      className="border border-dashed bg-muted/30 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
       role="button"
       tabIndex={0}
       onClick={() => {
