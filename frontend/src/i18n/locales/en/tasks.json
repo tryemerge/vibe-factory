@@ -167,6 +167,7 @@
     "copied": "Copied!",
     "clickToCopy": "Click to copy worktree path",
     "stopDev": "Stop Dev",
+    "pauseDev": "Pause Dev",
     "startDev": "Start Dev",
     "viewDevLogs": "View dev server logs",
     "stopping": "Stopping...",

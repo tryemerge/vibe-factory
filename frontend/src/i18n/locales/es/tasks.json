@@ -32,6 +32,7 @@
     "newAttempt": "New Attempt",
     "openInEditor": "Open in {{editor}}",
     "path": "Path",
+    "pauseDev": "Pausar Dev",
     "preview": "Preview",
     "startDev": "Start Dev",
     "stopAttempt": "Stop Attempt",
