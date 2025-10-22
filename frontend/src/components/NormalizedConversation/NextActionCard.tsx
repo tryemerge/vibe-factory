@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { IdeIcon } from '@/components/ide/IdeIcon';
 import { useUserSystem } from '@/components/config-provider';
 import { getIdeName } from '@/components/ide/IdeIcon';
+import { useProject } from '@/contexts/project-context';
 
 type NextActionCardProps = {
   attemptId?: string;
@@ -22,6 +23,7 @@ export function NextActionCard({
 }: NextActionCardProps) {
   const { t } = useTranslation('tasks');
   const { config } = useUserSystem();
+  const { project } = useProject();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
 
@@ -37,6 +39,9 @@ export function NextActionCard({
     runningDevServer,
     latestDevServerProcess,
   } = useDevServer(attemptId);
+
+  const projectHasDevScript = Boolean(project?.dev_script);
+  const canShowStartStop = runningDevServer || projectHasDevScript;
 
   const handleCopy = useCallback(async () => {
     if (!containerRef) return;
@@ -133,25 +138,27 @@ export function NextActionCard({
             />
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            onClick={runningDevServer ? () => stop() : () => start()}
-            disabled={(runningDevServer ? isStopping : isStarting) || !attemptId}
-            title={
-              runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')
-            }
-            aria-label={
-              runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')
-            }
-          >
-            {runningDevServer ? (
-              <Pause className="h-3.5 w-3.5 text-destructive" />
-            ) : (
-              <Play className="h-3.5 w-3.5" />
-            )}
-          </Button>
+          {canShowStartStop && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={runningDevServer ? () => stop() : () => start()}
+              disabled={(runningDevServer ? isStopping : isStarting) || !attemptId}
+              title={
+                runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')
+              }
+              aria-label={
+                runningDevServer ? t('attempt.pauseDev') : t('attempt.startDev')
+              }
+            >
+              {runningDevServer ? (
+                <Pause className="h-3.5 w-3.5 text-destructive" />
+              ) : (
+                <Play className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
 
           {latestDevServerProcess && (
             <Button
