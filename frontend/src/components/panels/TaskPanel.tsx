@@ -94,7 +94,9 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
                 isLoading={isParentLoading}
                 navigateToAttempt={(attempt) => {
                   if (projectId) {
-                    navigate(paths.attempt(projectId, attempt.task_id, attempt.id));
+                    navigate(
+                      paths.attempt(projectId, attempt.task_id, attempt.id)
+                    );
                   }
                 }}
                 formatTimeAgo={formatTimeAgo}
@@ -215,7 +217,9 @@ function AttemptsTable({
 }) {
   if (isLoading) {
     return (
-      <div className="text-muted-foreground">{t('taskPanel.loadingAttempts')}</div>
+      <div className="text-muted-foreground">
+        {t('taskPanel.loadingAttempts')}
+      </div>
     );
   }
   if (isError) {
