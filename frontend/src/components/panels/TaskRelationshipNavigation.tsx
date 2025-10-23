@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
@@ -22,7 +21,6 @@ export const TaskRelationshipNavigation = ({
   task,
   attempt,
 }: TaskRelationshipNavigationProps) => {
-  const { t } = useTranslation('tasks');
   const navigate = useNavigateWithSearch();
   const { projectId } = useProject();
 

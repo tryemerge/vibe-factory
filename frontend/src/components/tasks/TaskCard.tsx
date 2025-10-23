@@ -21,7 +21,6 @@ export function TaskCard({
   status,
   onViewDetails,
   isOpen,
-  projectId,
 }: TaskCardProps) {
   const handleClick = useCallback(() => {
     onViewDetails(task);
