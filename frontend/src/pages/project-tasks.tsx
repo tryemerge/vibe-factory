@@ -665,17 +665,6 @@ export function ProjectTasks() {
   const rightHeader = selectedTask ? (
     <NewCardHeader
       className="shrink-0"
-      leftActions={
-        !isTaskView ? (
-          <>
-            <TaskRelationshipNavigation
-              task={selectedTask}
-              attempt={attempt ?? null}
-            />
-            <div className="h-4 w-px bg-border" />
-          </>
-        ) : undefined
-      }
       actions={
         isTaskView ? (
           <TaskPanelHeaderActions
@@ -697,7 +686,7 @@ export function ProjectTasks() {
         )
       }
     >
-      <div className="mx-auto w-full">
+      <div className="mx-auto w-full flex items-center gap-4">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -728,6 +717,15 @@ export function ProjectTasks() {
             )}
           </BreadcrumbList>
         </Breadcrumb>
+        {!isTaskView && (
+          <>
+            <div className="h-4 w-px bg-border" />
+            <TaskRelationshipNavigation
+              task={selectedTask}
+              attempt={attempt ?? null}
+            />
+          </>
+        )}
       </div>
     </NewCardHeader>
   ) : null;
