@@ -242,7 +242,11 @@
   "attemptHeaderActions": {
     "preview": "Preview",
     "diffs": "Diffs",
-    "relatedTasks": "Related tasks"
+    "relatedTasks": "Related tasks",
+    "parent": "Parent",
+    "parentTooltip": "Navigate to parent task",
+    "nextChild": "Next Child",
+    "nextChildTooltip": "Navigate to next child task"
   },
   "actionsMenu": {
     "attempt": "Attempt",
