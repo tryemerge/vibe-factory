@@ -29,7 +29,9 @@ export function useTaskMutations(projectId?: string) {
       // Invalidate parent's children cache if this is a subtask
       if (createdTask.parent_task_attempt) {
         queryClient.invalidateQueries({
-          queryKey: taskRelationshipsKeys.byAttempt(createdTask.parent_task_attempt),
+          queryKey: taskRelationshipsKeys.byAttempt(
+            createdTask.parent_task_attempt
+          ),
         });
       }
       if (projectId) {
