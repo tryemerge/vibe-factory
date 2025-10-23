@@ -61,6 +61,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { AttemptHeaderActions } from '@/components/panels/AttemptHeaderActions';
 import { TaskPanelHeaderActions } from '@/components/panels/TaskPanelHeaderActions';
+import { TaskRelationshipNavigation } from '@/components/panels/TaskRelationshipNavigation';
 
 type Task = TaskWithAttemptStatus;
 
@@ -664,6 +665,14 @@ export function ProjectTasks() {
   const rightHeader = selectedTask ? (
     <NewCardHeader
       className="shrink-0"
+      leftActions={
+        !isTaskView ? (
+          <TaskRelationshipNavigation
+            task={selectedTask}
+            attempt={attempt ?? null}
+          />
+        ) : undefined
+      }
       actions={
         isTaskView ? (
           <TaskPanelHeaderActions
