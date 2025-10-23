@@ -44,11 +44,7 @@
   "attemptHeaderActions": {
     "diffs": "Diffs",
     "preview": "Preview",
-    "relatedTasks": "Related tasks",
-    "parent": "Padre",
-    "parentTooltip": "Navegar a tarea padre",
-    "nextChild": "Siguiente Hijo",
-    "nextChildTooltip": "Navegar a tarea hija siguiente"
+    "relatedTasks": "Related tasks"
   },
   "branches": {
     "changeTarget": {

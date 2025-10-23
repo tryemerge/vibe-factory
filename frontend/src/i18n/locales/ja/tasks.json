@@ -44,11 +44,7 @@
   "attemptHeaderActions": {
     "diffs": "Diffs",
     "preview": "Preview",
-    "relatedTasks": "Related tasks",
-    "parent": "親",
-    "parentTooltip": "親タスクに移動",
-    "nextChild": "次の子",
-    "nextChildTooltip": "次の子タスクに移動"
+    "relatedTasks": "Related tasks"
   },
   "branches": {
     "changeTarget": {
