@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { attemptsApi } from '@/lib/api';
-import type { Task } from 'shared/types';
+import type { TaskRelationships } from 'shared/types';
 
-export const taskChildrenKeys = {
-  all: ['taskChildren'] as const,
+export const taskRelationshipsKeys = {
+  all: ['taskRelationships'] as const,
   byAttempt: (attemptId: string | undefined) =>
-    ['taskChildren', attemptId] as const,
+    ['taskRelationships', attemptId] as const,
 };
+
+// Keep old export for backwards compatibility during migration
+export const taskChildrenKeys = taskRelationshipsKeys;
 
 type Options = {
   enabled?: boolean;
@@ -15,14 +18,14 @@ type Options = {
   retry?: number | false;
 };
 
-export function useTaskChildren(attemptId?: string, opts?: Options) {
+export function useTaskRelationships(attemptId?: string, opts?: Options) {
   const enabled = (opts?.enabled ?? true) && !!attemptId;
 
-  return useQuery<Task[]>({
-    queryKey: taskChildrenKeys.byAttempt(attemptId),
+  return useQuery<TaskRelationships | null>({
+    queryKey: taskRelationshipsKeys.byAttempt(attemptId),
     queryFn: async () => {
       const data = await attemptsApi.getChildren(attemptId!);
-      return data?.children ?? [];
+      return data ?? null;
     },
     enabled,
     refetchInterval: opts?.refetchInterval ?? false,
@@ -30,3 +33,6 @@ export function useTaskChildren(attemptId?: string, opts?: Options) {
     retry: opts?.retry ?? 2,
   });
 }
+
+// Keep old export for backwards compatibility during migration
+export const useTaskChildren = useTaskRelationships;

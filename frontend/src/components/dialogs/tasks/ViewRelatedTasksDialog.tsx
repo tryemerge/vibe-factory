@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { PlusIcon } from 'lucide-react';
 import { openTaskForm } from '@/lib/openTaskForm';
-import { useTaskChildren } from '@/hooks/useTaskChildren';
+import { useTaskRelationships } from '@/hooks/useTaskChildren';
 import { DataTable, type ColumnDef } from '@/components/ui/table/DataTable';
 import type { Task, TaskAttempt } from 'shared/types';
 
@@ -26,11 +26,13 @@ export const ViewRelatedTasksDialog =
       const modal = useModal();
       const { t } = useTranslation('tasks');
       const {
-        data: children = [],
+        data: relationships,
         isLoading,
         isError,
         refetch,
-      } = useTaskChildren(attemptId);
+      } = useTaskRelationships(attemptId);
+
+      const children = relationships?.children ?? [];
 
       const taskColumns: ColumnDef<Task>[] = [
         {

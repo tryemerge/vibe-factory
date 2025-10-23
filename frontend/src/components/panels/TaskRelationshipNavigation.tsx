@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowUp, ArrowRight } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   Tooltip,
@@ -9,8 +9,7 @@ import {
 } from '../ui/tooltip';
 import type { TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 import { useNavigateWithSearch } from '@/hooks';
-import { useTaskChildren } from '@/hooks/useTaskChildren';
-import { useTaskAttempt } from '@/hooks/useTaskAttempt';
+import { useTaskRelationships } from '@/hooks/useTaskChildren';
 import { useProject } from '@/contexts/project-context';
 import { paths } from '@/lib/paths';
 
@@ -27,77 +26,76 @@ export const TaskRelationshipNavigation = ({
   const navigate = useNavigateWithSearch();
   const { projectId } = useProject();
 
-  // Fetch parent task attempt if exists
-  const { data: parentAttempt } = useTaskAttempt(
-    task.parent_task_attempt || undefined
-  );
-
-  // Fetch children tasks if attempt exists
-  const { data: children = [] } = useTaskChildren(attempt?.id, {
+  // Fetch relationships (parent + children) in one API call
+  const { data: relationships } = useTaskRelationships(attempt?.id, {
     enabled: !!attempt?.id,
   });
 
-  const hasParent = !!task.parent_task_attempt && !!parentAttempt;
-  const hasChildren = children.length > 0;
+  const parentTask = relationships?.parent_task;
+  const children = relationships?.children ?? [];
+
+  const truncateTitle = (title: string, maxLength = 10) => {
+    if (title.length <= maxLength) return title;
+    return title.substring(0, maxLength) + '...';
+  };
 
   const handleNavigateToParent = () => {
-    if (projectId && parentAttempt) {
+    if (projectId && parentTask && task.parent_task_attempt) {
       navigate(
-        paths.attempt(projectId, parentAttempt.task_id, parentAttempt.id)
+        paths.attempt(projectId, parentTask.id, task.parent_task_attempt)
       );
     }
   };
 
-  const handleNavigateToNextChild = () => {
-    if (projectId && children.length > 0) {
-      const firstChild = children[0];
-      navigate(paths.task(projectId, firstChild.id) + '/attempts/latest');
+  const handleNavigateToChild = (childId: string) => {
+    if (projectId) {
+      navigate(paths.task(projectId, childId) + '/attempts/latest');
     }
   };
 
   // Don't render anything if no relationships exist
-  if (!hasParent && !hasChildren) {
+  if (!parentTask && children.length === 0) {
     return null;
   }
 
   return (
     <TooltipProvider>
-      {hasParent && (
+      {parentTask && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleNavigateToParent}
-              aria-label={t('attemptHeaderActions.parent')}
+              aria-label={`Navigate to parent: ${parentTask.title}`}
             >
               <ArrowUp className="h-4 w-4 mr-1" />
-              {t('attemptHeaderActions.parent')}
+              {truncateTitle(parentTask.title)}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {t('attemptHeaderActions.parentTooltip')}
+            <div className="max-w-xs">{parentTask.title}</div>
           </TooltipContent>
         </Tooltip>
       )}
-      {hasChildren && (
-        <Tooltip>
+      {children.map((child) => (
+        <Tooltip key={child.id}>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleNavigateToNextChild}
-              aria-label={t('attemptHeaderActions.nextChild')}
+              onClick={() => handleNavigateToChild(child.id)}
+              aria-label={`Navigate to child: ${child.title}`}
             >
-              {t('attemptHeaderActions.nextChild')}
-              <ArrowRight className="h-4 w-4 ml-1" />
+              <ArrowDown className="h-4 w-4 mr-1" />
+              {truncateTitle(child.title)}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {t('attemptHeaderActions.nextChildTooltip')}
+            <div className="max-w-xs">{child.title}</div>
           </TooltipContent>
         </Tooltip>
-      )}
+      ))}
     </TooltipProvider>
   );
 };
