@@ -642,7 +642,6 @@ function DisplayConversationEntry({
   const isUserMessage = entryType.type === 'user_message';
   const isUserFeedback = entryType.type === 'user_feedback';
   const isLoading = entryType.type === 'loading';
-  const isNextAction = entryType.type === 'next_action';
   const isFileEdit = (a: ActionType): a is FileEditAction =>
     a.action === 'file_edit';
 
@@ -785,12 +784,13 @@ function DisplayConversationEntry({
     );
   }
 
-  if (isNextAction) {
+  if (entry.entry_type.type === 'next_action') {
     return (
       <div className="px-4 py-2 text-sm">
         <NextActionCard
           attemptId={taskAttempt?.id}
           containerRef={taskAttempt?.container_ref}
+          failed={entry.entry_type.failed}
         />
       </div>
     );

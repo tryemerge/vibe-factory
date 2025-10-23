@@ -63,18 +63,19 @@ const loadingPatch: PatchTypeWithKey = {
   executionProcessId: '',
 };
 
-const nextActionPatch: PatchTypeWithKey = {
+const nextActionPatch: (failed: boolean) => PatchTypeWithKey = (failed) => ({
   type: 'NORMALIZED_ENTRY',
   content: {
     entry_type: {
       type: 'next_action',
+      failed: failed,
     },
     content: '',
     timestamp: null,
   },
   patchKey: 'next_action',
   executionProcessId: '',
-};
+});
 
 export const useConversationHistory = ({
   attempt,
@@ -226,7 +227,10 @@ export const useConversationHistory = ({
   const flattenEntriesForEmit = (
     executionProcessState: ExecutionProcessStateStore
   ): PatchTypeWithKey[] => {
+    // Flags to control Next Action bar emit
     let hasPendingApproval = false;
+    let hasRunningProcess = false;
+    let lastProcessFailed = false;
 
     // Create user messages + tool calls for setup/cleanup scripts
     const allEntries = Object.values(executionProcessState)
@@ -237,7 +241,7 @@ export const useConversationHistory = ({
           ).getTime() -
           new Date(b.executionProcess.created_at as unknown as string).getTime()
       )
-      .flatMap((p) => {
+      .flatMap((p, index) => {
         const entries: PatchTypeWithKey[] = [];
         if (
           p.executionProcess.executor_action.typ.type ===
@@ -285,9 +289,25 @@ export const useConversationHistory = ({
           }
 
           entries.push(...entriesExcludingUser);
+
+          const liveProcessStatus = getLiveExecutionProcess(
+            p.executionProcess.id
+          )?.status;
           const isProcessRunning =
-            getLiveExecutionProcess(p.executionProcess.id)?.status ===
-            ExecutionProcessStatus.running;
+            liveProcessStatus === ExecutionProcessStatus.running;
+          const didProcessFail =
+            liveProcessStatus === ExecutionProcessStatus.failed;
+
+          if (isProcessRunning) {
+            hasRunningProcess = true;
+          }
+
+          if (
+            didProcessFail &&
+            index === Object.keys(executionProcessState).length - 1
+          ) {
+            lastProcessFailed = true;
+          }
 
           if (isProcessRunning && !hasPendingApprovalEntry) {
             entries.push(loadingPatch);
@@ -311,6 +331,17 @@ export const useConversationHistory = ({
           const executionProcess = getLiveExecutionProcess(
             p.executionProcess.id
           );
+
+          if (executionProcess?.status === ExecutionProcessStatus.running) {
+            hasRunningProcess = true;
+          }
+
+          if (
+            executionProcess?.status === ExecutionProcessStatus.failed &&
+            index === Object.keys(executionProcessState).length - 1
+          ) {
+            lastProcessFailed = true;
+          }
 
           const exitCode = Number(executionProcess?.exit_code) || 0;
           const exit_status: CommandExitStatus | null =
@@ -363,12 +394,9 @@ export const useConversationHistory = ({
         return entries;
       });
 
-    const anyProcessesRunning = executionProcesses?.current.some(
-      (p) => p.status === ExecutionProcessStatus.running
-    );
-
-    if (!anyProcessesRunning && !hasPendingApproval) {
-      allEntries.push(nextActionPatch);
+    // Emit the next action bar if no process running
+    if (!hasRunningProcess && !hasPendingApproval) {
+      allEntries.push(nextActionPatch(lastProcessFailed));
     }
 
     return allEntries;

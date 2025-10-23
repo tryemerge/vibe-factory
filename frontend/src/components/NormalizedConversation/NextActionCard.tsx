@@ -21,11 +21,13 @@ import {
 type NextActionCardProps = {
   attemptId?: string;
   containerRef?: string | null;
+  failed: boolean;
 };
 
 export function NextActionCard({
   attemptId,
   containerRef,
+  failed,
 }: NextActionCardProps) {
   const { t } = useTranslation('tasks');
   const { config } = useUserSystem();
@@ -85,7 +87,8 @@ export function NextActionCard({
       <div className="pt-4 pb-8">
         <div className="px-3 py-1 bg-foreground text-background flex">
           <span className="font-semibold flex-1">
-            {t('attempt.labels.summaryAndActions')}
+            {t('attempt.labels.summaryAndActions')}:{' '}
+            {failed ? 'failed' : 'succeeded'}
           </span>
         </div>
         <div className="border border-foreground px-3 py-2 flex items-center gap-3 min-w-0">

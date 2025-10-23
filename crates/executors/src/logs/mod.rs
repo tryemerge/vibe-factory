@@ -65,7 +65,9 @@ pub enum NormalizedEntryType {
     ErrorMessage,
     Thinking,
     Loading,
-    NextAction,
+    NextAction {
+        failed: bool,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
