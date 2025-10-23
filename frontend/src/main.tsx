@@ -26,7 +26,7 @@ import {
   EditorSelectionDialog,
   DeleteTaskConfirmationDialog,
   FolderPickerDialog,
-  TaskTemplateEditDialog,
+  TagEditDialog,
   ChangeTargetBranchDialog,
   RebaseDialog,
   CreateConfigurationDialog,
@@ -35,6 +35,7 @@ import {
   ProjectEditorSelectionDialog,
   RestoreLogsDialog,
   ViewProcessesDialog,
+  GitActionsDialog,
 } from './components/dialogs';
 import { CreateAttemptDialog } from './components/dialogs/tasks/CreateAttemptDialog';
 
@@ -51,7 +52,7 @@ NiceModal.register('delete-task-confirmation', DeleteTaskConfirmationDialog);
 NiceModal.register('task-form', TaskFormDialog);
 NiceModal.register('editor-selection', EditorSelectionDialog);
 NiceModal.register('folder-picker', FolderPickerDialog);
-NiceModal.register('task-template-edit', TaskTemplateEditDialog);
+NiceModal.register('tag-edit', TagEditDialog);
 NiceModal.register('change-target-branch-dialog', ChangeTargetBranchDialog);
 NiceModal.register('rebase-dialog', RebaseDialog);
 NiceModal.register('create-configuration', CreateConfigurationDialog);
@@ -61,8 +62,7 @@ NiceModal.register('project-editor-selection', ProjectEditorSelectionDialog);
 NiceModal.register('restore-logs', RestoreLogsDialog);
 NiceModal.register('view-processes', ViewProcessesDialog);
 NiceModal.register('create-attempt', CreateAttemptDialog);
-// Install VS Code iframe keyboard bridge when running inside an iframe
-import './vscode/bridge';
+NiceModal.register('git-actions', GitActionsDialog);
 
 import {
   useLocation,
