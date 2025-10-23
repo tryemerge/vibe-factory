@@ -44,7 +44,11 @@
   "attemptHeaderActions": {
     "diffs": "Diffs",
     "preview": "Preview",
-    "relatedTasks": "Related tasks"
+    "relatedTasks": "Related tasks",
+    "parent": "부모",
+    "parentTooltip": "부모 작업으로 이동",
+    "nextChild": "다음 자식",
+    "nextChildTooltip": "다음 자식 작업으로 이동"
   },
   "branches": {
     "changeTarget": {
