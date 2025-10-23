@@ -665,6 +665,17 @@ export function ProjectTasks() {
   const rightHeader = selectedTask ? (
     <NewCardHeader
       className="shrink-0"
+      leftActions={
+        !isTaskView ? (
+          <>
+            <TaskRelationshipNavigation
+              task={selectedTask}
+              attempt={attempt ?? null}
+            />
+            <div className="h-4 w-px bg-border" />
+          </>
+        ) : undefined
+      }
       actions={
         isTaskView ? (
           <TaskPanelHeaderActions
@@ -674,22 +685,15 @@ export function ProjectTasks() {
             }
           />
         ) : (
-          <>
-            <TaskRelationshipNavigation
-              task={selectedTask}
-              attempt={attempt ?? null}
-            />
-            <div className="h-4 w-px bg-border" />
-            <AttemptHeaderActions
-              mode={mode}
-              onModeChange={setMode}
-              task={selectedTask}
-              attempt={attempt ?? null}
-              onClose={() =>
-                navigate(`/projects/${projectId}/tasks`, { replace: true })
-              }
-            />
-          </>
+          <AttemptHeaderActions
+            mode={mode}
+            onModeChange={setMode}
+            task={selectedTask}
+            attempt={attempt ?? null}
+            onClose={() =>
+              navigate(`/projects/${projectId}/tasks`, { replace: true })
+            }
+          />
         )
       }
     >
