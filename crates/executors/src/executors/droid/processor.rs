@@ -55,7 +55,7 @@ fn lines_from_stream(
             buffer = buffer.rsplit('\n').next().unwrap_or("").to_owned();
         }
 
-        if !buffer.trim().is_empty(){
+        if !buffer.trim().is_empty() {
             yield buffer;
         }
     }
