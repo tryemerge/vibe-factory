@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useProject } from '@/contexts/project-context';
 import { useTaskAttempts } from '@/hooks/useTaskAttempts';
-import { useTaskAttempt } from '@/hooks/useTaskAttempt';
 import { useNavigateWithSearch } from '@/hooks';
 import { paths } from '@/lib/paths';
 import type { TaskWithAttemptStatus, TaskAttempt } from 'shared/types';
@@ -26,10 +25,6 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
     isLoading: isAttemptsLoading,
     isError: isAttemptsError,
   } = useTaskAttempts(task?.id);
-
-  const { data: parentAttempt, isLoading: isParentLoading } = useTaskAttempt(
-    task?.parent_task_attempt || undefined
-  );
 
   const formatTimeAgo = (iso: string) => {
     const d = new Date(iso);
@@ -110,23 +105,6 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
           </div>
 
           <div className="mt-6 flex-shrink-0 space-y-4">
-            {task.parent_task_attempt && (
-              <DataTable
-                data={parentAttempt ? [parentAttempt] : []}
-                columns={attemptColumns}
-                keyExtractor={(attempt) => attempt.id}
-                onRowClick={(attempt) => {
-                  if (projectId) {
-                    navigate(
-                      paths.attempt(projectId, attempt.task_id, attempt.id)
-                    );
-                  }
-                }}
-                isLoading={isParentLoading}
-                headerContent="Parent Attempt"
-              />
-            )}
-
             {isAttemptsLoading ? (
               <div className="text-muted-foreground">
                 {t('taskPanel.loadingAttempts')}
