@@ -9,7 +9,7 @@ import {
 } from '../ui/tooltip';
 import type { TaskAttempt, TaskWithAttemptStatus } from 'shared/types';
 import { useNavigateWithSearch } from '@/hooks';
-import { useTaskRelationships } from '@/hooks/useTaskChildren';
+import { useTaskRelationships } from '@/hooks/useTaskRelationships';
 import { useProject } from '@/contexts/project-context';
 import { paths } from '@/lib/paths';
 
@@ -26,7 +26,6 @@ export const TaskRelationshipNavigation = ({
   const navigate = useNavigateWithSearch();
   const { projectId } = useProject();
 
-  // Fetch relationships (parent + children) in one API call
   const { data: relationships } = useTaskRelationships(attempt?.id, {
     enabled: !!attempt?.id,
   });
