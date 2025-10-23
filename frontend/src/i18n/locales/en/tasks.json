@@ -164,7 +164,7 @@
     },
     "agent": "Agent",
     "path": "Path",
-    "openInEditor": "Open in {{editor}}",
+    "openInEditor": "See changes in {{editor}}",
     "copied": "Copied!",
     "clickToCopy": "Copy worktree path",
     "stopDev": "Stop Dev",

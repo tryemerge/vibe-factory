@@ -91,7 +91,11 @@ export function NextActionCard({
         <div className="border border-foreground px-3 py-2 flex items-center gap-3 min-w-0">
           {/* Left: Diff summary */}
           {!error && (
-            <div className="flex items-center gap-1.5 text-sm shrink-0">
+            <button
+              onClick={handleOpenDiffs}
+              className="flex items-center gap-1.5 text-sm shrink-0 cursor-pointer hover:underline transition-all"
+              aria-label={t('attempt.diffs')}
+            >
               <span>{t('diff.filesChanged', { count: fileCount })}</span>
               <span className="opacity-50">•</span>
               <span className="text-green-600 dark:text-green-400">
@@ -99,7 +103,7 @@ export function NextActionCard({
               </span>
               <span className="opacity-50">•</span>
               <span className="text-red-600 dark:text-red-400">-{deleted}</span>
-            </div>
+            </button>
           )}
 
           <div className="flex-1" />
