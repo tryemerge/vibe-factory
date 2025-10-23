@@ -82,16 +82,24 @@ export function NextActionCard({
 
   const editorName = getIdeName(config?.editor?.editor_type);
 
+  // Necessary to prevent this component being displayed beyond fold within Virtualised List
+  if (!failed && fileCount === 0) {
+    return <div className="h-24"></div>;
+  }
+
   return (
     <TooltipProvider>
       <div className="pt-4 pb-8">
-        <div className="px-3 py-1 bg-foreground text-background flex">
+        <div
+          className={`px-3 py-1 text-background flex ${failed ? 'bg-destructive' : 'bg-foreground'}`}
+        >
           <span className="font-semibold flex-1">
-            {t('attempt.labels.summaryAndActions')}:{' '}
-            {failed ? 'failed' : 'succeeded'}
+            {t('attempt.labels.summaryAndActions')}
           </span>
         </div>
-        <div className="border border-foreground px-3 py-2 flex items-center gap-3 min-w-0">
+        <div
+          className={`border px-3 py-2 flex items-center gap-3 min-w-0 ${failed ? 'border-destructive' : 'border-foreground'}`}
+        >
           {/* Left: Diff summary */}
           {!error && (
             <button
