@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::events::DomainEvent;
+use super::events::LogEvent;
 use crate::logs::utils::patch::ConversationPatch;
 
 /// Trait for index providers (allows testing with fakes)
@@ -21,10 +21,10 @@ impl PatchEmitter {
         }
     }
 
-    /// Convert domain events to JSON patches using the index provider
+    /// Convert log events to JSON patches using the index provider
     pub fn emit_patches(
         &mut self,
-        events: Vec<DomainEvent>,
+        events: Vec<LogEvent>,
         index_provider: &dyn IndexProviderLike,
     ) -> Vec<json_patch::Patch> {
         events
@@ -35,15 +35,15 @@ impl PatchEmitter {
 
     fn emit_event(
         &mut self,
-        event: DomainEvent,
+        event: LogEvent,
         index_provider: &dyn IndexProviderLike,
     ) -> Option<json_patch::Patch> {
         match event {
-            DomainEvent::AddEntry(entry) => {
+            LogEvent::AddEntry(entry) => {
                 let idx = index_provider.next();
                 Some(ConversationPatch::add_normalized_entry(idx, entry))
             }
-            DomainEvent::AddToolCall {
+            LogEvent::AddToolCall {
                 tool_call_id,
                 entry,
             } => {
@@ -51,7 +51,7 @@ impl PatchEmitter {
                 self.tool_call_idx.insert(tool_call_id, idx);
                 Some(ConversationPatch::add_normalized_entry(idx, entry))
             }
-            DomainEvent::UpdateToolCall {
+            LogEvent::UpdateToolCall {
                 tool_call_id,
                 entry,
             } => {

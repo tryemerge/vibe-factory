@@ -1,14 +1,14 @@
 use std::{fs, path::Path};
 
 use executors::executors::droid::{
-    events::{DomainEvent, ProcessorState, process_event},
+    events::{LogEvent, ProcessorState, process_event},
     types::DroidJson,
 };
 
 #[derive(serde::Serialize)]
 struct SessionSnapshot {
     final_state: ProcessorState,
-    events: Vec<DomainEvent>,
+    events: Vec<LogEvent>,
     event_count: usize,
 }
 

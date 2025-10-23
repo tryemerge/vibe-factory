@@ -28,7 +28,7 @@ pub struct PendingToolCall {
 
 /// Lightweight wrapper around NormalizedEntry with correlation info
 #[derive(Debug, Clone, serde::Serialize)]
-pub enum DomainEvent {
+pub enum LogEvent {
     /// Add a new entry
     AddEntry(NormalizedEntry),
     /// Add a new tool call (needs tool_call_id tracking for later update)
@@ -47,7 +47,7 @@ pub fn process_event(
     state: ProcessorState,
     event: &DroidJson,
     worktree_path: &Path,
-) -> (ProcessorState, Vec<DomainEvent>) {
+) -> (ProcessorState, Vec<LogEvent>) {
     let mut state = state;
     let mut events = Vec::new();
 
@@ -57,7 +57,7 @@ pub fn process_event(
                 && let Some(model) = model
             {
                 state.model_reported = true;
-                events.push(DomainEvent::AddEntry(NormalizedEntry {
+                events.push(LogEvent::AddEntry(NormalizedEntry {
                     timestamp: None,
                     entry_type: NormalizedEntryType::SystemMessage,
                     content: format!("model: {model}"),
@@ -78,7 +78,7 @@ pub fn process_event(
                 _ => NormalizedEntryType::SystemMessage,
             };
 
-            events.push(DomainEvent::AddEntry(NormalizedEntry {
+            events.push(LogEvent::AddEntry(NormalizedEntry {
                 timestamp: Some(timestamp.to_string()),
                 entry_type,
                 content: text.clone(),
@@ -115,7 +115,7 @@ pub fn process_event(
                 obj.insert("toolCallId".to_string(), serde_json::json!(id));
             }
 
-            events.push(DomainEvent::AddToolCall {
+            events.push(LogEvent::AddToolCall {
                 tool_call_id: id.clone(),
                 entry: NormalizedEntry {
                     timestamp: Some(timestamp.to_string()),
@@ -147,7 +147,7 @@ pub fn process_event(
                 let updated_action_type =
                     compute_updated_action_type(&call, payload, *is_error, worktree_path);
 
-                events.push(DomainEvent::UpdateToolCall {
+                events.push(LogEvent::UpdateToolCall {
                     tool_call_id: id.clone(),
                     entry: NormalizedEntry {
                         timestamp: Some(timestamp.to_string()),
@@ -166,7 +166,7 @@ pub fn process_event(
         DroidJson::Error {
             message, timestamp, ..
         } => {
-            events.push(DomainEvent::AddEntry(NormalizedEntry {
+            events.push(LogEvent::AddEntry(NormalizedEntry {
                 timestamp: Some(timestamp.to_string()),
                 entry_type: NormalizedEntryType::ErrorMessage,
                 content: message.clone(),
@@ -313,7 +313,7 @@ mod tests {
         let (_state, events) = process_event(state, &event, worktree_path);
 
         match &events[0] {
-            DomainEvent::AddToolCall { entry, .. } => {
+            LogEvent::AddToolCall { entry, .. } => {
                 let metadata = entry.metadata.as_ref().unwrap();
                 // Should be string, not object with toolCallId
                 assert_eq!(metadata, &serde_json::json!("string-param"));
@@ -389,7 +389,7 @@ mod tests {
         let (_state, events) = process_event(state, &result_event, worktree_path);
 
         match &events[0] {
-            DomainEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
+            LogEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
                 crate::logs::NormalizedEntryType::ToolUse {
                     action_type,
                     status,
@@ -432,7 +432,7 @@ mod tests {
         let (_state, events) = process_event(state, &result_event, worktree_path);
 
         match &events[0] {
-            DomainEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
+            LogEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
                 crate::logs::NormalizedEntryType::ToolUse {
                     action_type,
                     status,
@@ -481,7 +481,7 @@ mod tests {
         // Should still produce UpdateToolCall with FileEdit (parse failed, so falls back)
         assert_eq!(events.len(), 1);
         match &events[0] {
-            DomainEvent::UpdateToolCall { entry, .. } => {
+            LogEvent::UpdateToolCall { entry, .. } => {
                 assert!(matches!(
                     &entry.entry_type,
                     crate::logs::NormalizedEntryType::ToolUse {
