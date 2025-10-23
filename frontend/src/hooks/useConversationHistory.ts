@@ -230,7 +230,7 @@ export const useConversationHistory = ({
     // Flags to control Next Action bar emit
     let hasPendingApproval = false;
     let hasRunningProcess = false;
-    let lastProcessFailed = false;
+    let lastProcessFailedOrKilled = false;
 
     // Create user messages + tool calls for setup/cleanup scripts
     const allEntries = Object.values(executionProcessState)
@@ -295,18 +295,19 @@ export const useConversationHistory = ({
           )?.status;
           const isProcessRunning =
             liveProcessStatus === ExecutionProcessStatus.running;
-          const didProcessFail =
-            liveProcessStatus === ExecutionProcessStatus.failed;
+          const processFailedOrKilled =
+            liveProcessStatus === ExecutionProcessStatus.failed ||
+            liveProcessStatus === ExecutionProcessStatus.killed;
 
           if (isProcessRunning) {
             hasRunningProcess = true;
           }
 
           if (
-            didProcessFail &&
+            processFailedOrKilled &&
             index === Object.keys(executionProcessState).length - 1
           ) {
-            lastProcessFailed = true;
+            lastProcessFailedOrKilled = true;
           }
 
           if (isProcessRunning && !hasPendingApprovalEntry) {
@@ -337,10 +338,11 @@ export const useConversationHistory = ({
           }
 
           if (
-            executionProcess?.status === ExecutionProcessStatus.failed &&
+            (executionProcess?.status === ExecutionProcessStatus.failed ||
+              executionProcess?.status === ExecutionProcessStatus.killed) &&
             index === Object.keys(executionProcessState).length - 1
           ) {
-            lastProcessFailed = true;
+            lastProcessFailedOrKilled = true;
           }
 
           const exitCode = Number(executionProcess?.exit_code) || 0;
@@ -396,7 +398,7 @@ export const useConversationHistory = ({
 
     // Emit the next action bar if no process running
     if (!hasRunningProcess && !hasPendingApproval) {
-      allEntries.push(nextActionPatch(lastProcessFailed));
+      allEntries.push(nextActionPatch(lastProcessFailedOrKilled));
     }
 
     return allEntries;
