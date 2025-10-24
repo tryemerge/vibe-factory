@@ -1,7 +1,10 @@
 use std::path::Path;
 
 use serde_json::Value;
-use workspace_utils::path::make_path_relative;
+use workspace_utils::{
+    diff::{concatenate_diff_hunks, extract_unified_diff_hunks},
+    path::make_path_relative,
+};
 
 use super::types::DroidToolData;
 use crate::logs::{ActionType, FileChange, TodoItem};
@@ -177,9 +180,12 @@ pub fn parse_apply_patch_result(value: &Value, worktree_path: &str) -> Option<Ac
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
+    let relative_path = make_path_relative(&file_path, worktree_path);
+
     let changes = if let Some(diff_text) = diff {
+        let hunks = extract_unified_diff_hunks(&diff_text);
         vec![FileChange::Edit {
-            unified_diff: diff_text,
+            unified_diff: concatenate_diff_hunks(&relative_path, &hunks),
             has_line_numbers: true,
         }]
     } else if let Some(content_text) = content {
@@ -191,7 +197,7 @@ pub fn parse_apply_patch_result(value: &Value, worktree_path: &str) -> Option<Ac
     };
 
     Some(ActionType::FileEdit {
-        path: make_path_relative(&file_path, worktree_path),
+        path: relative_path,
         changes,
     })
 }
