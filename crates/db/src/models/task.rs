@@ -237,8 +237,8 @@ ORDER BY t.position DESC"#,
     ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             Task,
-            r#"INSERT INTO tasks (id, project_id, title, description, status, parent_task_attempt)
-               VALUES ($1, $2, $3, $4, $5, $6)
+            r#"INSERT INTO tasks (id, project_id, title, description, status, parent_task_attempt, position)
+               VALUES ($1, $2, $3, $4, $5, $6, unixepoch('now', 'subsec'))
                RETURNING id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", position as "position!: f64", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>""#,
             task_id,
             data.project_id,

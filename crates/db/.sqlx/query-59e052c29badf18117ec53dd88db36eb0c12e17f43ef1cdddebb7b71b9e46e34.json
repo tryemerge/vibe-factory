@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO tasks (id, project_id, title, description, status, parent_task_attempt)\n               VALUES ($1, $2, $3, $4, $5, $6)\n               RETURNING id as \"id!: Uuid\", project_id as \"project_id!: Uuid\", title, description, status as \"status!: TaskStatus\", parent_task_attempt as \"parent_task_attempt: Uuid\", position as \"position!: f64\", created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "INSERT INTO tasks (id, project_id, title, description, status, parent_task_attempt, position)\n               VALUES ($1, $2, $3, $4, $5, $6, unixepoch('now', 'subsec'))\n               RETURNING id as \"id!: Uuid\", project_id as \"project_id!: Uuid\", title, description, status as \"status!: TaskStatus\", parent_task_attempt as \"parent_task_attempt: Uuid\", position as \"position!: f64\", created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
   "describe": {
     "columns": [
       {
@@ -64,5 +64,5 @@
       false
     ]
   },
-  "hash": "17e6cc5db7a002ea5c9c4ae2fecae88ea193d752258cb6f5ad9c2eece588cb2f"
+  "hash": "59e052c29badf18117ec53dd88db36eb0c12e17f43ef1cdddebb7b71b9e46e34"
 }

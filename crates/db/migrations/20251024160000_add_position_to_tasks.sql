@@ -1,8 +1,9 @@
 -- Add position column to tasks for drag-and-drop ordering
 -- Position is a float to enable fractional indexing (inserting between tasks)
--- Default is Unix timestamp (seconds with subseconds) so new tasks appear at top
+-- Default is 0.0 (constant required by SQLite for ALTER TABLE)
+-- New tasks will have position set by application code to unixepoch
 
-ALTER TABLE tasks ADD COLUMN position REAL NOT NULL DEFAULT (unixepoch('now', 'subsec'));
+ALTER TABLE tasks ADD COLUMN position REAL NOT NULL DEFAULT 0.0;
 
 -- Backfill existing tasks with their creation timestamp as position
 -- This preserves chronological order (most recent tasks = highest position)
