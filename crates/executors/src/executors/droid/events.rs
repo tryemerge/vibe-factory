@@ -44,11 +44,10 @@ pub enum LogEvent {
 }
 
 pub fn process_event(
-    state: ProcessorState,
+    state: &mut ProcessorState,
     event: &DroidJson,
     worktree_path: &Path,
-) -> (ProcessorState, Vec<LogEvent>) {
-    let mut state = state;
+) -> Vec<LogEvent> {
     let mut events = Vec::new();
 
     match event {
@@ -175,7 +174,7 @@ pub fn process_event(
         }
     }
 
-    (state, events)
+    events
 }
 
 fn compute_updated_action_type(
@@ -275,29 +274,29 @@ mod tests {
 
     #[test]
     fn test_system_model_reported_once() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         // First system event with model
         let event = build_system_event(Some("gpt-5-codex".to_string()));
-        let (state, events) = process_event(state, &event, worktree_path);
+        let events = process_event(&mut state, &event, worktree_path);
 
         assert_eq!(events.len(), 1);
         assert!(state.model_reported);
 
         // Second system event should produce no events
         let event2 = build_system_event(Some("different-model".to_string()));
-        let (_state2, events2) = process_event(state, &event2, worktree_path);
+        let events2 = process_event(&mut state, &event2, worktree_path);
         assert!(events2.is_empty());
     }
 
     #[test]
     fn test_system_without_model() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         let event = build_system_event(None);
-        let (state, events) = process_event(state, &event, worktree_path);
+        let events = process_event(&mut state, &event, worktree_path);
 
         assert!(events.is_empty());
         assert!(!state.model_reported);
@@ -305,12 +304,12 @@ mod tests {
 
     #[test]
     fn test_tool_call_metadata_non_object() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         let params = serde_json::json!("string-param");
         let event = build_tool_call("call-1", "Read", params);
-        let (_state, events) = process_event(state, &event, worktree_path);
+        let events = process_event(&mut state, &event, worktree_path);
 
         match &events[0] {
             LogEvent::AddToolCall { entry, .. } => {
@@ -324,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_tool_result_unknown_id() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         let result_event = build_tool_result(
@@ -334,7 +333,7 @@ mod tests {
                 value: serde_json::json!("data"),
             },
         );
-        let (state, events) = process_event(state, &result_event, worktree_path);
+        let events = process_event(&mut state, &result_event, worktree_path);
 
         assert!(events.is_empty());
         assert!(state.tool_map.is_empty());
@@ -342,7 +341,7 @@ mod tests {
 
     #[test]
     fn test_tool_result_double_result() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         let call_event = build_tool_call(
@@ -350,7 +349,7 @@ mod tests {
             "Read",
             serde_json::json!({"file_path": "test.txt"}),
         );
-        let (state, _) = process_event(state, &call_event, worktree_path);
+        process_event(&mut state, &call_event, worktree_path);
 
         let result_event = build_tool_result(
             "call-1",
@@ -359,17 +358,17 @@ mod tests {
                 value: serde_json::json!("data"),
             },
         );
-        let (state, events1) = process_event(state, &result_event, worktree_path);
+        let events1 = process_event(&mut state, &result_event, worktree_path);
         assert_eq!(events1.len(), 1);
 
         // Second result should be ignored
-        let (_state, events2) = process_event(state, &result_event, worktree_path);
+        let events2 = process_event(&mut state, &result_event, worktree_path);
         assert!(events2.is_empty());
     }
 
     #[test]
     fn test_execute_without_exit_code_success() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         let call_event = build_tool_call(
@@ -377,7 +376,7 @@ mod tests {
             "Execute",
             serde_json::json!({"command": "echo test"}),
         );
-        let (state, _) = process_event(state, &call_event, worktree_path);
+        process_event(&mut state, &call_event, worktree_path);
 
         let result_event = build_tool_result(
             "call-1",
@@ -386,7 +385,7 @@ mod tests {
                 value: serde_json::json!("output without exit code"),
             },
         );
-        let (_state, events) = process_event(state, &result_event, worktree_path);
+        let events = process_event(&mut state, &result_event, worktree_path);
 
         match &events[0] {
             LogEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
@@ -415,12 +414,12 @@ mod tests {
 
     #[test]
     fn test_execute_error_without_exit_code() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         let call_event =
             build_tool_call("call-1", "Execute", serde_json::json!({"command": "fail"}));
-        let (state, _) = process_event(state, &call_event, worktree_path);
+        process_event(&mut state, &call_event, worktree_path);
 
         let result_event = build_tool_result(
             "call-1",
@@ -429,7 +428,7 @@ mod tests {
                 value: serde_json::json!("error output"),
             },
         );
-        let (_state, events) = process_event(state, &result_event, worktree_path);
+        let events = process_event(&mut state, &result_event, worktree_path);
 
         match &events[0] {
             LogEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
@@ -458,7 +457,7 @@ mod tests {
 
     #[test]
     fn test_apply_patch_with_unparsable_result() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         let call_event = build_tool_call(
@@ -466,7 +465,7 @@ mod tests {
             "ApplyPatch",
             serde_json::json!({"input": "*** Begin Patch\n..."}),
         );
-        let (state, _) = process_event(state, &call_event, worktree_path);
+        process_event(&mut state, &call_event, worktree_path);
 
         // Unparsable result (missing file_path)
         let result_event = build_tool_result(
@@ -476,7 +475,7 @@ mod tests {
                 value: serde_json::json!("unparsable string"),
             },
         );
-        let (_state, events) = process_event(state, &result_event, worktree_path);
+        let events = process_event(&mut state, &result_event, worktree_path);
 
         // Should still produce UpdateToolCall with FileEdit (parse failed, so falls back)
         assert_eq!(events.len(), 1);
@@ -496,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_out_of_order_result_before_call() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         // Result arrives first
@@ -507,7 +506,7 @@ mod tests {
                 value: serde_json::json!("data"),
             },
         );
-        let (state, events) = process_event(state, &result_event, worktree_path);
+        let events = process_event(&mut state, &result_event, worktree_path);
         assert!(events.is_empty());
 
         // Then call arrives
@@ -516,22 +515,22 @@ mod tests {
             "Read",
             serde_json::json!({"file_path": "test.txt"}),
         );
-        let (state, events) = process_event(state, &call_event, worktree_path);
+        let events = process_event(&mut state, &call_event, worktree_path);
         assert_eq!(events.len(), 1);
         assert!(state.tool_map.contains_key("call-1"));
     }
 
     #[test]
     fn test_multiple_simultaneous_calls_partial_results() {
-        let state = ProcessorState::default();
+        let mut state = ProcessorState::default();
         let worktree_path = Path::new("/tmp/test");
 
         // Add two calls
         let call1 = build_tool_call("call-A", "Read", serde_json::json!({"file_path": "a.txt"}));
-        let (state, _) = process_event(state, &call1, worktree_path);
+        process_event(&mut state, &call1, worktree_path);
 
         let call2 = build_tool_call("call-B", "Read", serde_json::json!({"file_path": "b.txt"}));
-        let (state, _) = process_event(state, &call2, worktree_path);
+        process_event(&mut state, &call2, worktree_path);
 
         assert_eq!(state.tool_map.len(), 2);
 
@@ -543,7 +542,7 @@ mod tests {
                 value: serde_json::json!("b contents"),
             },
         );
-        let (state, events) = process_event(state, &result_b, worktree_path);
+        let events = process_event(&mut state, &result_b, worktree_path);
 
         assert_eq!(events.len(), 1);
         assert_eq!(state.tool_map.len(), 1);
@@ -558,7 +557,7 @@ mod tests {
                 value: serde_json::json!("a contents"),
             },
         );
-        let (state, events) = process_event(state, &result_a, worktree_path);
+        let events = process_event(&mut state, &result_a, worktree_path);
 
         assert_eq!(events.len(), 1);
         assert!(state.tool_map.is_empty());

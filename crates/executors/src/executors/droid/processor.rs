@@ -61,8 +61,7 @@ async fn process_parsed_items(
                     session_id_extracted = true;
                 }
 
-                let (new_state, events) = process_event(state, &droid_json, worktree_path);
-                state = new_state;
+                let events = process_event(&mut state, &droid_json, worktree_path);
 
                 let patches = patch_emitter.emit_patches(events, &entry_index_provider);
                 for patch in patches {

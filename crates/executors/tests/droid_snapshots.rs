@@ -33,8 +33,7 @@ fn process_jsonl_file(file_path: &str) -> SessionSnapshot {
             }
         };
 
-        let (new_state, events) = process_event(state, &event, worktree_path);
-        state = new_state;
+        let events = process_event(&mut state, &event, worktree_path);
         all_events.extend(events);
     }
 
