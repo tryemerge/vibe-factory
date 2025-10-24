@@ -5,19 +5,13 @@ use workspace_utils::msg_store::MsgStore;
 
 use super::{
     events::{ProcessorState, process_event},
-    patch_emitter::{IndexProviderLike, PatchEmitter},
+    patch_emitter::PatchEmitter,
     types::DroidJson,
 };
 use crate::logs::{
     NormalizedEntry, NormalizedEntryType,
     utils::{EntryIndexProvider, patch::ConversationPatch},
 };
-
-impl IndexProviderLike for EntryIndexProvider {
-    fn next(&self) -> usize {
-        EntryIndexProvider::next(self)
-    }
-}
 
 /// Represents the result of attempting to parse a line
 enum ParsedLine {
@@ -46,7 +40,7 @@ async fn process_parsed_items(
     parsed_items: impl Stream<Item = ParsedLine>,
     msg_store: Arc<MsgStore>,
     worktree_path: &Path,
-    entry_index_provider: EntryIndexProvider,
+    entry_index_provider: &EntryIndexProvider,
 ) {
     let mut parsed_items = std::pin::pin!(parsed_items);
     let mut session_id_extracted = false;
@@ -63,7 +57,7 @@ async fn process_parsed_items(
 
                 let events = process_event(&mut state, &droid_json, worktree_path);
 
-                let patches = patch_emitter.emit_patches(events, &entry_index_provider);
+                let patches = patch_emitter.emit_patches(events, entry_index_provider);
                 for patch in patches {
                     msg_store.push_patch(patch);
                 }
@@ -103,7 +97,7 @@ impl DroidLogProcessor {
                 parsed_items,
                 msg_store,
                 &worktree_path,
-                entry_index_provider,
+                &entry_index_provider,
             )
             .await;
         });
