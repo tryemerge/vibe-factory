@@ -1,7 +1,7 @@
 use std::{path::Path, sync::Arc};
 
-use futures::{Stream, StreamExt};
-use workspace_utils::{log_msg::LogMsg, msg_store::MsgStore};
+use futures::{Stream, StreamExt, future};
+use workspace_utils::msg_store::MsgStore;
 
 use super::{
     events::{ProcessorState, process_event},
@@ -25,43 +25,7 @@ enum ParsedLine {
     UnparsedContent(String),
 }
 
-/// Layer 1: Extract lines from a stream of chunks
-fn lines_from_stream(
-    stream: impl Stream<Item = Result<LogMsg, std::io::Error>>,
-) -> impl Stream<Item = String> {
-    async_stream::stream! {
-        let mut buffer = String::new();
-        let mut stream = std::pin::pin!(stream);
-
-        while let Some(Ok(msg)) = stream.next().await {
-            let chunk = match msg {
-                LogMsg::Stdout(x) => x,
-                LogMsg::JsonPatch(_) | LogMsg::SessionId(_) | LogMsg::Stderr(_) => continue,
-                LogMsg::Finished => break,
-            };
-
-            buffer.push_str(&chunk);
-
-            for line in buffer
-                .split_inclusive('\n')
-                .filter(|l| l.ends_with('\n'))
-                .filter(|l| !l.trim().is_empty())
-                .map(str::to_owned)
-                .collect::<Vec<_>>()
-            {
-                yield line;
-            }
-
-            buffer = buffer.rsplit('\n').next().unwrap_or("").to_owned();
-        }
-
-        if !buffer.trim().is_empty() {
-            yield buffer;
-        }
-    }
-}
-
-/// Layer 2: Parse lines into structured data
+/// Parse lines into structured data
 fn parse_lines(lines: impl Stream<Item = String>) -> impl Stream<Item = ParsedLine> {
     async_stream::stream! {
         let mut lines = std::pin::pin!(lines);
@@ -77,7 +41,7 @@ fn parse_lines(lines: impl Stream<Item = String>) -> impl Stream<Item = ParsedLi
     }
 }
 
-/// Layer 3: Process parsed items and emit patches
+/// Process parsed items and emit patches
 async fn process_parsed_items(
     parsed_items: impl Stream<Item = ParsedLine>,
     msg_store: Arc<MsgStore>,
@@ -132,8 +96,8 @@ impl DroidLogProcessor {
     ) {
         let worktree_path = worktree_path.to_path_buf();
         tokio::spawn(async move {
-            let stream = msg_store.history_plus_stream();
-            let lines = lines_from_stream(stream);
+            let stream = msg_store.stdout_lines_stream();
+            let lines = stream.filter_map(|l| future::ready(l.ok()));
             let parsed_items = parse_lines(lines);
 
             process_parsed_items(
