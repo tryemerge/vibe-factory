@@ -16,14 +16,10 @@ pub struct ProcessorState {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
-#[allow(dead_code)]
 pub struct PendingToolCall {
     pub tool_name: String,
-    pub tool_call_id: String,
-    pub message_id: String,
     pub action_type: ActionType,
     pub content: String,
-    pub timestamp: u64,
 }
 
 /// Lightweight wrapper around NormalizedEntry with correlation info
@@ -65,12 +61,7 @@ pub fn process_event(
             }
         }
 
-        DroidJson::Message {
-            role,
-            text,
-            timestamp,
-            ..
-        } => {
+        DroidJson::Message { role, text, .. } => {
             let entry_type = match role.as_str() {
                 "user" => NormalizedEntryType::UserMessage,
                 "assistant" => NormalizedEntryType::AssistantMessage,
@@ -78,7 +69,7 @@ pub fn process_event(
             };
 
             events.push(LogEvent::AddEntry(NormalizedEntry {
-                timestamp: Some(timestamp.to_string()),
+                timestamp: None,
                 entry_type,
                 content: text.clone(),
                 metadata: None,
@@ -87,10 +78,8 @@ pub fn process_event(
 
         DroidJson::ToolCall {
             id,
-            message_id,
             tool_name,
             parameters,
-            timestamp,
             ..
         } => {
             let action_type =
@@ -101,30 +90,22 @@ pub fn process_event(
                 id.clone(),
                 PendingToolCall {
                     tool_name: tool_name.clone(),
-                    tool_call_id: id.clone(),
-                    message_id: message_id.clone(),
                     action_type: action_type.clone(),
                     content: content.clone(),
-                    timestamp: *timestamp,
                 },
             );
-
-            let mut metadata = parameters.clone();
-            if let Some(obj) = metadata.as_object_mut() {
-                obj.insert("toolCallId".to_string(), serde_json::json!(id));
-            }
 
             events.push(LogEvent::AddToolCall {
                 tool_call_id: id.clone(),
                 entry: NormalizedEntry {
-                    timestamp: Some(timestamp.to_string()),
+                    timestamp: None,
                     entry_type: NormalizedEntryType::ToolUse {
                         tool_name: tool_name.clone(),
                         action_type,
                         status: ToolStatus::Created,
                     },
                     content,
-                    metadata: Some(metadata),
+                    metadata: None,
                 },
             });
         }
@@ -133,7 +114,6 @@ pub fn process_event(
             id,
             is_error,
             payload,
-            timestamp,
             ..
         } => {
             if let Some(call) = state.tool_map.remove(id) {
@@ -149,7 +129,7 @@ pub fn process_event(
                 events.push(LogEvent::UpdateToolCall {
                     tool_call_id: id.clone(),
                     entry: NormalizedEntry {
-                        timestamp: Some(timestamp.to_string()),
+                        timestamp: None,
                         entry_type: NormalizedEntryType::ToolUse {
                             tool_name: call.tool_name,
                             action_type: updated_action_type,
@@ -162,11 +142,9 @@ pub fn process_event(
             }
         }
 
-        DroidJson::Error {
-            message, timestamp, ..
-        } => {
+        DroidJson::Error { message, .. } => {
             events.push(LogEvent::AddEntry(NormalizedEntry {
-                timestamp: Some(timestamp.to_string()),
+                timestamp: None,
                 entry_type: NormalizedEntryType::ErrorMessage,
                 content: message.clone(),
                 metadata: None,
