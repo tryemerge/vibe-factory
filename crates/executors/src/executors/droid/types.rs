@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use strum_macros::AsRefStr;
 use ts_rs::TS;
 
 use crate::{command::CmdOverrides, executors::AppendPrompt};
@@ -19,8 +20,9 @@ fn default_autonomy() -> Autonomy {
     Autonomy::SkipPermissionsUnsafe
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, JsonSchema, AsRefStr)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 #[ts(rename = "DroidReasoningEffort")]
 pub enum ReasoningEffortLevel {
     None,
@@ -64,33 +66,20 @@ pub struct Droid {
 impl Droid {
     pub fn build_command_builder(&self) -> crate::command::CommandBuilder {
         use crate::command::{CommandBuilder, apply_overrides};
-
         let mut builder =
             CommandBuilder::new("droid exec").params(["--output-format", "stream-json"]);
-
-        let autonomy_args: Vec<&str> = match &self.autonomy {
-            Autonomy::Normal => vec![],
-            Autonomy::Low => vec!["--auto", "low"],
-            Autonomy::Medium => vec!["--auto", "medium"],
-            Autonomy::High => vec!["--auto", "high"],
-            Autonomy::SkipPermissionsUnsafe => vec!["--skip-permissions-unsafe"],
+        builder = match &self.autonomy {
+            Autonomy::Normal => builder,
+            Autonomy::Low => builder.extend_params(["--auto", "low"]),
+            Autonomy::Medium => builder.extend_params(["--auto", "medium"]),
+            Autonomy::High => builder.extend_params(["--auto", "high"]),
+            Autonomy::SkipPermissionsUnsafe => builder.extend_params(["--skip-permissions-unsafe"]),
         };
-        builder = builder.extend_params(autonomy_args);
-
-        if let Some(ref model) = self.model {
-            builder = builder.extend_params(["--model", model]);
+        if let Some(model) = &self.model {
+            builder = builder.extend_params(["--model", model.as_str()]);
         }
-
-        if let Some(ref effort) = self.reasoning_effort {
-            let effort_str = match effort {
-                ReasoningEffortLevel::None => "none",
-                ReasoningEffortLevel::Dynamic => "dynamic",
-                ReasoningEffortLevel::Off => "off",
-                ReasoningEffortLevel::Low => "low",
-                ReasoningEffortLevel::Medium => "medium",
-                ReasoningEffortLevel::High => "high",
-            };
-            builder = builder.extend_params(["--reasoning-effort", effort_str]);
+        if let Some(effort) = &self.reasoning_effort {
+            builder = builder.extend_params(["--reasoning-effort", effort.as_ref()]);
         }
 
         apply_overrides(builder, &self.cmd)
