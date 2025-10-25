@@ -16,19 +16,7 @@ impl PatchEmitter {
         }
     }
 
-    /// Convert log events to JSON patches using the index provider
-    pub fn emit_patches(
-        &mut self,
-        events: Vec<LogEvent>,
-        index_provider: &EntryIndexProvider,
-    ) -> Vec<json_patch::Patch> {
-        events
-            .into_iter()
-            .filter_map(|event| self.emit_event(event, index_provider))
-            .collect()
-    }
-
-    fn emit_event(
+    pub fn convert(
         &mut self,
         event: LogEvent,
         index_provider: &EntryIndexProvider,

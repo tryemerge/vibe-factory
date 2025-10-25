@@ -1,7 +1,7 @@
 use std::{fs, path::Path};
 
 use executors::executors::droid::{
-    events::{LogEvent, ProcessorState, process_event},
+    events::{LogEvent, ProcessorState},
     types::DroidJson,
 };
 
@@ -33,8 +33,8 @@ fn process_jsonl_file(file_path: &str) -> SessionSnapshot {
             }
         };
 
-        let events = process_event(&mut state, &event, worktree_path);
-        all_events.extend(events);
+        let event = state.process_event(&event, worktree_path);
+        all_events.extend(event);
     }
 
     SessionSnapshot {

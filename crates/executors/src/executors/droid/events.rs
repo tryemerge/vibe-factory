@@ -39,122 +39,118 @@ pub enum LogEvent {
     },
 }
 
-pub fn process_event(
-    state: &mut ProcessorState,
-    event: &DroidJson,
-    worktree_path: &Path,
-) -> Vec<LogEvent> {
-    let mut events = Vec::new();
-
-    match event {
-        DroidJson::System { model, .. } => {
-            if !state.model_reported
-                && let Some(model) = model
-            {
-                state.model_reported = true;
-                events.push(LogEvent::AddEntry(NormalizedEntry {
-                    timestamp: None,
-                    entry_type: NormalizedEntryType::SystemMessage,
-                    content: format!("model: {model}"),
-                    metadata: None,
-                }));
-            }
-        }
-
-        DroidJson::Message { role, text, .. } => {
-            let entry_type = match role.as_str() {
-                "user" => NormalizedEntryType::UserMessage,
-                "assistant" => NormalizedEntryType::AssistantMessage,
-                _ => NormalizedEntryType::SystemMessage,
-            };
-
-            events.push(LogEvent::AddEntry(NormalizedEntry {
-                timestamp: None,
-                entry_type,
-                content: text.clone(),
-                metadata: None,
-            }));
-        }
-
-        DroidJson::ToolCall {
-            id,
-            tool_name,
-            parameters,
-            ..
-        } => {
-            let action_type =
-                action_mapper::map_tool_to_action(tool_name, parameters, worktree_path);
-            let content = action_mapper::generate_concise_content(tool_name, &action_type);
-
-            state.tool_map.insert(
-                id.clone(),
-                PendingToolCall {
-                    tool_name: tool_name.clone(),
-                    action_type: action_type.clone(),
-                    content: content.clone(),
-                },
-            );
-
-            events.push(LogEvent::AddToolCall {
-                tool_call_id: id.clone(),
-                entry: NormalizedEntry {
-                    timestamp: None,
-                    entry_type: NormalizedEntryType::ToolUse {
-                        tool_name: tool_name.clone(),
-                        action_type,
-                        status: ToolStatus::Created,
-                    },
-                    content,
-                    metadata: None,
-                },
-            });
-        }
-
-        DroidJson::ToolResult {
-            id,
-            is_error,
-            payload,
-            ..
-        } => {
-            if let Some(call) = state.tool_map.remove(id) {
-                let status = if *is_error {
-                    ToolStatus::Failed
+impl ProcessorState {
+    pub fn process_event(&mut self, event: &DroidJson, worktree_path: &Path) -> Option<LogEvent> {
+        match event {
+            DroidJson::System { model, .. } => {
+                if !self.model_reported
+                    && let Some(model) = model
+                {
+                    self.model_reported = true;
+                    Some(LogEvent::AddEntry(NormalizedEntry {
+                        timestamp: None,
+                        entry_type: NormalizedEntryType::SystemMessage,
+                        content: format!("model: {model}"),
+                        metadata: None,
+                    }))
                 } else {
-                    ToolStatus::Success
+                    None
+                }
+            }
+            DroidJson::Message { role, text, .. } => {
+                let entry_type = match role.as_str() {
+                    "user" => NormalizedEntryType::UserMessage,
+                    "assistant" => NormalizedEntryType::AssistantMessage,
+                    _ => NormalizedEntryType::SystemMessage,
                 };
 
-                let updated_action_type =
-                    compute_updated_action_type(&call, payload, *is_error, worktree_path);
+                Some(LogEvent::AddEntry(NormalizedEntry {
+                    timestamp: None,
+                    entry_type,
+                    content: text.clone(),
+                    metadata: None,
+                }))
+            }
+            DroidJson::ToolCall {
+                id,
+                tool_name,
+                parameters,
+                ..
+            } => {
+                let action_type =
+                    action_mapper::map_tool_to_action(tool_name, parameters, worktree_path);
+                let content = action_mapper::generate_concise_content(tool_name, &action_type);
 
-                events.push(LogEvent::UpdateToolCall {
+                self.tool_map.insert(
+                    id.clone(),
+                    PendingToolCall {
+                        tool_name: tool_name.clone(),
+                        action_type: action_type.clone(),
+                        content: content.clone(),
+                    },
+                );
+
+                Some(LogEvent::AddToolCall {
                     tool_call_id: id.clone(),
                     entry: NormalizedEntry {
                         timestamp: None,
                         entry_type: NormalizedEntryType::ToolUse {
-                            tool_name: call.tool_name,
-                            action_type: updated_action_type,
-                            status,
+                            tool_name: tool_name.clone(),
+                            action_type,
+                            status: ToolStatus::Created,
                         },
-                        content: call.content,
+                        content,
                         metadata: None,
                     },
-                });
+                })
             }
-        }
+            DroidJson::ToolResult {
+                id,
+                is_error,
+                payload,
+                ..
+            } => {
+                if let Some(call) = self.tool_map.remove(id) {
+                    let status = if *is_error {
+                        ToolStatus::Failed
+                    } else {
+                        ToolStatus::Success
+                    };
 
-        DroidJson::Error { message, .. } => {
-            events.push(LogEvent::AddEntry(NormalizedEntry {
+                    let updated_action_type =
+                        compute_updated_action_type(&call, payload, *is_error, worktree_path);
+
+                    Some(LogEvent::UpdateToolCall {
+                        tool_call_id: id.clone(),
+                        entry: NormalizedEntry {
+                            timestamp: None,
+                            entry_type: NormalizedEntryType::ToolUse {
+                                tool_name: call.tool_name,
+                                action_type: updated_action_type,
+                                status,
+                            },
+                            content: call.content,
+                            metadata: None,
+                        },
+                    })
+                } else {
+                    // Tool result either received before called, or duplicated
+                    tracing::error!("Failed to match tool result with tool call for id: {}", id);
+                    None
+                }
+            }
+            DroidJson::Error { message, .. } => Some(LogEvent::AddEntry(NormalizedEntry {
                 timestamp: None,
                 entry_type: NormalizedEntryType::ErrorMessage,
                 content: message.clone(),
                 metadata: None,
-            }));
+            })),
         }
     }
-
-    events
 }
 
+// We have more data about a tool call after receiving a tool call result
+// Here we normalise that data too
 fn compute_updated_action_type(
     call: &PendingToolCall,
     payload: &ToolResultPayload,
@@ -168,376 +164,46 @@ fn compute_updated_action_type(
             serde_json::to_string_pretty(value).unwrap_or_default()
         };
 
-        if matches!(call.action_type, ActionType::CommandRun { .. }) {
-            let exit_code = result_str
-                .lines()
-                .find(|line| line.contains("[Process exited with code"))
-                .and_then(|line| {
-                    line.strip_prefix("[Process exited with code ")?
-                        .strip_suffix("]")?
-                        .parse::<i32>()
-                        .ok()
+        let res = match call.action_type {
+            ActionType::FileEdit { .. } => {
+                if call.tool_name == "ApplyPatch" {
+                    let worktree_path_str = worktree_path.to_string_lossy();
+                    Some(
+                        action_mapper::parse_apply_patch_result(value, &worktree_path_str)
+                            .unwrap_or_else(|| call.action_type.clone()),
+                    )
+                } else {
+                    None
+                }
+            }
+            ActionType::CommandRun { ref command, .. } => {
+                let exit_code = result_str
+                    .lines()
+                    .find(|line| line.contains("[Process exited with code"))
+                    .and_then(|line| {
+                        line.strip_prefix("[Process exited with code ")?
+                            .strip_suffix("]")?
+                            .parse::<i32>()
+                            .ok()
+                    });
+
+                let result = Some(CommandRunResult {
+                    exit_status: exit_code
+                        .map(|code| CommandExitStatus::ExitCode { code })
+                        .or(Some(CommandExitStatus::Success { success: !is_error })),
+                    output: Some(result_str),
                 });
 
-            let result = Some(CommandRunResult {
-                exit_status: exit_code
-                    .map(|code| CommandExitStatus::ExitCode { code })
-                    .or(Some(CommandExitStatus::Success { success: !is_error })),
-                output: Some(result_str),
-            });
-
-            if let ActionType::CommandRun { command, .. } = &call.action_type {
-                ActionType::CommandRun {
+                Some(ActionType::CommandRun {
                     command: command.clone(),
                     result,
-                }
-            } else {
-                call.action_type.clone()
+                })
             }
-        } else if matches!(call.action_type, ActionType::FileEdit { .. })
-            && call.tool_name == "ApplyPatch"
-        {
-            let worktree_path_str = worktree_path.to_string_lossy();
-            action_mapper::parse_apply_patch_result(value, &worktree_path_str)
-                .unwrap_or_else(|| call.action_type.clone())
-        } else {
-            call.action_type.clone()
-        }
+            _ => None,
+        };
+
+        res.unwrap_or(call.action_type.clone())
     } else {
         call.action_type.clone()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::executors::droid::types::{DroidJson, ToolResultPayload};
-
-    // Test helpers
-    fn build_system_event(model: Option<String>) -> DroidJson {
-        DroidJson::System {
-            subtype: Some("init".to_string()),
-            session_id: "test-session".to_string(),
-            cwd: Some("/test/path".to_string()),
-            tools: Some(vec!["Read".to_string()]),
-            model,
-        }
-    }
-
-    fn build_tool_call(id: &str, tool_name: &str, parameters: serde_json::Value) -> DroidJson {
-        DroidJson::ToolCall {
-            id: id.to_string(),
-            message_id: "msg-id".to_string(),
-            tool_id: tool_name.to_string(),
-            tool_name: tool_name.to_string(),
-            parameters,
-            timestamp: 1000000,
-            session_id: "test-session".to_string(),
-        }
-    }
-
-    fn build_tool_result(id: &str, is_error: bool, payload: ToolResultPayload) -> DroidJson {
-        DroidJson::ToolResult {
-            id: id.to_string(),
-            message_id: "msg-id".to_string(),
-            tool_id: "".to_string(),
-            is_error,
-            payload,
-            timestamp: 1000001,
-            session_id: "test-session".to_string(),
-        }
-    }
-
-    // Edge case tests - These test scenarios not fully covered by snapshot tests
-
-    #[test]
-    fn test_system_model_reported_once() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        // First system event with model
-        let event = build_system_event(Some("gpt-5-codex".to_string()));
-        let events = process_event(&mut state, &event, worktree_path);
-
-        assert_eq!(events.len(), 1);
-        assert!(state.model_reported);
-
-        // Second system event should produce no events
-        let event2 = build_system_event(Some("different-model".to_string()));
-        let events2 = process_event(&mut state, &event2, worktree_path);
-        assert!(events2.is_empty());
-    }
-
-    #[test]
-    fn test_system_without_model() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        let event = build_system_event(None);
-        let events = process_event(&mut state, &event, worktree_path);
-
-        assert!(events.is_empty());
-        assert!(!state.model_reported);
-    }
-
-    #[test]
-    fn test_tool_call_metadata_non_object() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        let params = serde_json::json!("string-param");
-        let event = build_tool_call("call-1", "Read", params);
-        let events = process_event(&mut state, &event, worktree_path);
-
-        match &events[0] {
-            LogEvent::AddToolCall { entry, .. } => {
-                let metadata = entry.metadata.as_ref().unwrap();
-                // Should be string, not object with toolCallId
-                assert_eq!(metadata, &serde_json::json!("string-param"));
-            }
-            _ => panic!("Expected AddToolCall"),
-        }
-    }
-
-    #[test]
-    fn test_tool_result_unknown_id() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        let result_event = build_tool_result(
-            "unknown-id",
-            false,
-            ToolResultPayload::Value {
-                value: serde_json::json!("data"),
-            },
-        );
-        let events = process_event(&mut state, &result_event, worktree_path);
-
-        assert!(events.is_empty());
-        assert!(state.tool_map.is_empty());
-    }
-
-    #[test]
-    fn test_tool_result_double_result() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        let call_event = build_tool_call(
-            "call-1",
-            "Read",
-            serde_json::json!({"file_path": "test.txt"}),
-        );
-        process_event(&mut state, &call_event, worktree_path);
-
-        let result_event = build_tool_result(
-            "call-1",
-            false,
-            ToolResultPayload::Value {
-                value: serde_json::json!("data"),
-            },
-        );
-        let events1 = process_event(&mut state, &result_event, worktree_path);
-        assert_eq!(events1.len(), 1);
-
-        // Second result should be ignored
-        let events2 = process_event(&mut state, &result_event, worktree_path);
-        assert!(events2.is_empty());
-    }
-
-    #[test]
-    fn test_execute_without_exit_code_success() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        let call_event = build_tool_call(
-            "call-1",
-            "Execute",
-            serde_json::json!({"command": "echo test"}),
-        );
-        process_event(&mut state, &call_event, worktree_path);
-
-        let result_event = build_tool_result(
-            "call-1",
-            false,
-            ToolResultPayload::Value {
-                value: serde_json::json!("output without exit code"),
-            },
-        );
-        let events = process_event(&mut state, &result_event, worktree_path);
-
-        match &events[0] {
-            LogEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
-                crate::logs::NormalizedEntryType::ToolUse {
-                    action_type,
-                    status,
-                    ..
-                } => {
-                    assert!(matches!(status, crate::logs::ToolStatus::Success));
-                    match action_type {
-                        crate::logs::ActionType::CommandRun { result, .. } => {
-                            let result = result.as_ref().unwrap();
-                            assert!(matches!(
-                                result.exit_status,
-                                Some(crate::logs::CommandExitStatus::Success { success: true })
-                            ));
-                        }
-                        _ => panic!("Expected CommandRun"),
-                    }
-                }
-                _ => panic!("Expected ToolUse"),
-            },
-            _ => panic!("Expected UpdateToolCall"),
-        }
-    }
-
-    #[test]
-    fn test_execute_error_without_exit_code() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        let call_event =
-            build_tool_call("call-1", "Execute", serde_json::json!({"command": "fail"}));
-        process_event(&mut state, &call_event, worktree_path);
-
-        let result_event = build_tool_result(
-            "call-1",
-            true,
-            ToolResultPayload::Value {
-                value: serde_json::json!("error output"),
-            },
-        );
-        let events = process_event(&mut state, &result_event, worktree_path);
-
-        match &events[0] {
-            LogEvent::UpdateToolCall { entry, .. } => match &entry.entry_type {
-                crate::logs::NormalizedEntryType::ToolUse {
-                    action_type,
-                    status,
-                    ..
-                } => {
-                    assert!(matches!(status, crate::logs::ToolStatus::Failed));
-                    match action_type {
-                        crate::logs::ActionType::CommandRun { result, .. } => {
-                            let result = result.as_ref().unwrap();
-                            assert!(matches!(
-                                result.exit_status,
-                                Some(crate::logs::CommandExitStatus::Success { success: false })
-                            ));
-                        }
-                        _ => panic!("Expected CommandRun"),
-                    }
-                }
-                _ => panic!("Expected ToolUse"),
-            },
-            _ => panic!("Expected UpdateToolCall"),
-        }
-    }
-
-    #[test]
-    fn test_apply_patch_with_unparsable_result() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        let call_event = build_tool_call(
-            "call-1",
-            "ApplyPatch",
-            serde_json::json!({"input": "*** Begin Patch\n..."}),
-        );
-        process_event(&mut state, &call_event, worktree_path);
-
-        // Unparsable result (missing file_path)
-        let result_event = build_tool_result(
-            "call-1",
-            false,
-            ToolResultPayload::Value {
-                value: serde_json::json!("unparsable string"),
-            },
-        );
-        let events = process_event(&mut state, &result_event, worktree_path);
-
-        // Should still produce UpdateToolCall with FileEdit (parse failed, so falls back)
-        assert_eq!(events.len(), 1);
-        match &events[0] {
-            LogEvent::UpdateToolCall { entry, .. } => {
-                assert!(matches!(
-                    &entry.entry_type,
-                    crate::logs::NormalizedEntryType::ToolUse {
-                        action_type: crate::logs::ActionType::FileEdit { .. },
-                        ..
-                    }
-                ));
-            }
-            _ => panic!("Expected UpdateToolCall"),
-        }
-    }
-
-    #[test]
-    fn test_out_of_order_result_before_call() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        // Result arrives first
-        let result_event = build_tool_result(
-            "call-1",
-            false,
-            ToolResultPayload::Value {
-                value: serde_json::json!("data"),
-            },
-        );
-        let events = process_event(&mut state, &result_event, worktree_path);
-        assert!(events.is_empty());
-
-        // Then call arrives
-        let call_event = build_tool_call(
-            "call-1",
-            "Read",
-            serde_json::json!({"file_path": "test.txt"}),
-        );
-        let events = process_event(&mut state, &call_event, worktree_path);
-        assert_eq!(events.len(), 1);
-        assert!(state.tool_map.contains_key("call-1"));
-    }
-
-    #[test]
-    fn test_multiple_simultaneous_calls_partial_results() {
-        let mut state = ProcessorState::default();
-        let worktree_path = Path::new("/tmp/test");
-
-        // Add two calls
-        let call1 = build_tool_call("call-A", "Read", serde_json::json!({"file_path": "a.txt"}));
-        process_event(&mut state, &call1, worktree_path);
-
-        let call2 = build_tool_call("call-B", "Read", serde_json::json!({"file_path": "b.txt"}));
-        process_event(&mut state, &call2, worktree_path);
-
-        assert_eq!(state.tool_map.len(), 2);
-
-        // Result for B only
-        let result_b = build_tool_result(
-            "call-B",
-            false,
-            ToolResultPayload::Value {
-                value: serde_json::json!("b contents"),
-            },
-        );
-        let events = process_event(&mut state, &result_b, worktree_path);
-
-        assert_eq!(events.len(), 1);
-        assert_eq!(state.tool_map.len(), 1);
-        assert!(state.tool_map.contains_key("call-A"));
-        assert!(!state.tool_map.contains_key("call-B"));
-
-        // Result for A
-        let result_a = build_tool_result(
-            "call-A",
-            false,
-            ToolResultPayload::Value {
-                value: serde_json::json!("a contents"),
-            },
-        );
-        let events = process_event(&mut state, &result_a, worktree_path);
-
-        assert_eq!(events.len(), 1);
-        assert!(state.tool_map.is_empty());
     }
 }

@@ -3,11 +3,7 @@ use std::{path::Path, sync::Arc};
 use futures::{Stream, StreamExt, future};
 use workspace_utils::msg_store::MsgStore;
 
-use super::{
-    events::{ProcessorState, process_event},
-    patch_emitter::PatchEmitter,
-    types::DroidJson,
-};
+use super::{events::ProcessorState, patch_emitter::PatchEmitter, types::DroidJson};
 use crate::logs::{
     NormalizedEntry, NormalizedEntryType,
     utils::{EntryIndexProvider, patch::ConversationPatch},
@@ -54,11 +50,10 @@ async fn process_parsed_items(
                     msg_store.push_session_id(session_id.to_string());
                     session_id_extracted = true;
                 }
-
-                let events = process_event(&mut state, &droid_json, worktree_path);
-
-                let patches = patch_emitter.emit_patches(events, entry_index_provider);
-                for patch in patches {
+                if let Some(patch) = state
+                    .process_event(&droid_json, worktree_path)
+                    .and_then(|event| patch_emitter.convert(event, entry_index_provider))
+                {
                     msg_store.push_patch(patch);
                 }
             }
