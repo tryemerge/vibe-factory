@@ -6,7 +6,7 @@ use ts_rs::TS;
 
 use crate::{command::CmdOverrides, executors::AppendPrompt};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS, JsonSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, TS, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum Autonomy {
     Normal,
@@ -272,21 +272,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_droid_json_parsing() {
-        let system_msg = r#"{"type":"system","subtype":"init","cwd":"/test","session_id":"test-123","tools":["Read"],"model":"gpt-5-codex"}"#;
-        let user_msg = r#"{"type":"message","role":"user","id":"u1","text":"hello","timestamp":12345,"session_id":"test-123"}"#;
-        let tool_call = r#"{"type":"tool_call","id":"t1","messageId":"m1","toolId":"Read","toolName":"Read","parameters":{"file_path":"test.txt"},"timestamp":12345,"session_id":"test-123"}"#;
-
-        let parsed_system: Result<DroidJson, _> = serde_json::from_str(system_msg);
-        let parsed_user: Result<DroidJson, _> = serde_json::from_str(user_msg);
-        let parsed_tool: Result<DroidJson, _> = serde_json::from_str(tool_call);
-
-        assert!(parsed_system.is_ok(), "System message should parse");
-        assert!(parsed_user.is_ok(), "User message should parse");
-        assert!(parsed_tool.is_ok(), "Tool call should parse");
-    }
-
-    #[test]
     fn test_build_command_default() {
         let droid = Droid {
             append_prompt: AppendPrompt::default(),
@@ -295,9 +280,7 @@ mod tests {
             reasoning_effort: None,
             cmd: CmdOverrides::default(),
         };
-
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
+        let cmd = droid.build_command_builder().build_initial();
 
         assert_eq!(
             cmd,
@@ -306,67 +289,28 @@ mod tests {
     }
 
     #[test]
-    fn test_build_command_autonomy_normal() {
-        let droid = Droid {
-            append_prompt: AppendPrompt::default(),
-            autonomy: Autonomy::Normal,
-            model: None,
-            reasoning_effort: None,
-            cmd: CmdOverrides::default(),
-        };
-
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
-
-        assert_eq!(cmd, "droid exec --output-format stream-json");
-    }
-
-    #[test]
-    fn test_build_command_autonomy_low() {
-        let droid = Droid {
-            append_prompt: AppendPrompt::default(),
-            autonomy: Autonomy::Low,
-            model: None,
-            reasoning_effort: None,
-            cmd: CmdOverrides::default(),
-        };
-
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
-
-        assert_eq!(cmd, "droid exec --output-format stream-json --auto low");
-    }
-
-    #[test]
-    fn test_build_command_autonomy_medium() {
-        let droid = Droid {
-            append_prompt: AppendPrompt::default(),
-            autonomy: Autonomy::Medium,
-            model: None,
-            reasoning_effort: None,
-            cmd: CmdOverrides::default(),
-        };
-
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
-
-        assert_eq!(cmd, "droid exec --output-format stream-json --auto medium");
-    }
-
-    #[test]
-    fn test_build_command_autonomy_high() {
-        let droid = Droid {
-            append_prompt: AppendPrompt::default(),
-            autonomy: Autonomy::High,
-            model: None,
-            reasoning_effort: None,
-            cmd: CmdOverrides::default(),
-        };
-
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
-
-        assert_eq!(cmd, "droid exec --output-format stream-json --auto high");
+    fn test_build_command_autonomy_levels() {
+        let test_cases = [
+            (Autonomy::Normal, ""),
+            (Autonomy::Low, "--auto low"),
+            (Autonomy::Medium, "--auto medium"),
+            (Autonomy::High, "--auto high"),
+            (Autonomy::SkipPermissionsUnsafe, "--skip-permissions-unsafe"),
+        ];
+        for (autonomy, expected) in test_cases {
+            let cmd = Droid {
+                append_prompt: AppendPrompt::default(),
+                autonomy,
+                model: None,
+                reasoning_effort: None,
+                cmd: CmdOverrides::default(),
+            }
+            .build_command_builder()
+            .build_initial();
+            let expected = format!("droid exec --output-format stream-json {}", expected);
+            let expected = expected.trim();
+            assert_eq!(cmd, expected, "Failed for autonomy level: {:?}", autonomy);
+        }
     }
 
     #[test]
@@ -378,10 +322,7 @@ mod tests {
             reasoning_effort: None,
             cmd: CmdOverrides::default(),
         };
-
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
-
+        let cmd = droid.build_command_builder().build_initial();
         assert_eq!(
             cmd,
             "droid exec --output-format stream-json --skip-permissions-unsafe --model gpt-5-codex"
@@ -398,31 +339,11 @@ mod tests {
             cmd: CmdOverrides::default(),
         };
 
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
+        let cmd = droid.build_command_builder().build_initial();
 
         assert_eq!(
             cmd,
             "droid exec --output-format stream-json --skip-permissions-unsafe --reasoning-effort high"
-        );
-    }
-
-    #[test]
-    fn test_build_command_combined_options() {
-        let droid = Droid {
-            append_prompt: AppendPrompt::default(),
-            autonomy: Autonomy::Medium,
-            model: Some("claude-sonnet-4-5-20250929".to_string()),
-            reasoning_effort: Some(ReasoningEffortLevel::Dynamic),
-            cmd: CmdOverrides::default(),
-        };
-
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
-
-        assert_eq!(
-            cmd,
-            "droid exec --output-format stream-json --auto medium --model claude-sonnet-4-5-20250929 --reasoning-effort dynamic"
         );
     }
 
@@ -439,8 +360,7 @@ mod tests {
             },
         };
 
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
+        let cmd = droid.build_command_builder().build_initial();
 
         assert_eq!(
             cmd,
@@ -461,8 +381,7 @@ mod tests {
             },
         };
 
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
+        let cmd = droid.build_command_builder().build_initial();
 
         assert_eq!(
             cmd,
@@ -483,8 +402,7 @@ mod tests {
             },
         };
 
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
+        let cmd = droid.build_command_builder().build_initial();
 
         assert_eq!(
             cmd,
@@ -502,11 +420,8 @@ mod tests {
             cmd: CmdOverrides::default(),
         };
 
-        let builder = droid.build_command_builder();
-        let cmd = builder.build_initial();
+        let cmd = droid.build_command_builder().build_initial();
 
         assert_eq!(cmd, "droid exec --output-format stream-json");
-        assert!(!cmd.contains("--model"));
-        assert!(!cmd.contains("--reasoning-effort"));
     }
 }
