@@ -10,6 +10,7 @@ use crate::{
     db, routes,
 };
 
+// ...
 pub struct Server;
 
 impl Server {
