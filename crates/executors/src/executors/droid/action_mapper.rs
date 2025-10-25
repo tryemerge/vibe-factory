@@ -75,13 +75,10 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
             path: make_path_relative(&file_path, &worktree_path_str),
             changes: vec![],
         },
-        DroidToolData::ApplyPatch { input } => {
-            let path = extract_path_from_patch(&serde_json::json!({ "input": input }));
-            ActionType::FileEdit {
-                path: make_path_relative(&path, &worktree_path_str),
-                changes: vec![],
-            }
-        }
+        DroidToolData::ApplyPatch { input } => ActionType::FileEdit {
+            path: make_path_relative(&extract_path_from_patch(&input), &worktree_path_str),
+            changes: vec![],
+        },
         DroidToolData::TodoWrite { todos } => {
             let todo_items = todos
                 .into_iter()
@@ -110,16 +107,14 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
     }
 }
 
-fn extract_path_from_patch(params: &Value) -> String {
-    if let Some(input) = params.get("input").and_then(|v| v.as_str()) {
-        for line in input.lines() {
-            if line.starts_with("*** Update File:") || line.starts_with("*** Create File:") {
-                return line
-                    .split(':')
-                    .nth(1)
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_default();
-            }
+fn extract_path_from_patch(input: &String) -> String {
+    for line in input.lines() {
+        if line.starts_with("*** Update File:") || line.starts_with("*** Create File:") {
+            return line
+                .split(':')
+                .nth(1)
+                .map(|s| s.trim().to_string())
+                .unwrap_or_default();
         }
     }
     String::new()
