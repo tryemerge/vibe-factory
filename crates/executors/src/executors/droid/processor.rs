@@ -19,7 +19,10 @@ fn parse_lines(lines: impl Stream<Item = String>) -> impl Stream<Item = Result<D
             let trimmed = line.trim();
             match serde_json::from_str::<DroidJson>(trimmed) {
                 Ok(droid_json) => yield Ok(droid_json),
-                Err(_) => yield Err(trimmed.to_string()),
+                Err(e) => {
+                    tracing::error!("Failed to parse DroidJson from line '{}': {}", trimmed, e);
+                    yield Err(trimmed.to_string());
+                }
             }
         }
     }
