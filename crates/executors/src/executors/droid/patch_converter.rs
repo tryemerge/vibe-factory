@@ -10,7 +10,7 @@ pub struct PatchConverter {
 }
 
 impl PatchConverter {
-    pub fn to_patch(
+    pub fn process_event(
         &mut self,
         event: LogEvent,
         index_provider: &EntryIndexProvider,

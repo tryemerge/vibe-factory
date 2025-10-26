@@ -342,7 +342,7 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
     }
 }
 
-fn extract_path_from_patch(input: &String) -> String {
+fn extract_path_from_patch(input: &str) -> String {
     for line in input.lines() {
         // 'The required format is '[ACTION] File: [path/to/file]' -> ACTION must be either Add or Update.'
         if line.starts_with("*** Update File:") || line.starts_with("*** Add File:") {

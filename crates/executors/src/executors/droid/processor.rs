@@ -49,7 +49,7 @@ async fn process_parsed_items(
                 }
                 if let Some(patch) = log_event_converter
                     .to_log_event(&droid_json, worktree_path)
-                    .and_then(|event| patch_converter.to_patch(event, entry_index_provider))
+                    .and_then(|event| patch_converter.process_event(event, entry_index_provider))
                 {
                     msg_store.push_patch(patch);
                 }
