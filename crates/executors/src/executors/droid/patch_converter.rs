@@ -1,22 +1,16 @@
 use std::collections::HashMap;
 
-use super::events::LogEvent;
+use super::log_event_converter::LogEvent;
 use crate::logs::utils::{EntryIndexProvider, patch::ConversationPatch};
 
 #[derive(Default)]
-pub struct PatchEmitter {
+pub struct PatchConverter {
     /// Maps tool_call_id to entry indices
     tool_call_idx: HashMap<String, usize>,
 }
 
-impl PatchEmitter {
-    pub fn new() -> Self {
-        Self {
-            tool_call_idx: HashMap::new(),
-        }
-    }
-
-    pub fn convert(
+impl PatchConverter {
+    pub fn to_patch(
         &mut self,
         event: LogEvent,
         index_provider: &EntryIndexProvider,

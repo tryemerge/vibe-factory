@@ -2,7 +2,7 @@
 source: crates/executors/tests/droid_snapshots.rs
 expression: snapshot
 ---
-final_state:
+log_event_converter:
   tool_map: {}
   model_reported: true
 events:
@@ -13,13 +13,13 @@ events:
       content: "model: gpt-5-codex"
       metadata: ~
   - AddEntry:
-      timestamp: "1760806427595"
+      timestamp: ~
       entry_type:
         type: user_message
       content: hello world
       metadata: ~
   - AddEntry:
-      timestamp: "1760806437677"
+      timestamp: ~
       entry_type:
         type: assistant_message
       content: "# Hello world!"

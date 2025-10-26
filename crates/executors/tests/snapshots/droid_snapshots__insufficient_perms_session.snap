@@ -2,7 +2,7 @@
 source: crates/executors/tests/droid_snapshots.rs
 expression: snapshot
 ---
-final_state:
+log_event_converter:
   tool_map: {}
   model_reported: true
 events:
@@ -13,7 +13,7 @@ events:
       content: "model: gpt-5-codex"
       metadata: ~
   - AddEntry:
-      timestamp: "1760806536533"
+      timestamp: ~
       entry_type:
         type: user_message
       content: "create a text file called 'a.txt' with the character 'a' inside"
@@ -21,7 +21,7 @@ events:
   - AddToolCall:
       tool_call_id: call_WaiIpWDOVLcWkCDEJKogOzrl
       entry:
-        timestamp: "1760806545519"
+        timestamp: ~
         entry_type:
           type: tool_use
           tool_name: Read
@@ -31,13 +31,11 @@ events:
           status:
             status: created
         content: "`/Users/tempuser/projects/vibe-kanban/README.md`"
-        metadata:
-          file_path: /Users/tempuser/projects/vibe-kanban/README.md
-          toolCallId: call_WaiIpWDOVLcWkCDEJKogOzrl
+        metadata: ~
   - UpdateToolCall:
       tool_call_id: call_WaiIpWDOVLcWkCDEJKogOzrl
       entry:
-        timestamp: "1760806545524"
+        timestamp: ~
         entry_type:
           type: tool_use
           tool_name: Read
@@ -51,7 +49,7 @@ events:
   - AddToolCall:
       tool_call_id: call_ULikm3YyJS9DBwHRcEck7ejc
       entry:
-        timestamp: "1760806551942"
+        timestamp: ~
         entry_type:
           type: tool_use
           tool_name: TodoWrite
@@ -65,17 +63,11 @@ events:
           status:
             status: created
         content: TODO list updated
-        metadata:
-          todos:
-            - id: todo-1
-              content: "Create text file a.txt containing single character 'a'"
-              status: in_progress
-              priority: medium
-          toolCallId: call_ULikm3YyJS9DBwHRcEck7ejc
+        metadata: ~
   - UpdateToolCall:
       tool_call_id: call_ULikm3YyJS9DBwHRcEck7ejc
       entry:
-        timestamp: "1760806551946"
+        timestamp: ~
         entry_type:
           type: tool_use
           tool_name: TodoWrite
@@ -93,7 +85,7 @@ events:
   - AddToolCall:
       tool_call_id: call_W4t4W4TDhrZFiM9DxVox21PW
       entry:
-        timestamp: "1760806562636"
+        timestamp: ~
         entry_type:
           type: tool_use
           tool_name: Execute
@@ -104,16 +96,11 @@ events:
           status:
             status: created
         content: "`printf 'a' > \"/Users/tempuser/projects/vibe-kanban/a.txt\"`"
-        metadata:
-          command: "printf 'a' > \"/Users/tempuser/projects/vibe-kanban/a.txt\""
-          riskLevel:
-            value: medium
-            reason: Command creates/overwrites a file in the repository.
-          toolCallId: call_W4t4W4TDhrZFiM9DxVox21PW
+        metadata: ~
   - UpdateToolCall:
       tool_call_id: call_W4t4W4TDhrZFiM9DxVox21PW
       entry:
-        timestamp: "1760806562640"
+        timestamp: ~
         entry_type:
           type: tool_use
           tool_name: Execute
@@ -126,13 +113,13 @@ events:
         content: "`printf 'a' > \"/Users/tempuser/projects/vibe-kanban/a.txt\"`"
         metadata: ~
   - AddEntry:
-      timestamp: "1760806562640"
+      timestamp: ~
       entry_type:
         type: assistant_message
       content: "Exec ended early: insufficient permission to proceed. Re-run with --auto medium or --auto high. For destructive commands, use --skip-permissions-unsafe."
       metadata: ~
   - AddEntry:
-      timestamp: "1760806562644"
+      timestamp: ~
       entry_type:
         type: error_message
       content: "Exec ended early: insufficient permission to proceed. Re-run with --auto medium or --auto high. For destructive commands, use --skip-permissions-unsafe."

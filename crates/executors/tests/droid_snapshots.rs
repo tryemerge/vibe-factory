@@ -1,13 +1,13 @@
 use std::{fs, path::Path};
 
 use executors::executors::droid::{
-    events::{LogEvent, ProcessorState},
+    log_event_converter::{LogEvent, LogEventConverter},
     types::DroidJson,
 };
 
 #[derive(serde::Serialize)]
 struct SessionSnapshot {
-    final_state: ProcessorState,
+    log_event_converter: LogEventConverter,
     events: Vec<LogEvent>,
     event_count: usize,
 }
@@ -16,7 +16,7 @@ fn process_jsonl_file(file_path: &str) -> SessionSnapshot {
     let content = fs::read_to_string(file_path).expect("Failed to read test file");
     let worktree_path = Path::new("/tmp/test-worktree");
 
-    let mut state = ProcessorState::default();
+    let mut converter = LogEventConverter::default();
     let mut all_events = Vec::new();
 
     for line in content.lines() {
@@ -33,14 +33,14 @@ fn process_jsonl_file(file_path: &str) -> SessionSnapshot {
             }
         };
 
-        let event = state.process_event(&event, worktree_path);
+        let event = converter.to_log_event(&event, worktree_path);
         all_events.extend(event);
     }
 
     SessionSnapshot {
         event_count: all_events.len(),
         events: all_events,
-        final_state: state,
+        log_event_converter: converter,
     }
 }
 
@@ -65,5 +65,11 @@ fn test_glob_permission_denied_session() {
 #[test]
 fn test_insufficient_perms_session() {
     let snapshot = process_jsonl_file("tests/droid_snapshots/fixtures/insufficient-perms.jsonl");
+    insta::assert_yaml_snapshot!(snapshot);
+}
+
+#[test]
+fn test_rc_claude_session() {
+    let snapshot = process_jsonl_file("tests/droid_snapshots/fixtures/rc-claude.jsonl");
     insta::assert_yaml_snapshot!(snapshot);
 }

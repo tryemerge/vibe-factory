@@ -10,9 +10,8 @@ use crate::{
     logs::{stderr_processor::normalize_stderr_logs, utils::EntryIndexProvider},
 };
 
-mod action_mapper;
-pub mod events;
-mod patch_emitter;
+pub mod log_event_converter;
+mod patch_converter;
 mod processor;
 pub mod types;
 
