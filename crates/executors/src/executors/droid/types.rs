@@ -212,6 +212,7 @@ pub enum DroidToolData {
     MultiEdit {
         #[serde(alias = "path")]
         file_path: String,
+        #[serde(alias = "changes")]
         edits: Vec<DroidEditItem>,
     },
     Create {

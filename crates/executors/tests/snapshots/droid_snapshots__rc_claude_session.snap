@@ -642,7 +642,7 @@ events:
             path: /private/tmp/droid-claude/calculator/src/main.rs
             changes:
               - action: edit
-                unified_diff: "--- a//private/tmp/droid-claude/calculator/src/main.rs\n+++ b//private/tmp/droid-claude/calculator/src/main.rs\n@@ -1,3 +1,4 @@\n+// Adds two numbers together\n fn add(a: f64, b: f64) -> f64 {\n     a + b\n }\n@@ -1,3 +1,4 @@\n+// Subtracts b from a\n fn subtract(a: f64, b: f64) -> f64 {\n     a - b\n }\n@@ -1,3 +1,4 @@\n+// Multiplies two numbers\n fn multiply(a: f64, b: f64) -> f64 {\n     a * b\n }\n@@ -1,8 +1,9 @@\n+// Divides a by b, handles division by zero\n fn divide(a: f64, b: f64) -> f64 {\n     if b == 0.0 {\n         println!(\"Warning: Division by zero! Returning infinity.\");\n         f64::INFINITY\n     } else {\n         a / b\n     }\n }\n"
+                unified_diff: "--- a//private/tmp/droid-claude/calculator/src/main.rs\n+++ b//private/tmp/droid-claude/calculator/src/main.rs\n"
                 has_line_numbers: false
           status:
             status: created
@@ -690,7 +690,7 @@ events:
             path: /private/tmp/droid-claude/calculator/src/main.rs
             changes:
               - action: edit
-                unified_diff: "--- a//private/tmp/droid-claude/calculator/src/main.rs\n+++ b//private/tmp/droid-claude/calculator/src/main.rs\n@@ -1,3 +1,4 @@\n+// Adds two numbers together\n fn add(a: f64, b: f64) -> f64 {\n     a + b\n }\n@@ -1,3 +1,4 @@\n+// Subtracts b from a\n fn subtract(a: f64, b: f64) -> f64 {\n     a - b\n }\n@@ -1,3 +1,4 @@\n+// Multiplies two numbers\n fn multiply(a: f64, b: f64) -> f64 {\n     a * b\n }\n@@ -1,8 +1,9 @@\n+// Divides a by b, handles division by zero\n fn divide(a: f64, b: f64) -> f64 {\n     if b == 0.0 {\n         println!(\"Warning: Division by zero! Returning infinity.\");\n         f64::INFINITY\n     } else {\n         a / b\n     }\n }\n"
+                unified_diff: "--- a//private/tmp/droid-claude/calculator/src/main.rs\n+++ b//private/tmp/droid-claude/calculator/src/main.rs\n"
                 has_line_numbers: false
           status:
             status: success

@@ -246,7 +246,7 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
     let worktree_path_str = worktree_path.to_string_lossy();
 
     match tool_data {
-        DroidToolData::Read { path: file_path } => ActionType::FileRead {
+        DroidToolData::Read { file_path } => ActionType::FileRead {
             path: make_path_relative(&file_path, &worktree_path_str),
         },
         DroidToolData::LS { directory_path, .. } => ActionType::FileRead {
@@ -265,9 +265,9 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
             result: None,
         },
         DroidToolData::Edit {
-            path: file_path,
-            old_str: old_string,
-            new_str: new_string,
+            file_path,
+            old_string,
+            new_string,
         } => {
             let changes = vec![FileChange::Edit {
                 unified_diff: workspace_utils::diff::create_unified_diff(
@@ -282,11 +282,8 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
                 changes,
             }
         }
-        DroidToolData::MultiEdit {
-            path: file_path,
-            changes,
-        } => {
-            let hunks: Vec<String> = changes
+        DroidToolData::MultiEdit { file_path, edits } => {
+            let hunks: Vec<String> = edits
                 .iter()
                 .filter_map(|edit| {
                     if edit.old_string.is_some() || edit.new_string.is_some() {
@@ -307,10 +304,7 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
                 }],
             }
         }
-        DroidToolData::Create {
-            path: file_path,
-            content,
-        } => ActionType::FileEdit {
+        DroidToolData::Create { file_path, content } => ActionType::FileEdit {
             path: make_path_relative(&file_path, &worktree_path_str),
             changes: vec![FileChange::Write {
                 content: content.clone(),
@@ -349,8 +343,6 @@ pub fn map_tool_to_action(tool_name: &str, params: &Value, worktree_path: &Path)
 }
 
 fn extract_path_from_patch(input: &String) -> String {
-    // TODO if prefix is Add File, and every line is prefixed with `+` (after the begin line, and the patch line, ignoring the end patch line)
-    // then we can extract the content.
     for line in input.lines() {
         // 'The required format is '[ACTION] File: [path/to/file]' -> ACTION must be either Add or Update.'
         if line.starts_with("*** Update File:") || line.starts_with("*** Add File:") {
