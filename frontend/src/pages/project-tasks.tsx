@@ -95,14 +95,14 @@ function DiffsPanelContainer({
       gitOps={
         attempt && selectedTask
           ? {
-              task: selectedTask,
-              projectId,
-              branchStatus: branchStatus ?? null,
-              branches,
-              isAttemptRunning,
-              setError: setGitError,
-              selectedBranch: branchStatus?.target_branch_name ?? null,
-            }
+            task: selectedTask,
+            projectId,
+            branchStatus: branchStatus ?? null,
+            branches,
+            isAttemptRunning,
+            setError: setGitError,
+            selectedBranch: branchStatus?.target_branch_name ?? null,
+          }
           : undefined
       }
     />
@@ -581,6 +581,7 @@ export function ProjectTasks() {
           title: task.title,
           description: task.description,
           status: newStatus,
+          priority: task.priority,
           parent_task_attempt: task.parent_task_attempt,
           image_ids: null,
         });
