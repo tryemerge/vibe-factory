@@ -26,11 +26,12 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useUserSystem } from '@/components/config-provider';
 import { ExecutorProfileSelector } from '@/components/settings';
 import BranchSelector from '@/components/tasks/BranchSelector';
-import type {
+import {
   TaskStatus,
   ImageResponse,
   GitBranch,
   ExecutorProfileId,
+  TaskPriority,
 } from 'shared/types';
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
 import { useKeySubmitTask, useKeySubmitTaskAlt, Scope } from '@/keyboard';
@@ -41,6 +42,7 @@ interface Task {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +85,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       useState<boolean>(false);
     const imageUploadRef = useRef<ImageUploadSectionHandle>(null);
     const [isTextareaFocused, setIsTextareaFocused] = useState(false);
+    const [priority, setPriority] = useState<TaskPriority>(TaskPriority.NORMAL);
 
     const isEditMode = Boolean(task);
 
@@ -90,17 +93,24 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
     const hasUnsavedChanges = useCallback(() => {
       if (!isEditMode) {
         // Create mode - warn when there's content
-        return title.trim() !== '' || description.trim() !== '';
+        return (
+          title.trim() !== '' ||
+          description.trim() !== '' ||
+          priority !== TaskPriority.NORMAL
+        );
       } else if (task) {
         // Edit mode - warn when current values differ from original task
         const titleChanged = title.trim() !== task.title.trim();
         const descriptionChanged =
           (description || '').trim() !== (task.description || '').trim();
         const statusChanged = status !== task.status;
-        return titleChanged || descriptionChanged || statusChanged;
+        const priorityChanged = priority !== task.priority;
+        return (
+          titleChanged || descriptionChanged || statusChanged || priorityChanged
+        );
       }
       return false;
-    }, [title, description, status, isEditMode, task]);
+    }, [title, description, status, priority, isEditMode, task]);
 
     // Warn on browser/tab close if there are unsaved changes
     useEffect(() => {
@@ -128,6 +138,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         setTitle(task.title);
         setDescription(task.description || '');
         setStatus(task.status);
+        setPriority(task.priority);
 
         // Load existing images for the task
         if (modal.visible) {
@@ -144,6 +155,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         setTitle(initialTask.title);
         setDescription(initialTask.description || '');
         setStatus('todo'); // Always start duplicated tasks as 'todo'
+        setPriority(initialTask.priority || TaskPriority.NORMAL);
         setImages([]);
         setNewlyUploadedImageIds([]);
       } else {
@@ -151,6 +163,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         setTitle('');
         setDescription('');
         setStatus('todo');
+        setPriority(TaskPriority.NORMAL);
         setImages([]);
         setNewlyUploadedImageIds([]);
         setSelectedBranch('');
@@ -289,7 +302,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
                 description: description,
                 status,
                 parent_task_attempt: parentTaskAttemptId || null,
-                priority: null, // Don't change priority when editing
+                priority,
                 image_ids: imageIds || null,
               },
             },
@@ -306,7 +319,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
-              priority: null, // Don't change priority when editing
+              priority,
               image_ids: imageIds || null,
             },
             {
@@ -336,6 +349,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       isSubmitting,
       isSubmittingAndStart,
       parentTaskAttemptId,
+      priority,
     ]);
 
     const handleCreateAndStart = useCallback(async () => {
@@ -373,7 +387,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
-              priority: null,
+              priority,
               image_ids: imageIds || null,
             },
             executor_profile_id: finalExecutorProfile,
@@ -404,6 +418,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       isSubmitting,
       isSubmittingAndStart,
       parentTaskAttemptId,
+      priority,
     ]);
 
     const handleCancel = useCallback(() => {
@@ -557,6 +572,28 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
                   </Select>
                 </div>
               )}
+
+              <div className="pt-2">
+                <Label htmlFor="task-priority" className="text-sm font-medium">
+                  Priority
+                </Label>
+                <Select
+                  value={priority}
+                  onValueChange={(value) => setPriority(value as TaskPriority)}
+                  disabled={isSubmitting || isSubmittingAndStart}
+                >
+                  <SelectTrigger className="mt-1.5" id="task-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(TaskPriority).map((priorityValue) => (
+                      <SelectItem key={priorityValue} value={priorityValue}>
+                        {priorityValue}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {!isEditMode &&
                 (() => {
