@@ -105,7 +105,9 @@ export const useConversationHistory = ({
 
   // Keep executionProcesses up to date
   useEffect(() => {
-    executionProcesses.current = executionProcessesRaw;
+    executionProcesses.current = executionProcessesRaw.filter(
+      (ep) => ep.run_reason !== 'devserver'
+    );
   }, [executionProcessesRaw]);
 
   const loadEntriesForHistoricExecutionProcess = (
@@ -426,11 +428,13 @@ export const useConversationHistory = ({
   };
 
   const loadInitialEntries = async (): Promise<ExecutionProcessStateStore> => {
+    console.log('DEBUG3');
     const localDisplayedExecutionProcesses: ExecutionProcessStateStore = {};
 
     if (!executionProcesses?.current) return localDisplayedExecutionProcesses;
 
     for (const executionProcess of [...executionProcesses.current].reverse()) {
+      console.log('DEBUG6', executionProcess.id);
       if (executionProcess.status === ExecutionProcessStatus.running) continue;
 
       const entries =
@@ -498,6 +502,7 @@ export const useConversationHistory = ({
     addEntryType: AddEntryType,
     loading: boolean
   ) => {
+    console.log('DEBUG2', loading);
     const entries = flattenEntriesForEmit(executionProcessState);
     onEntriesUpdatedRef.current?.(entries, addEntryType, loading);
   };
@@ -541,10 +546,12 @@ export const useConversationHistory = ({
 
       // Initial entries
       const allInitialEntries = await loadInitialEntries();
+      console.log('DEBUG4', cancelled);
       if (cancelled) return;
       mergeIntoDisplayed((state) => {
         Object.assign(state, allInitialEntries);
       });
+      console.log('DEBUG5');
       emitEntries(displayedExecutionProcesses.current, 'initial', false);
       loadedInitialEntries.current = true;
 

@@ -114,6 +114,8 @@ const VirtualizedList = ({ attempt, task }: VirtualizedListProps) => {
     [attempt, task]
   );
 
+  console.log('DEBUG1', loading);
+
   return (
     <ApprovalFormProvider>
       <VirtuosoMessageListLicense
