@@ -11,22 +11,31 @@ interface SwitchProps {
 
 const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
   (
-    { className, checked = false, onCheckedChange, disabled, ...props },
+    { className, checked = false, onCheckedChange, disabled, id, ...props },
     ref
   ) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        onCheckedChange?.(!checked);
+      }
+    };
+
     return (
       <button
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-labelledby={id ? `${id}-label` : undefined}
         ref={ref}
         className={cn(
-          'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
+          'inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
           checked ? 'bg-foreground' : 'bg-input',
           className
         )}
         disabled={disabled}
         onClick={() => onCheckedChange?.(!checked)}
+        onKeyDown={handleKeyDown}
         {...props}
       >
         <span
