@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use super::{project::Project, task_attempt::TaskAttempt};
 
-#[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, TS, EnumString, Display)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, Eq, TS, EnumString, Display)]
 #[sqlx(type_name = "task_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "kebab_case")]
@@ -19,16 +19,16 @@ pub enum TaskStatus {
     Cancelled,
 }
 
-#[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, TS)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, TS)]
 #[sqlx(type_name = "task_priority", rename_all = "SCREAMING_SNAKE_CASE")]
 #[ts(use_ts_enum)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TaskPriority {
-    Normal,
     High,
+    Normal,
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS, PartialEq, Eq)]
 pub struct Task {
     pub id: Uuid,
     pub project_id: Uuid, // Foreign key to Project
@@ -39,6 +39,22 @@ pub struct Task {
     pub priority: TaskPriority,            // Priority for task importance (normal or high)
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl Ord for Task {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Primary sort: priority (High before Normal)
+        // Secondary sort: created_at (newer first)
+        self.priority
+            .cmp(&other.priority)
+            .then_with(|| other.created_at.cmp(&self.created_at))
+    }
+}
+
+impl PartialOrd for Task {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -176,7 +192,7 @@ ORDER BY t.created_at DESC"#,
         .fetch_all(pool)
         .await?;
 
-        let tasks = records
+        let mut tasks: Vec<TaskWithAttemptStatus> = records
             .into_iter()
             .map(|rec| TaskWithAttemptStatus {
                 task: Task {
@@ -196,6 +212,8 @@ ORDER BY t.created_at DESC"#,
                 executor: rec.executor,
             })
             .collect();
+
+        tasks.sort_by(|a, b| a.task.cmp(&b.task));
 
         Ok(tasks)
     }
@@ -355,7 +373,7 @@ ORDER BY t.created_at DESC"#,
         attempt_id: Uuid,
     ) -> Result<Vec<Self>, sqlx::Error> {
         // Find only child tasks that have this attempt as their parent
-        sqlx::query_as!(
+        let mut tasks = sqlx::query_as!(
             Task,
             r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", priority as "priority!: TaskPriority", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
                FROM tasks
@@ -364,7 +382,11 @@ ORDER BY t.created_at DESC"#,
             attempt_id,
         )
         .fetch_all(pool)
-        .await
+        .await?;
+
+        tasks.sort();
+
+        Ok(tasks)
     }
 
     pub async fn find_relationships_for_attempt(

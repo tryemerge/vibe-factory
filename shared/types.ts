@@ -54,7 +54,7 @@ export type CreateTask = { project_id: string, title: string, description: strin
 
 export type UpdateTask = { title: string | null, description: string | null, status: TaskStatus | null, parent_task_attempt: string | null, priority: TaskPriority | null, image_ids: Array<string> | null, };
 
-export enum TaskPriority { NORMAL = "NORMAL", HIGH = "HIGH" }
+export enum TaskPriority { HIGH = "HIGH", NORMAL = "NORMAL" }
 
 export type Image = { id: string, file_path: string, original_name: string, mime_type: string | null, size_bytes: bigint, hash: string, created_at: string, updated_at: string, };
 

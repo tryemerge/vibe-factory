@@ -306,6 +306,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
+              priority: null, // Don't change priority when editing
               image_ids: imageIds || null,
             },
             {
@@ -358,7 +359,8 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
           selectedExecutorProfile || system.config?.executor_profile;
         if (!finalExecutorProfile || !selectedBranch) {
           console.warn(
-            `Missing ${!finalExecutorProfile ? 'executor profile' : 'branch'
+            `Missing ${
+              !finalExecutorProfile ? 'executor profile' : 'branch'
             } for Create & Start`
           );
           return;
@@ -371,6 +373,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
+              priority: null,
               image_ids: imageIds || null,
             },
             executor_profile_id: finalExecutorProfile,
