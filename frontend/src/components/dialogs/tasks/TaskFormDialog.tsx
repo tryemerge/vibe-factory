@@ -600,7 +600,15 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       } else {
         void handleSubmit();
       }
-    }, [isSubmitting, isSubmittingAndStart, title, isEditMode, shouldStart, handleSubmit, handleCreateAndStart]);
+    }, [
+      isSubmitting,
+      isSubmittingAndStart,
+      title,
+      isEditMode,
+      shouldStart,
+      handleSubmit,
+      handleCreateAndStart,
+    ]);
 
     const alternateAction = useCallback(() => {
       if (isSubmitting || isSubmittingAndStart || !title.trim()) return;
@@ -614,19 +622,31 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       } else {
         void handleCreateAndStart(); // create and start
       }
-    }, [isSubmitting, isSubmittingAndStart, title, isEditMode, shouldStart, handleSubmit, handleCreateAndStart]);
+    }, [
+      isSubmitting,
+      isSubmittingAndStart,
+      title,
+      isEditMode,
+      shouldStart,
+      handleSubmit,
+      handleCreateAndStart,
+    ]);
 
     const shortcutsEnabled =
-      modal.visible && !isSubmitting && !isSubmittingAndStart && !!title.trim() && isTextareaFocused;
+      modal.visible &&
+      !isSubmitting &&
+      !isSubmittingAndStart &&
+      !!title.trim() &&
+      isTextareaFocused;
 
-    useKeySubmitTask(primaryAction, { 
-      enabled: shortcutsEnabled, 
+    useKeySubmitTask(primaryAction, {
+      enabled: shortcutsEnabled,
       scope: Scope.DIALOG,
       enableOnFormTags: ['textarea', 'TEXTAREA'],
       preventDefault: true,
     });
-    useKeySubmitTaskAlt(alternateAction, { 
-      enabled: shortcutsEnabled, 
+    useKeySubmitTaskAlt(alternateAction, {
+      enabled: shortcutsEnabled,
       scope: Scope.DIALOG,
       enableOnFormTags: ['textarea', 'TEXTAREA'],
       preventDefault: true,
