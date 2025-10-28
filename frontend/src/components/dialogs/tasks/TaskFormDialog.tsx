@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Settings2, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -64,6 +65,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
     parentTaskAttemptId,
   }) => {
     const modal = useModal();
+    const { t } = useTranslation('common');
     const { createTask, createAndStart, updateTask } =
       useTaskMutations(projectId);
     const { system, profiles } = useUserSystem();
@@ -575,7 +577,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
 
               <div className="pt-2">
                 <Label htmlFor="task-priority" className="text-sm font-medium">
-                  Priority
+                  {t('priority')}
                 </Label>
                 <Select
                   value={priority}
