@@ -26,7 +26,7 @@ export {
 export {
   TaskFormDialog,
   type TaskFormDialogProps,
-} from './tasks/TaskFormDialog';
+} from './tasks/TaskForm/TaskFormDialog';
 
 export { CreatePRDialog } from './tasks/CreatePRDialog';
 export {
