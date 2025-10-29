@@ -479,7 +479,10 @@ impl WorktreeManager {
     }
 
     /// Get the base directory for vibe-kanban worktrees
+    ///
+    /// This can be customized via the VIBE_WORKTREE_DIR environment variable.
+    /// See utils::path::get_worktree_base_dir() for details.
     pub fn get_worktree_base_dir() -> std::path::PathBuf {
-        utils::path::get_vibe_kanban_temp_dir().join("worktrees")
+        utils::path::get_worktree_base_dir()
     }
 }
