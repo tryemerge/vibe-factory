@@ -174,7 +174,8 @@ impl LocalContainerService {
             );
             return;
         }
-        let worktree_base_dir = WorktreeManager::get_worktree_base_dir();
+        // Use the default worktree base dir (None means no project override)
+        let worktree_base_dir = WorktreeManager::get_worktree_base_dir(None);
         if !worktree_base_dir.exists() {
             tracing::debug!(
                 "Worktree base directory {} does not exist, skipping orphan cleanup",
@@ -670,14 +671,16 @@ impl ContainerService for LocalContainerService {
             .await?
             .ok_or(sqlx::Error::RowNotFound)?;
 
-        let worktree_dir_name =
-            LocalContainerService::dir_name_from_task_attempt(&task_attempt.id, &task.title);
-        let worktree_path = WorktreeManager::get_worktree_base_dir().join(&worktree_dir_name);
-
         let project = task
             .parent_project(&self.db.pool)
             .await?
             .ok_or(sqlx::Error::RowNotFound)?;
+
+        let worktree_dir_name =
+            LocalContainerService::dir_name_from_task_attempt(&task_attempt.id, &task.title);
+        let worktree_path = WorktreeManager::get_worktree_base_dir(
+            project.worktree_dir.as_deref()
+        ).join(&worktree_dir_name);
 
         WorktreeManager::create_worktree(
             &project.git_repo_path,
