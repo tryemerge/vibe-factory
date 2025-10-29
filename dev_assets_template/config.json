@@ -1,0 +1,38 @@
+{
+  "config_version": "v7",
+  "theme": "SYSTEM",
+  "executor_profile": {
+    "executor": "CLAUDE_CODE"
+  },
+  "disclaimer_acknowledged": true,
+  "onboarding_acknowledged": true,
+  "github_login_acknowledged": true,
+  "telemetry_acknowledged": true,
+  "notifications": {
+    "sound_enabled": false,
+    "push_enabled": true,
+    "sound_file": "PHONE_VIBRATION"
+  },
+  "editor": {
+    "editor_type": "VS_CODE",
+    "custom_command": null
+  },
+  "github": {
+    "pat": null,
+    "oauth_token": null,
+    "username": null,
+    "primary_email": null,
+    "default_pr_base": "main"
+  },
+  "analytics_enabled": false,
+  "workspace_dir": null,
+  "last_app_version": "0.0.113",
+  "show_release_notes": false,
+  "language": "BROWSER",
+  "git_branch_prefix": "emerge",
+  "showcases": {
+    "seen_features": [
+      "task-panel-onboarding"
+    ]
+  }
+}
