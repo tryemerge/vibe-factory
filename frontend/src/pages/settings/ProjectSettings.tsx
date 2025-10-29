@@ -214,6 +214,7 @@ export function ProjectSettings() {
         dev_script: draft.dev_script.trim() || null,
         cleanup_script: draft.cleanup_script.trim() || null,
         copy_files: draft.copy_files.trim() || null,
+        worktree_dir: selectedProject.worktree_dir ?? null,
       };
 
       updateProject.mutate({
