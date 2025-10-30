@@ -36,6 +36,7 @@ interface ProjectFormState {
   dev_script: string;
   cleanup_script: string;
   copy_files: string;
+  worktree_dir: string;
 }
 
 function projectToFormState(project: Project): ProjectFormState {
@@ -46,6 +47,7 @@ function projectToFormState(project: Project): ProjectFormState {
     dev_script: project.dev_script ?? '',
     cleanup_script: project.cleanup_script ?? '',
     copy_files: project.copy_files ?? '',
+    worktree_dir: project.worktree_dir ?? '',
   };
 }
 
@@ -214,7 +216,7 @@ export function ProjectSettings() {
         dev_script: draft.dev_script.trim() || null,
         cleanup_script: draft.cleanup_script.trim() || null,
         copy_files: draft.copy_files.trim() || null,
-        worktree_dir: selectedProject.worktree_dir ?? null,
+        worktree_dir: draft.worktree_dir.trim() || null,
       };
 
       updateProject.mutate({
@@ -462,6 +464,41 @@ export function ProjectSettings() {
                 />
                 <p className="text-sm text-muted-foreground">
                   {t('settings.projects.scripts.copyFiles.helper')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="worktree-dir">Worktree Directory</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="worktree-dir"
+                    type="text"
+                    value={draft.worktree_dir}
+                    onChange={(e) =>
+                      updateDraft({ worktree_dir: e.target.value })
+                    }
+                    placeholder="~/my-worktrees or /custom/path/to/worktrees"
+                    className="flex-1 font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      const selectedPath = await showFolderPicker({
+                        title: 'Select Worktree Directory',
+                        description: 'Choose where to store git worktrees for this project',
+                        value: draft.worktree_dir,
+                      });
+                      if (selectedPath) {
+                        updateDraft({ worktree_dir: selectedPath });
+                      }
+                    }}
+                  >
+                    <Folder className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Custom directory for git worktrees (optional). Supports absolute paths (<code className="text-xs">/custom/path</code>), tilde expansion (<code className="text-xs">~/worktrees</code>), or relative paths. Leave empty to use the global <code className="text-xs">VIBE_WORKTREE_DIR</code> setting or the default temp directory.
                 </p>
               </div>
             </CardContent>
