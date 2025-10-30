@@ -20,6 +20,10 @@
       "@playwright/mcp@latest"
     ]
   },
+  "figma": {
+    "type": "http",
+    "url": "http://127.0.0.1:3845/mcp"
+  },
   "meta": {
     "vibe_kanban": {
       "name": "Vibe Kanban",
@@ -38,6 +42,12 @@
       "description": "Browser automation with Playwright",
       "url": "https://github.com/microsoft/playwright-mcp",
       "icon": "mcp/playwright_logo_icon.svg"
+    },
+    "figma": {
+      "name": "Figma",
+      "description": "Access Figma design files, components, variables, and FigJam diagrams for design-informed code generation",
+      "url": "https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Figma-MCP-server",
+      "icon": "mcp/figma_logo.svg"
     }
   }
 }
