@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE projects SET name = $2, git_repo_path = $3, setup_script = $4, dev_script = $5, cleanup_script = $6, copy_files = $7, worktree_dir = $8 WHERE id = $1 RETURNING id as \"id!: Uuid\", name, git_repo_path, setup_script, dev_script, cleanup_script, copy_files, worktree_dir, created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "git_repo_path",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "setup_script",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "dev_script",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "cleanup_script",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "copy_files",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "worktree_dir",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 9,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "518bcd84447ea83009407de262bcd58d15251b3d772162cbbf3cb3ae86b06fcb"
+}
