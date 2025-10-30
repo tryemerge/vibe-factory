@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM station_transitions\n               WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "workflow_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "source_station_id!: Uuid",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_station_id!: Uuid",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "condition",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "label",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "d6321666f38046339980641182de6e631c804b6f2a2b1e0ee60301516347702c"
+}

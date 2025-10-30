@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO agents (id, name, role, system_prompt, capabilities, tools, description)\n               VALUES ($1, $2, $3, $4, $5, $6, $7)\n               RETURNING\n                id as \"id!: Uuid\",\n                name,\n                role,\n                system_prompt,\n                capabilities,\n                tools,\n                description,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "role",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "system_prompt",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "capabilities",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "tools",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "892b855881bfab5c83ed6cdf9f6ca02499b1254fa7d6154bfbb735df87b71fb7"
+}
