@@ -77,8 +77,11 @@ vibe-kanban-*.tgz
 # Development ports file
 .dev-ports.json
 
-dev_assets
+# Ignore runtime dev_assets but track template
+dev_assets/
+!dev_assets_template/
 dev_assets_*/
+
 /frontend/.env.sentry-build-plugin
 .ssh
 

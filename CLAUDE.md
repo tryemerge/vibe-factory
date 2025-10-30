@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Prerequisites
+
+Before starting development, ensure you have:
+- [Rust](https://rustup.rs/) (latest stable)
+- [Node.js](https://nodejs.org/) >=18
+- [pnpm](https://pnpm.io/) >=8
+
+Install additional development tools:
+```bash
+cargo install cargo-watch
+cargo install sqlx-cli
+pnpm i
+```
+
 ## Essential Commands
 
 ### Development
@@ -10,22 +24,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm run dev
 
 # Individual dev servers
-npm run frontend:dev    # Frontend only (port 3000)
-npm run backend:dev     # Backend only (port auto-assigned)
+pnpm run frontend:dev    # Frontend only (port 3000)
+pnpm run backend:dev     # Backend only (port auto-assigned)
 
 # Build production version
-./build-npm-package.sh
+pnpm run build:npx       # Or: ./local-build.sh
 ```
 
 ### Testing & Validation
 ```bash
 # Run all checks (frontend + backend)
-npm run check
+pnpm run check
 
 # Frontend specific
-cd frontend && npm run lint          # Lint TypeScript/React code
-cd frontend && npm run format:check  # Check formatting
-cd frontend && npx tsc --noEmit     # TypeScript type checking
+cd frontend && pnpm run lint          # Lint TypeScript/React code
+cd frontend && pnpm run format:check  # Check formatting
+cd frontend && pnpm run format        # Auto-fix formatting
+cd frontend && pnpm exec tsc --noEmit # TypeScript type checking
 
 # Backend specific  
 cargo test --workspace               # Run all Rust tests
@@ -35,8 +50,8 @@ cargo fmt --all -- --check          # Check Rust formatting
 cargo clippy --all --all-targets --all-features -- -D warnings  # Linting
 
 # Type generation (after modifying Rust types)
-npm run generate-types               # Regenerate TypeScript types from Rust
-npm run generate-types:check        # Verify types are up to date
+pnpm run generate-types               # Regenerate TypeScript types from Rust
+pnpm run generate-types:check        # Verify types are up to date
 ```
 
 ### Database Operations
@@ -131,3 +146,61 @@ Runtime:
   - Supports tilde expansion: `~/my-worktrees`
   - Supports relative paths (resolved from current directory)
 - `DISABLE_WORKTREE_ORPHAN_CLEANUP`: Debug flag for worktrees
+- `GIT_SCAN_TIMEOUT_MS`: Git repository scan timeout (default: 5000ms)
+- `GIT_SCAN_HARD_TIMEOUT_MS`: Git repository hard timeout (default: 10000ms)
+- `GIT_SCAN_MAX_DEPTH`: Maximum directory depth for git scanning (default: 3)
+
+## Dogfooding: Using Vibe-Factory to Develop Itself
+
+When using vibe-factory to work on itself, each worktree needs an isolated environment to safely test changes without breaking the orchestration system.
+
+### Project Configuration for Self-Development
+
+**Copy Files:**
+```
+.env
+```
+
+**Setup Script:**
+```bash
+#!/bin/bash
+set -e
+
+# Install dependencies
+pnpm install
+
+# Copy template database (production snapshot)
+mkdir -p dev_assets
+cp dev_assets_template/db.sqlite dev_assets/db.sqlite
+cp dev_assets_template/config.json dev_assets/config.json
+
+# Run migrations on copied database
+WORKTREE_DB="$(pwd)/dev_assets/db.sqlite"
+cd crates/db && DATABASE_URL="sqlite://$WORKTREE_DB" sqlx migrate run && cd ../..
+
+echo "✅ Worktree ready with isolated database"
+```
+
+**Dev Server Script** (optional, for testing backend changes):
+```bash
+#!/bin/bash
+# Run isolated backend + frontend
+BACKEND_PORT=0 pnpm run dev
+```
+
+### Database Template
+
+- `dev_assets_template/` contains a snapshot of the production database
+- This directory is version-controlled (unlike `dev_assets/`)
+- Each worktree gets a fresh copy for isolated testing
+- Update template when you want worktrees to have fresh production data:
+  ```bash
+  cp dev_assets/db.sqlite dev_assets_template/db.sqlite
+  ```
+
+### Why This Architecture?
+
+- **Main instance** (port 3000/3001): Safe orchestrator, manages tasks, never crashes
+- **Worktree instances** (auto-assigned ports): Isolated backends for testing changes
+- **Template DB**: Realistic production data for each worktree without conflicts
+- **Safe merges**: Schema changes tested in isolation before merging to main

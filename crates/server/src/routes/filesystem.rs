@@ -42,15 +42,28 @@ pub async fn list_git_repos(
     State(deployment): State<DeploymentImpl>,
     Query(query): Query<ListDirectoryQuery>,
 ) -> Result<ResponseJson<ApiResponse<Vec<DirectoryEntry>>>, ApiError> {
+    // Read timeout values from environment variables with sensible defaults
+    let timeout_ms = std::env::var("GIT_SCAN_TIMEOUT_MS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5000); // Default: 5 seconds
+    let hard_timeout_ms = std::env::var("GIT_SCAN_HARD_TIMEOUT_MS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(10000); // Default: 10 seconds
+    let max_depth = std::env::var("GIT_SCAN_MAX_DEPTH")
+        .ok()
+        .and_then(|s| s.parse().ok());
+
     let res = if let Some(ref path) = query.path {
         deployment
             .filesystem()
-            .list_git_repos(Some(path.clone()), 800, 1200, Some(3))
+            .list_git_repos(Some(path.clone()), timeout_ms, hard_timeout_ms, max_depth)
             .await
     } else {
         deployment
             .filesystem()
-            .list_common_git_repos(800, 1200, Some(4))
+            .list_common_git_repos(timeout_ms, hard_timeout_ms, max_depth.or(Some(4)))
             .await
     };
     match res {
