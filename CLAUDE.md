@@ -171,7 +171,8 @@ cp dev_assets_template/db.sqlite dev_assets/db.sqlite
 cp dev_assets_template/config.json dev_assets/config.json
 
 # Run migrations on copied database
-cd crates/db && sqlx migrate run && cd ../..
+WORKTREE_DB="$(pwd)/dev_assets/db.sqlite"
+cd crates/db && DATABASE_URL="sqlite://$WORKTREE_DB" sqlx migrate run && cd ../..
 
 echo "✅ Worktree ready with isolated database"
 ```
