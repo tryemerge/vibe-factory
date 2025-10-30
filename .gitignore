@@ -78,7 +78,15 @@ vibe-kanban-*.tgz
 .dev-ports.json
 
 dev_assets
+dev_assets_*/
 /frontend/.env.sentry-build-plugin
 .ssh
 
 vibe-kanban-cloud/
+
+# Temporary database files
+state_temp.db
+**/state_temp.db
+
+# Lock files (project uses pnpm)
+package-lock.json
