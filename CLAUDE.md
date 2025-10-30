@@ -60,8 +60,35 @@ pnpm run generate-types:check        # Verify types are up to date
 sqlx migrate run                     # Apply migrations
 sqlx database create                 # Create database
 
-# Database is auto-copied from dev_assets_seed/ on dev server start
+# Database is auto-copied from dev_assets_template/ for worktrees
 ```
+
+**IMPORTANT: Workflow for Database Schema Changes**
+
+When creating or modifying database migrations, you **MUST** update the SQLx query cache to avoid compilation errors:
+
+```bash
+# 1. Create your migration file
+touch crates/db/migrations/YYYYMMDDHHMMSS_description.sql
+# Edit the migration file...
+
+# 2. Apply migration to your local database
+DATABASE_URL="sqlite:///Users/the_dusky/code/emerge/vibe-factory/dev_assets/db.sqlite" sqlx migrate run
+
+# 3. Update SQLx offline query cache (CRITICAL!)
+DATABASE_URL="sqlite:///Users/the_dusky/code/emerge/vibe-factory/dev_assets/db.sqlite" cargo sqlx prepare --workspace
+
+# 4. Commit BOTH the migration AND the updated cache
+git add crates/db/migrations/
+git add .sqlx/
+git commit -m "Add migration with updated query cache"
+```
+
+**Why this matters:**
+- SQLx uses offline query cache (`.sqlx/` directory) for compile-time verification
+- If you change the schema but don't update the cache, compilation will fail
+- PRs with database changes MUST include updated `.sqlx/` files
+- Use absolute paths for `DATABASE_URL` to avoid path resolution issues
 
 ## Architecture Overview
 
