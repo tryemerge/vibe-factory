@@ -61,6 +61,7 @@ export const ProjectFormDialog = NiceModal.create<ProjectFormDialogProps>(
         dev_script: null,
         cleanup_script: null,
         copy_files: null,
+        worktree_dir: null,
       };
 
       createProject.mutate(createData);
@@ -91,6 +92,7 @@ export const ProjectFormDialog = NiceModal.create<ProjectFormDialogProps>(
         dev_script: null,
         cleanup_script: null,
         copy_files: null,
+        worktree_dir: null,
       };
 
       createProject.mutate(createData);

@@ -141,6 +141,10 @@ Runtime:
 - `BACKEND_PORT`: Backend server port (default: auto-assign)
 - `FRONTEND_PORT`: Frontend dev port (default: 3000)
 - `HOST`: Backend host (default: 127.0.0.1)
+- `VIBE_WORKTREE_DIR`: Custom directory for git worktrees (default: platform-specific temp dir)
+  - Supports absolute paths: `/custom/path/to/worktrees`
+  - Supports tilde expansion: `~/my-worktrees`
+  - Supports relative paths (resolved from current directory)
 - `DISABLE_WORKTREE_ORPHAN_CLEANUP`: Debug flag for worktrees
 - `GIT_SCAN_TIMEOUT_MS`: Git repository scan timeout (default: 5000ms)
 - `GIT_SCAN_HARD_TIMEOUT_MS`: Git repository hard timeout (default: 10000ms)

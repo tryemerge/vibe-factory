@@ -120,6 +120,34 @@ pub fn get_vibe_kanban_temp_dir() -> std::path::PathBuf {
     }
 }
 
+/// Get the base directory for worktrees with support for custom path via environment variable.
+///
+/// Priority order:
+/// 1. VIBE_WORKTREE_DIR environment variable (if set)
+/// 2. Default: {vibe_kanban_temp_dir}/worktrees
+///
+/// The VIBE_WORKTREE_DIR can be:
+/// - An absolute path: /custom/path/to/worktrees
+/// - A path with ~: ~/my-worktrees (will be expanded)
+/// - A relative path (will be resolved relative to current directory)
+pub fn get_worktree_base_dir() -> std::path::PathBuf {
+    if let Ok(custom_dir) = std::env::var("VIBE_WORKTREE_DIR")
+        && !custom_dir.is_empty()
+    {
+        let path = expand_tilde(&custom_dir);
+        // If it's a relative path, make it absolute relative to current dir
+        if path.is_relative()
+            && let Ok(current_dir) = std::env::current_dir()
+        {
+            return current_dir.join(path);
+        }
+        return path;
+    }
+
+    // Default behavior: use temp directory
+    get_vibe_kanban_temp_dir().join("worktrees")
+}
+
 /// Expand leading ~ to user's home directory.
 pub fn expand_tilde(path_str: &str) -> std::path::PathBuf {
     shellexpand::tilde(path_str).as_ref().into()

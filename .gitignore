@@ -80,8 +80,16 @@ vibe-kanban-*.tgz
 # Ignore runtime dev_assets but track template
 dev_assets/
 !dev_assets_template/
+dev_assets_*/
 
 /frontend/.env.sentry-build-plugin
 .ssh
 
 vibe-kanban-cloud/
+
+# Temporary database files
+state_temp.db
+**/state_temp.db
+
+# Lock files (project uses pnpm)
+package-lock.json

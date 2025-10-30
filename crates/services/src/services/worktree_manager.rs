@@ -479,7 +479,29 @@ impl WorktreeManager {
     }
 
     /// Get the base directory for vibe-kanban worktrees
-    pub fn get_worktree_base_dir() -> std::path::PathBuf {
-        utils::path::get_vibe_kanban_temp_dir().join("worktrees")
+    ///
+    /// Priority order:
+    /// 1. project_override (if provided) - Project-specific worktree directory setting
+    /// 2. VIBE_WORKTREE_DIR environment variable (if set)
+    /// 3. Default platform-specific temp directory
+    ///
+    /// See utils::path::get_worktree_base_dir() for details on default behavior.
+    pub fn get_worktree_base_dir(project_override: Option<&str>) -> std::path::PathBuf {
+        // Check for project-specific override first
+        if let Some(override_dir) = project_override
+            && !override_dir.is_empty()
+        {
+            let path = utils::path::expand_tilde(override_dir);
+            // If it's a relative path, make it absolute relative to current dir
+            if path.is_relative()
+                && let Ok(current_dir) = std::env::current_dir()
+            {
+                return current_dir.join(path);
+            }
+            return path;
+        }
+
+        // Fall back to global setting (env var or default)
+        utils::path::get_worktree_base_dir()
     }
 }

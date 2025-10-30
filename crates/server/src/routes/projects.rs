@@ -56,9 +56,52 @@ pub async fn create_project(
         dev_script,
         cleanup_script,
         copy_files,
+        worktree_dir,
         use_existing_repo,
     } = payload;
     tracing::debug!("Creating project '{}'", name);
+
+    // Validate worktree_dir if provided
+    if let Some(ref dir) = worktree_dir {
+        let path = expand_tilde(dir);
+
+        // Validate path is not empty
+        if path.as_os_str().is_empty() {
+            return Ok(ResponseJson(ApiResponse::error(
+                "Worktree directory path cannot be empty",
+            )));
+        }
+
+        // Create directory if it doesn't exist
+        if !path.exists() {
+            if let Err(e) = std::fs::create_dir_all(&path) {
+                tracing::error!("Failed to create worktree directory '{}': {}", dir, e);
+                return Ok(ResponseJson(ApiResponse::error(&format!(
+                    "Failed to create worktree directory: {}",
+                    e
+                ))));
+            }
+            tracing::info!("Created worktree directory: {}", path.display());
+        }
+
+        // Validate path is a directory
+        if !path.is_dir() {
+            return Ok(ResponseJson(ApiResponse::error(
+                "Worktree path exists but is not a directory",
+            )));
+        }
+
+        // Test write permissions
+        let test_file = path.join(".vibe-kanban-test");
+        if let Err(e) = std::fs::write(&test_file, "") {
+            tracing::error!("Worktree directory '{}' is not writable: {}", dir, e);
+            return Ok(ResponseJson(ApiResponse::error(&format!(
+                "Worktree directory is not writable: {}",
+                e
+            ))));
+        }
+        let _ = std::fs::remove_file(&test_file);
+    }
 
     // Validate and setup git repository
     let path = std::path::absolute(expand_tilde(&git_repo_path))?;
@@ -143,6 +186,7 @@ pub async fn create_project(
             dev_script,
             cleanup_script,
             copy_files,
+            worktree_dir,
         },
         id,
     )
@@ -184,7 +228,51 @@ pub async fn update_project(
         dev_script,
         cleanup_script,
         copy_files,
+        worktree_dir,
     } = payload;
+
+    // Validate worktree_dir if provided
+    if let Some(ref dir) = worktree_dir {
+        let path = expand_tilde(dir);
+
+        // Validate path is not empty
+        if path.as_os_str().is_empty() {
+            return Ok(ResponseJson(ApiResponse::error(
+                "Worktree directory path cannot be empty",
+            )));
+        }
+
+        // Create directory if it doesn't exist
+        if !path.exists() {
+            if let Err(e) = std::fs::create_dir_all(&path) {
+                tracing::error!("Failed to create worktree directory '{}': {}", dir, e);
+                return Ok(ResponseJson(ApiResponse::error(&format!(
+                    "Failed to create worktree directory: {}",
+                    e
+                ))));
+            }
+            tracing::info!("Created worktree directory: {}", path.display());
+        }
+
+        // Validate path is a directory
+        if !path.is_dir() {
+            return Ok(ResponseJson(ApiResponse::error(
+                "Worktree path exists but is not a directory",
+            )));
+        }
+
+        // Test write permissions
+        let test_file = path.join(".vibe-kanban-test");
+        if let Err(e) = std::fs::write(&test_file, "") {
+            tracing::error!("Worktree directory '{}' is not writable: {}", dir, e);
+            return Ok(ResponseJson(ApiResponse::error(&format!(
+                "Worktree directory is not writable: {}",
+                e
+            ))));
+        }
+        let _ = std::fs::remove_file(&test_file);
+    }
+
     // If git_repo_path is being changed, check if the new path is already used by another project
     let git_repo_path = if let Some(new_git_repo_path) = git_repo_path.map(|s| expand_tilde(&s))
         && new_git_repo_path != existing_project.git_repo_path
@@ -220,6 +308,7 @@ pub async fn update_project(
         dev_script,
         cleanup_script,
         copy_files,
+        worktree_dir,
     )
     .await
     {

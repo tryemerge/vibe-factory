@@ -94,6 +94,7 @@ export function NoServerContent({
           dev_script: script,
           cleanup_script: project.cleanup_script ?? null,
           copy_files: project.copy_files ?? null,
+          worktree_dir: project.worktree_dir ?? null,
         },
       },
       {
