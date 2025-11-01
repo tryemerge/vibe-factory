@@ -486,7 +486,8 @@ export function ProjectSettings() {
                     onClick={async () => {
                       const selectedPath = await showFolderPicker({
                         title: 'Select Worktree Directory',
-                        description: 'Choose where to store git worktrees for this project',
+                        description:
+                          'Choose where to store git worktrees for this project',
                         value: draft.worktree_dir,
                       });
                       if (selectedPath) {
@@ -498,7 +499,13 @@ export function ProjectSettings() {
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Custom directory for git worktrees (optional). Supports absolute paths (<code className="text-xs">/custom/path</code>), tilde expansion (<code className="text-xs">~/worktrees</code>), or relative paths. Leave empty to use the global <code className="text-xs">VIBE_WORKTREE_DIR</code> setting or the default temp directory.
+                  Custom directory for git worktrees (optional). Supports
+                  absolute paths (<code className="text-xs">/custom/path</code>
+                  ), tilde expansion (
+                  <code className="text-xs">~/worktrees</code>), or relative
+                  paths. Leave empty to use the global{' '}
+                  <code className="text-xs">VIBE_WORKTREE_DIR</code> setting or
+                  the default temp directory.
                 </p>
               </div>
             </CardContent>

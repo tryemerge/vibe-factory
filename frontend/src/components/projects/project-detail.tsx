@@ -19,6 +19,7 @@ import {
   CheckSquare,
   Clock,
   Edit,
+  Factory,
   Loader2,
   Trash2,
 } from 'lucide-react';
@@ -133,6 +134,10 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
           <Button onClick={() => navigate(`/projects/${projectId}/tasks`)}>
             <CheckSquare className="mr-2 h-4 w-4" />
             View Tasks
+          </Button>
+          <Button onClick={() => navigate(`/projects/${projectId}/factory`)}>
+            <Factory className="mr-2 h-4 w-4" />
+            Factory Floor
           </Button>
           <Button variant="outline" onClick={handleEditClick}>
             <Edit className="mr-2 h-4 w-4" />
