@@ -70,6 +70,9 @@ export function FlowPage() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          panOnScroll
+          panOnScrollMode="free"
+          zoomOnScroll
           fitView
         >
           <Controls />
