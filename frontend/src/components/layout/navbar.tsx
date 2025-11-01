@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Menu,
   Plus,
+  Bot,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { SearchBar } from '@/components/search-bar';
@@ -47,7 +48,15 @@ const EXTERNAL_LINKS = [
   },
 ];
 
-export function Navbar() {
+interface NavbarProps {
+  onToggleManagerTray?: () => void;
+  isManagerTrayOpen?: boolean;
+}
+
+export function Navbar({
+  onToggleManagerTray,
+  isManagerTrayOpen = false,
+}: NavbarProps = {}) {
   const location = useLocation();
   const { projectId, project } = useProject();
   const { query, setQuery, active, clear, registerInputRef } = useSearch();
@@ -106,6 +115,18 @@ export function Navbar() {
               </span>
             </a>
           </div>
+
+          {onToggleManagerTray && (
+            <Button
+              variant={isManagerTrayOpen ? 'default' : 'ghost'}
+              size="icon"
+              onClick={onToggleManagerTray}
+              aria-label="Toggle Manager Agent"
+              className="mr-2"
+            >
+              <Bot className="h-4 w-4" />
+            </Button>
+          )}
 
           <SearchBar
             ref={setSearchBarRef}
