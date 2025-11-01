@@ -29,6 +29,31 @@ AI coding agents are increasingly writing the world's code and human engineers n
 
 You can watch a video overview [here](https://youtu.be/TFT3KnZOOAk).
 
+## Manager Agent
+
+Vibe Kanban includes a **Manager Agent** - an AI-powered project-level assistant that helps automate project management tasks. Unlike task-level coding agents that work on individual coding tasks, the Manager Agent helps with higher-order orchestration.
+
+### What can the Manager Agent do?
+
+- **Break down features** into multiple subtasks automatically
+- **Create related tasks** in bulk (e.g., "add authentication system" → creates tasks for OAuth setup, endpoints, tests, etc.)
+- **Analyze backlogs** and suggest what to work on next
+- **Organize work** based on dependencies and priorities
+
+### How to use it
+
+The Manager Agent works through the Vibe Kanban MCP server. If you're using Claude Code or another MCP-compatible agent:
+
+```
+"Using the vibe_kanban MCP server, create tasks for implementing a new
+payment system including: Stripe integration, webhook handlers, payment
+flow UI, and integration tests"
+```
+
+The Manager Agent will use the `bulk_create_tasks` MCP tool to create all related tasks at once.
+
+See [MANAGER_AGENT.md](./MANAGER_AGENT.md) for detailed documentation, examples, and best practices.
+
 ## Installation
 
 Make sure you have authenticated with your favourite coding agent. A full list of supported coding agents can be found in the [docs](https://vibekanban.com/docs). Then in your terminal run:

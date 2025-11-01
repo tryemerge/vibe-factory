@@ -678,9 +678,8 @@ impl ContainerService for LocalContainerService {
 
         let worktree_dir_name =
             LocalContainerService::dir_name_from_task_attempt(&task_attempt.id, &task.title);
-        let worktree_path = WorktreeManager::get_worktree_base_dir(
-            project.worktree_dir.as_deref()
-        ).join(&worktree_dir_name);
+        let worktree_path = WorktreeManager::get_worktree_base_dir(project.worktree_dir.as_deref())
+            .join(&worktree_dir_name);
 
         WorktreeManager::create_worktree(
             &project.git_repo_path,

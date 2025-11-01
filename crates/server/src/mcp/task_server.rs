@@ -234,6 +234,34 @@ pub struct GetTaskResponse {
     pub task: TaskDetails,
 }
 
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct BulkCreateTasksRequest {
+    #[schemars(description = "The ID of the project to create tasks in")]
+    pub project_id: Uuid,
+    #[schemars(description = "List of tasks to create")]
+    pub tasks: Vec<TaskInput>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct TaskInput {
+    #[schemars(description = "The title of the task")]
+    pub title: String,
+    #[schemars(description = "Optional description of the task")]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct BulkCreateTasksResponse {
+    pub created_tasks: Vec<CreatedTask>,
+    pub count: usize,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct CreatedTask {
+    pub task_id: String,
+    pub title: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct TaskServer {
     client: reqwest::Client,
@@ -586,6 +614,53 @@ impl TaskServer {
 
         TaskServer::success(&response)
     }
+
+    #[tool(
+        description = "Create multiple tasks at once for a project. Useful for breaking down a feature into subtasks or creating a batch of related tasks. `project_id` is required!"
+    )]
+    async fn bulk_create_tasks(
+        &self,
+        Parameters(BulkCreateTasksRequest { project_id, tasks }): Parameters<
+            BulkCreateTasksRequest,
+        >,
+    ) -> Result<CallToolResult, ErrorData> {
+        if tasks.is_empty() {
+            return Self::err("At least one task must be provided", None::<&str>);
+        }
+
+        let url = self.url("/api/tasks");
+        let mut created_tasks = Vec::new();
+
+        for task_input in tasks {
+            let task: Task = match self
+                .send_json(
+                    self.client
+                        .post(&url)
+                        .json(&CreateTask::from_title_description(
+                            project_id,
+                            task_input.title.clone(),
+                            task_input.description,
+                        )),
+                )
+                .await
+            {
+                Ok(t) => t,
+                Err(e) => return Ok(e),
+            };
+
+            created_tasks.push(CreatedTask {
+                task_id: task.id.to_string(),
+                title: task.title,
+            });
+        }
+
+        let response = BulkCreateTasksResponse {
+            count: created_tasks.len(),
+            created_tasks,
+        };
+
+        TaskServer::success(&response)
+    }
 }
 
 #[tool_handler]
@@ -600,7 +675,7 @@ impl ServerHandler for TaskServer {
                 name: "vibe-kanban".to_string(),
                 version: "1.0.0".to_string(),
             },
-            instructions: Some("A task and project management server. If you need to create or update tickets or tasks then use these tools. Most of them absolutely require that you pass the `project_id` of the project that you are currently working on. This should be provided to you. Call `list_tasks` to fetch the `task_ids` of all the tasks in a project`. TOOLS: 'list_projects', 'list_tasks', 'create_task', 'start_task_attempt', 'get_task', 'update_task', 'delete_task'. Make sure to pass `project_id` or `task_id` where required. You can use list tools to get the available ids.".to_string()),
+            instructions: Some("A task and project management server. If you need to create or update tickets or tasks then use these tools. Most of them absolutely require that you pass the `project_id` of the project that you are currently working on. This should be provided to you. Call `list_tasks` to fetch the `task_ids` of all the tasks in a project`. TOOLS: 'list_projects', 'list_tasks', 'create_task', 'bulk_create_tasks', 'start_task_attempt', 'get_task', 'update_task', 'delete_task'. Make sure to pass `project_id` or `task_id` where required. You can use list tools to get the available ids. Use 'bulk_create_tasks' to efficiently create multiple related tasks at once (e.g., breaking down a feature into subtasks).".to_string()),
         }
     }
 }
