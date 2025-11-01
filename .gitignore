@@ -79,8 +79,8 @@ vibe-kanban-*.tgz
 
 # Ignore runtime dev_assets but track template
 dev_assets/
-!dev_assets_template/
 dev_assets_*/
+!dev_assets_template/
 
 /frontend/.env.sentry-build-plugin
 .ssh
