@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO station_steps (id, station_id, agent_id, position, step_prompt, description)\n               VALUES ($1, $2, $3, $4, $5, $6)\n               RETURNING\n                id as \"id!: Uuid\",\n                station_id as \"station_id!: Uuid\",\n                agent_id as \"agent_id!: Uuid\",\n                position,\n                step_prompt,\n                description,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "station_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "agent_id!: Uuid",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "position",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "step_prompt",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "f77fa88387383ef3b2cfef7212780afd05b3c3fb0e4ebd47027f41e4bf89cfc7"
+}

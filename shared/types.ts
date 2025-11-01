@@ -286,6 +286,44 @@ export type Draft = { id: string, task_attempt_id: string, draft_type: DraftType
 
 export type DraftType = "follow_up" | "retry";
 
+export type Agent = { id: string, name: string, role: string, system_prompt: string, capabilities: string | null, tools: string | null, description: string | null, created_at: string, updated_at: string, };
+
+export type CreateAgent = { name: string, role: string, system_prompt: string, capabilities: Array<string> | null, tools: Array<string> | null, description: string | null, };
+
+export type UpdateAgent = { name: string | null, role: string | null, system_prompt: string | null, capabilities: Array<string> | null, tools: Array<string> | null, description: string | null, };
+
+export type Workflow = { id: string, project_id: string, name: string, description: string | null, created_at: string, updated_at: string, };
+
+export type CreateWorkflow = { project_id: string, name: string, description: string | null, };
+
+export type UpdateWorkflow = { name: string | null, description: string | null, };
+
+export type WorkflowStation = { id: string, workflow_id: string, name: string, position: bigint, description: string | null, x_position: number, y_position: number, created_at: string, updated_at: string, };
+
+export type CreateWorkflowStation = { workflow_id: string, name: string, position: bigint, description: string | null, x_position: number | null, y_position: number | null, };
+
+export type UpdateWorkflowStation = { name: string | null, position: bigint | null, description: string | null, x_position: number | null, y_position: number | null, };
+
+export type StationStep = { id: string, station_id: string, agent_id: string, position: bigint, step_prompt: string | null, description: string | null, created_at: string, updated_at: string, };
+
+export type CreateStationStep = { station_id: string, agent_id: string, position: bigint, step_prompt: string | null, description: string | null, };
+
+export type UpdateStationStep = { agent_id: string | null, position: bigint | null, step_prompt: string | null, description: string | null, };
+
+export type StationTransition = { id: string, workflow_id: string, source_station_id: string, target_station_id: string, condition: string | null, label: string | null, created_at: string, updated_at: string, };
+
+export type CreateStationTransition = { workflow_id: string, source_station_id: string, target_station_id: string, condition: string | null, label: string | null, };
+
+export type UpdateStationTransition = { condition: string | null, label: string | null, };
+
+export type TaskStepExecution = { id: string, task_attempt_id: string, station_step_id: string, agent_id: string, status: TaskStepExecutionStatus, started_at: string | null, completed_at: string | null, error_message: string | null, created_at: string, updated_at: string, };
+
+export type CreateTaskStepExecution = { task_attempt_id: string, station_step_id: string, agent_id: string, status: TaskStepExecutionStatus, };
+
+export type UpdateTaskStepExecution = { status: TaskStepExecutionStatus | null, started_at: string | null, completed_at: string | null, error_message: string | null, };
+
+export type TaskStepExecutionStatus = "pending" | "running" | "completed" | "failed";
+
 export type CommandExitStatus = { "type": "exit_code", code: number, } | { "type": "success", success: boolean, };
 
 export type CommandRunResult = { exit_status: CommandExitStatus | null, output: string | null, };
