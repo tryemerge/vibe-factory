@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import type { TaskWithAttemptStatus } from 'shared/types';
 import { TaskTrayCard } from '@/components/factory/TaskTrayCard';
+import { ProjectViewNav } from '@/components/projects/ProjectViewNav';
 
 type Task = TaskWithAttemptStatus;
 
@@ -83,10 +84,8 @@ export function FactoryFloorPage() {
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-card shrink-0">
-        <h1 className="text-2xl font-bold">Factory Floor</h1>
-      </div>
+      {/* Navigation */}
+      <ProjectViewNav currentView="factory" />
 
       {/* Main content area with trays and canvas */}
       <div className="flex-1 min-h-0 flex">
