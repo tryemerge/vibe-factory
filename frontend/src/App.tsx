@@ -5,6 +5,7 @@ import i18n from '@/i18n';
 import { Projects } from '@/pages/projects';
 import { ProjectTasks } from '@/pages/project-tasks';
 import { FullAttemptLogsPage } from '@/pages/full-attempt-logs';
+import { FlowPage } from '@/pages/flow';
 import { NormalLayout } from '@/components/layout/NormalLayout';
 import { usePostHog } from 'posthog-js/react';
 
@@ -168,6 +169,7 @@ function AppContent() {
                 <Route path="/" element={<Projects />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:projectId" element={<Projects />} />
+                <Route path="/flow" element={<FlowPage />} />
                 <Route
                   path="/projects/:projectId/tasks"
                   element={<ProjectTasks />}
