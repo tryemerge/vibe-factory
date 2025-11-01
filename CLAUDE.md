@@ -230,4 +230,4 @@ BACKEND_PORT=0 pnpm run dev
 - **Main instance** (port 3000/3001): Safe orchestrator, manages tasks, never crashes
 - **Worktree instances** (auto-assigned ports): Isolated backends for testing changes
 - **Template DB**: Realistic production data for each worktree without conflicts
-- **Safe merges**: Schema changes tested in isolation before merging to main
+- **Safe merges**: Schema changes tested in isolation before merging to master
