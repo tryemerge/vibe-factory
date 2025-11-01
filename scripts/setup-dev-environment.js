@@ -105,8 +105,9 @@ async function allocatePorts() {
   }
 
   // Find new free ports
-  const frontendPort = await findFreePort(3000);
-  const backendPort = await findFreePort(frontendPort + 1);
+  // Use 4500+ for frontend and 4600+ for backend in worktrees
+  const frontendPort = await findFreePort(4500);
+  const backendPort = await findFreePort(4600);
 
   const ports = {
     frontend: frontendPort,
