@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Label } from '@/components/ui/label';
 import {
@@ -9,7 +8,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { agentsApi } from '@/lib/api';
-import type { Agent } from 'shared/types';
 
 interface AgentSelectorProps {
   value: string | null;

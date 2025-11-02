@@ -42,6 +42,7 @@ interface Task {
   title: string;
   description: string | null;
   status: TaskStatus;
+  agent_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -341,6 +342,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       isSubmitting,
       isSubmittingAndStart,
       parentTaskAttemptId,
+      selectedAgentId,
     ]);
 
     const handleCreateAndStart = useCallback(async () => {
@@ -409,6 +411,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
       isSubmitting,
       isSubmittingAndStart,
       parentTaskAttemptId,
+      selectedAgentId,
     ]);
 
     const handleCancel = useCallback(() => {

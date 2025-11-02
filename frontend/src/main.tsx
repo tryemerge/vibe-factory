@@ -36,6 +36,7 @@ import {
   RestoreLogsDialog,
   ViewProcessesDialog,
   GitActionsDialog,
+  AgentFormDialog,
 } from './components/dialogs';
 import { CreateAttemptDialog } from './components/dialogs/tasks/CreateAttemptDialog';
 
@@ -63,6 +64,7 @@ NiceModal.register('restore-logs', RestoreLogsDialog);
 NiceModal.register('view-processes', ViewProcessesDialog);
 NiceModal.register('create-attempt', CreateAttemptDialog);
 NiceModal.register('git-actions', GitActionsDialog);
+NiceModal.register('agent-form', AgentFormDialog);
 
 import {
   useLocation,

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Pencil, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,13 +29,11 @@ export function AgentsPage() {
   });
 
   const handleCreateAgent = async () => {
-    // TODO: Create agent dialog
-    console.log('Create agent');
+    await showModal('agent-form', {});
   };
 
   const handleEditAgent = async (agent: Agent) => {
-    // TODO: Edit agent dialog
-    console.log('Edit agent', agent);
+    await showModal('agent-form', { agent });
   };
 
   const handleDeleteAgent = async (agent: Agent) => {
