@@ -4,15 +4,23 @@ use sqlx::{Executor, FromRow, Sqlite, SqlitePool};
 use ts_rs::TS;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct ContextFile {
+    pub pattern: String,
+    pub instruction: Option<String>,
+}
+
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct Agent {
     pub id: Uuid,
     pub name: String,
     pub role: String,
     pub system_prompt: String,
-    pub capabilities: Option<String>, // JSON array
-    pub tools: Option<String>,        // JSON array
+    pub capabilities: Option<String>,   // JSON array
+    pub tools: Option<String>,          // JSON array
     pub description: Option<String>,
+    pub context_files: Option<String>,  // JSON array of ContextFile
+    pub executor: String,               // Executor type: CLAUDE_CODE, GEMINI, etc.
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -25,6 +33,8 @@ pub struct CreateAgent {
     pub capabilities: Option<Vec<String>>,
     pub tools: Option<Vec<String>>,
     pub description: Option<String>,
+    pub context_files: Option<Vec<ContextFile>>,
+    pub executor: Option<String>,
 }
 
 #[derive(Debug, Deserialize, TS)]
@@ -35,6 +45,8 @@ pub struct UpdateAgent {
     pub capabilities: Option<Vec<String>>,
     pub tools: Option<Vec<String>>,
     pub description: Option<String>,
+    pub context_files: Option<Vec<ContextFile>>,
+    pub executor: Option<String>,
 }
 
 impl Agent {
@@ -49,6 +61,8 @@ impl Agent {
                 capabilities,
                 tools,
                 description,
+                context_files,
+                executor,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM agents
@@ -69,6 +83,8 @@ impl Agent {
                 capabilities,
                 tools,
                 description,
+                context_files,
+                executor,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM agents
@@ -92,11 +108,16 @@ impl Agent {
             .tools
             .map(|tools| serde_json::to_string(&tools).ok())
             .flatten();
+        let context_files_json = data
+            .context_files
+            .map(|files| serde_json::to_string(&files).ok())
+            .flatten();
+        let executor = data.executor.unwrap_or_else(|| "CLAUDE_CODE".to_string());
 
         sqlx::query_as!(
             Agent,
-            r#"INSERT INTO agents (id, name, role, system_prompt, capabilities, tools, description)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+            r#"INSERT INTO agents (id, name, role, system_prompt, capabilities, tools, description, context_files, executor)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                RETURNING
                 id as "id!: Uuid",
                 name,
@@ -105,6 +126,8 @@ impl Agent {
                 capabilities,
                 tools,
                 description,
+                context_files,
+                executor,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             agent_id,
@@ -113,7 +136,9 @@ impl Agent {
             data.system_prompt,
             capabilities_json,
             tools_json,
-            data.description
+            data.description,
+            context_files_json,
+            executor
         )
         .fetch_one(pool)
         .await
@@ -143,11 +168,17 @@ impl Agent {
             .flatten()
             .or(existing.tools);
         let description = data.description.or(existing.description);
+        let context_files_json = data
+            .context_files
+            .map(|files| serde_json::to_string(&files).ok())
+            .flatten()
+            .or(existing.context_files);
+        let executor = data.executor.unwrap_or(existing.executor);
 
         sqlx::query_as!(
             Agent,
             r#"UPDATE agents
-               SET name = $2, role = $3, system_prompt = $4, capabilities = $5, tools = $6, description = $7, updated_at = CURRENT_TIMESTAMP
+               SET name = $2, role = $3, system_prompt = $4, capabilities = $5, tools = $6, description = $7, context_files = $8, executor = $9, updated_at = CURRENT_TIMESTAMP
                WHERE id = $1
                RETURNING
                 id as "id!: Uuid",
@@ -157,6 +188,8 @@ impl Agent {
                 capabilities,
                 tools,
                 description,
+                context_files,
+                executor,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             id,
@@ -165,7 +198,9 @@ impl Agent {
             system_prompt,
             capabilities_json,
             tools_json,
-            description
+            description,
+            context_files_json,
+            executor
         )
         .fetch_one(pool)
         .await

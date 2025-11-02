@@ -218,6 +218,7 @@ export function RetryEditorInline({
       await attemptsApi.followUp(attemptId, {
         prompt: message,
         variant: selectedVariant,
+        agent_id: null, // Retry uses the original process's agent
         image_ids: images.map((img) => img.id),
         retry_process_id: executionProcessId,
         force_when_dirty: modalResult.forceWhenDirty ?? false,

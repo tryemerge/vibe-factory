@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Menu,
   Plus,
+  Bot,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { SearchBar } from '@/components/search-bar';
@@ -27,7 +28,10 @@ import { useOpenProjectInEditor } from '@/hooks/useOpenProjectInEditor';
 import { OpenInIdeButton } from '@/components/ide/OpenInIdeButton';
 import { useDiscordOnlineCount } from '@/hooks/useDiscordOnlineCount';
 
-const INTERNAL_NAV = [{ label: 'Projects', icon: FolderOpen, to: '/projects' }];
+const INTERNAL_NAV = [
+  { label: 'Projects', icon: FolderOpen, to: '/projects' },
+  { label: 'Agents', icon: Bot, to: '/agents' },
+];
 
 const EXTERNAL_LINKS = [
   {

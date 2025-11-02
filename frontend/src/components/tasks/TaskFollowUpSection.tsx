@@ -28,6 +28,7 @@ import { useHotkeysContext } from 'react-hotkeys-hook';
 //
 import { VariantSelector } from '@/components/tasks/VariantSelector';
 import { FollowUpStatusRow } from '@/components/tasks/FollowUpStatusRow';
+import { AgentSelector } from '@/components/agents/AgentSelector';
 import { useAttemptBranch } from '@/hooks/useAttemptBranch';
 import { FollowUpConflictSection } from '@/components/tasks/follow-up/FollowUpConflictSection';
 import { ClickedElementsBanner } from '@/components/tasks/ClickedElementsBanner';
@@ -131,6 +132,11 @@ export function TaskFollowUpSection({
   const { selectedVariant, setSelectedVariant, currentProfile } =
     useDefaultVariant({ processes, profiles: profiles ?? null });
 
+  // Agent selection (defaults to task's agent_id)
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
+    task.agent_id || null
+  );
+
   // Cycle to the next variant when Shift+Tab is pressed
   const cycleVariant = useCallback(() => {
     if (!currentProfile) return;
@@ -211,6 +217,7 @@ export function TaskFollowUpSection({
       reviewMarkdown,
       clickedMarkdown,
       selectedVariant,
+      selectedAgentId,
       images,
       newlyUploadedImageIds,
       clearComments,
@@ -526,6 +533,14 @@ export function TaskFollowUpSection({
                     selectedVariant={selectedVariant}
                     onChange={setSelectedVariant}
                     disabled={!isEditable}
+                  />
+
+                  <AgentSelector
+                    value={selectedAgentId}
+                    onChange={setSelectedAgentId}
+                    disabled={!isEditable}
+                    label=""
+                    placeholder="Agent"
                   />
                 </div>
 

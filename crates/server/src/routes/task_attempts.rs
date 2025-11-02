@@ -13,6 +13,7 @@ use axum::{
     routing::{get, post},
 };
 use db::models::{
+    agent::Agent,
     draft::{Draft, DraftType},
     execution_process::{ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus},
     merge::{Merge, MergeStatus, PrMerge, PullRequestInfo},
@@ -195,6 +196,7 @@ pub async fn create_task_attempt(
 pub struct CreateFollowUpAttempt {
     pub prompt: String,
     pub variant: Option<String>,
+    pub agent_id: Option<Uuid>,
     pub image_ids: Option<Vec<Uuid>>,
     pub retry_process_id: Option<Uuid>,
     pub force_when_dirty: Option<bool>,
@@ -234,6 +236,14 @@ pub async fn follow_up(
         .parent_project(&deployment.db().pool)
         .await?
         .ok_or(SqlxError::RowNotFound)?;
+
+    // Load agent if provided (agent_id from payload) or use task's default agent
+    let agent = if let Some(agent_id) = payload.agent_id.or(task.agent_id) {
+        Agent::find_by_id(&deployment.db().pool, agent_id)
+            .await?
+    } else {
+        None
+    };
 
     // If retry settings provided, perform replace-logic before proceeding
     if let Some(proc_id) = payload.retry_process_id {
@@ -306,6 +316,42 @@ pub async fn follow_up(
             .await?;
     }
 
+    // Apply agent configuration if present
+    if let Some(agent) = &agent {
+        // Prepend system prompt
+        if !agent.system_prompt.is_empty() {
+            prompt = format!("{}\n\n{}", agent.system_prompt, prompt);
+        }
+
+        // Add context files instructions
+        if let Some(context_files_json) = &agent.context_files {
+            if let Ok(context_files) = serde_json::from_str::<Vec<db::models::agent::ContextFile>>(context_files_json) {
+                let mut context_section = String::from("\n\n## Context Files\n");
+                for cf in context_files {
+                    context_section.push_str(&format!("- Pattern: `{}`\n", cf.pattern));
+                    if let Some(instruction) = &cf.instruction {
+                        context_section.push_str(&format!("  Instruction: {}\n", instruction));
+                    }
+                }
+                prompt = format!("{}{}", prompt, context_section);
+            }
+        }
+    }
+
+    // Override executor if agent specifies one
+    let final_executor_profile_id = if let Some(agent) = &agent {
+        if let Ok(agent_executor) = agent.executor.parse() {
+            ExecutorProfileId {
+                executor: agent_executor,
+                variant: executor_profile_id.variant.clone(),
+            }
+        } else {
+            executor_profile_id.clone()
+        }
+    } else {
+        executor_profile_id.clone()
+    };
+
     let cleanup_action = deployment
         .container()
         .cleanup_action(project.cleanup_script);
@@ -314,13 +360,13 @@ pub async fn follow_up(
         ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
             prompt: prompt.clone(),
             session_id,
-            executor_profile_id: executor_profile_id.clone(),
+            executor_profile_id: final_executor_profile_id.clone(),
         })
     } else {
         ExecutorActionType::CodingAgentInitialRequest(
             executors::actions::coding_agent_initial::CodingAgentInitialRequest {
                 prompt,
-                executor_profile_id: executor_profile_id.clone(),
+                executor_profile_id: final_executor_profile_id.clone(),
             },
         )
     };

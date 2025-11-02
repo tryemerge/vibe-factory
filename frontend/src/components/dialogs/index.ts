@@ -28,6 +28,12 @@ export {
   type TaskFormDialogProps,
 } from './tasks/TaskFormDialog';
 
+// Agent-related dialogs
+export {
+  AgentFormDialog,
+  type AgentFormDialogProps,
+} from './agents/AgentFormDialog';
+
 export { CreatePRDialog } from './tasks/CreatePRDialog';
 export {
   EditorSelectionDialog,

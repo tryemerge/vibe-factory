@@ -583,6 +583,7 @@ export function ProjectTasks() {
           description: task.description,
           status: newStatus,
           parent_task_attempt: task.parent_task_attempt,
+          agent_id: task.agent_id,
           image_ids: null,
         });
       } catch (err) {

@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO agents (id, name, role, system_prompt, capabilities, tools, description, context_files, executor)\n               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n               RETURNING\n                id as \"id!: Uuid\",\n                name,\n                role,\n                system_prompt,\n                capabilities,\n                tools,\n                description,\n                context_files,\n                executor,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "role",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "system_prompt",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "capabilities",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "tools",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "context_files",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "executor",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 10,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "36c5a8a615185ada42a26fc0c1516e5e96d524abc8a1fa9b367a86b1ae73e014"
+}

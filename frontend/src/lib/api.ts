@@ -1,12 +1,14 @@
 // Import all necessary types from shared types
 
 import {
+  Agent,
   ApprovalStatus,
   ApiResponse,
   BranchStatus,
   CheckTokenResponse,
   Config,
   CommitInfo,
+  CreateAgent,
   CreateFollowUpAttempt,
   CreateGitHubPrRequest,
   CreateTask,
@@ -30,6 +32,7 @@ import {
   Tag,
   TagSearchParams,
   TaskWithAttemptStatus,
+  UpdateAgent,
   UpdateProject,
   UpdateTask,
   UpdateTag,
@@ -707,6 +710,42 @@ export const tagsApi = {
 
   delete: async (tagId: string): Promise<void> => {
     const response = await makeRequest(`/api/tags/${tagId}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
+  },
+};
+
+// Agents APIs (Factory Floor agents)
+export const agentsApi = {
+  list: async (): Promise<Agent[]> => {
+    const response = await makeRequest('/api/agents');
+    return handleApiResponse<Agent[]>(response);
+  },
+
+  get: async (agentId: string): Promise<Agent> => {
+    const response = await makeRequest(`/api/agents/${agentId}`);
+    return handleApiResponse<Agent>(response);
+  },
+
+  create: async (data: CreateAgent): Promise<Agent> => {
+    const response = await makeRequest('/api/agents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<Agent>(response);
+  },
+
+  update: async (agentId: string, data: UpdateAgent): Promise<Agent> => {
+    const response = await makeRequest(`/api/agents/${agentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<Agent>(response);
+  },
+
+  delete: async (agentId: string): Promise<void> => {
+    const response = await makeRequest(`/api/agents/${agentId}`, {
       method: 'DELETE',
     });
     return handleApiResponse<void>(response);

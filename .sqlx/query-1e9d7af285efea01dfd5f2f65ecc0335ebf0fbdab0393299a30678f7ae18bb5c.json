@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                name,\n                role,\n                system_prompt,\n                capabilities,\n                tools,\n                description,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM agents\n               ORDER BY created_at DESC",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                name,\n                role,\n                system_prompt,\n                capabilities,\n                tools,\n                description,\n                context_files,\n                executor,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM agents\n               WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -39,18 +39,28 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "context_files",
         "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "executor",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 8,
+        "ordinal": 10,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       true,
@@ -60,9 +70,11 @@
       true,
       true,
       true,
+      true,
+      false,
       false,
       false
     ]
   },
-  "hash": "707f386aa916d608334a1b9b4c4e5783c6b5cd64df5a203d4f7332bff17a5838"
+  "hash": "1e9d7af285efea01dfd5f2f65ecc0335ebf0fbdab0393299a30678f7ae18bb5c"
 }
