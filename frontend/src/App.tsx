@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
@@ -42,6 +42,7 @@ function AppContent() {
   const { config, analyticsUserId, updateAndSaveConfig, loading } =
     useUserSystem();
   const posthog = usePostHog();
+  const hasRunOnboarding = useRef(false);
 
   // Handle opt-in/opt-out and user identification when config loads
   useEffect(() => {
@@ -61,6 +62,7 @@ function AppContent() {
 
   useEffect(() => {
     let cancelled = false;
+    let onboardingInProgress = false;
 
     const handleOnboardingComplete = async (
       onboardingConfig: OnboardingResult
@@ -100,38 +102,44 @@ function AppContent() {
     };
 
     const checkOnboardingSteps = async () => {
-      if (!config || cancelled) return;
+      if (!config || cancelled || onboardingInProgress || hasRunOnboarding.current) return;
+      onboardingInProgress = true;
+      hasRunOnboarding.current = true;
 
-      if (!config.disclaimer_acknowledged) {
-        await NiceModal.show('disclaimer');
-        await handleDisclaimerAccept();
-        await NiceModal.hide('disclaimer');
-      }
+      try {
+        if (!config.disclaimer_acknowledged) {
+          await NiceModal.show('disclaimer');
+          await handleDisclaimerAccept();
+          await NiceModal.hide('disclaimer');
+        }
 
-      if (!config.onboarding_acknowledged) {
-        const onboardingResult: OnboardingResult =
-          await NiceModal.show('onboarding');
-        await handleOnboardingComplete(onboardingResult);
-        await NiceModal.hide('onboarding');
-      }
+        if (!config.onboarding_acknowledged) {
+          const onboardingResult: OnboardingResult =
+            await NiceModal.show('onboarding');
+          await handleOnboardingComplete(onboardingResult);
+          await NiceModal.hide('onboarding');
+        }
 
-      if (!config.github_login_acknowledged) {
-        await NiceModal.show('github-login');
-        await handleGitHubLoginComplete();
-        await NiceModal.hide('github-login');
-      }
+        if (!config.github_login_acknowledged) {
+          await NiceModal.show('github-login');
+          await handleGitHubLoginComplete();
+          await NiceModal.hide('github-login');
+        }
 
-      if (!config.telemetry_acknowledged) {
-        const analyticsEnabled: boolean =
-          await NiceModal.show('privacy-opt-in');
-        await handleTelemetryOptIn(analyticsEnabled);
-        await NiceModal.hide('privacy-opt-in');
-      }
+        if (!config.telemetry_acknowledged) {
+          const analyticsEnabled: boolean =
+            await NiceModal.show('privacy-opt-in');
+          await handleTelemetryOptIn(analyticsEnabled);
+          await NiceModal.hide('privacy-opt-in');
+        }
 
-      if (config.show_release_notes) {
-        await NiceModal.show('release-notes');
-        await handleReleaseNotesClose();
-        await NiceModal.hide('release-notes');
+        if (config.show_release_notes) {
+          await NiceModal.show('release-notes');
+          await handleReleaseNotesClose();
+          await NiceModal.hide('release-notes');
+        }
+      } finally {
+        onboardingInProgress = false;
       }
     };
 
@@ -145,7 +153,7 @@ function AppContent() {
     return () => {
       cancelled = true;
     };
-  }, [config]);
+  }, [config, updateAndSaveConfig]);
 
   if (loading) {
     return (
