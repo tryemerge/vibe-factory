@@ -26,6 +26,7 @@ import { useTaskMutations } from '@/hooks/useTaskMutations';
 import { useUserSystem } from '@/components/config-provider';
 import { ExecutorProfileSelector } from '@/components/settings';
 import BranchSelector from '@/components/tasks/BranchSelector';
+import { AgentSelector } from '@/components/agents/AgentSelector';
 import type {
   TaskStatus,
   ImageResponse,
@@ -79,6 +80,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
     const [selectedBranch, setSelectedBranch] = useState<string>('');
     const [selectedExecutorProfile, setSelectedExecutorProfile] =
       useState<ExecutorProfileId | null>(null);
+    const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
     const [quickstartExpanded, setQuickstartExpanded] =
       useState<boolean>(false);
     const imageUploadRef = useRef<ImageUploadSectionHandle>(null);
@@ -128,6 +130,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         setTitle(task.title);
         setDescription(task.description || '');
         setStatus(task.status);
+        setSelectedAgentId(task.agent_id || null);
 
         // Load existing images for the task
         if (modal.visible) {
@@ -144,6 +147,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         setTitle(initialTask.title);
         setDescription(initialTask.description || '');
         setStatus('todo'); // Always start duplicated tasks as 'todo'
+        setSelectedAgentId(initialTask.agent_id || null);
         setImages([]);
         setNewlyUploadedImageIds([]);
       } else {
@@ -151,6 +155,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
         setTitle('');
         setDescription('');
         setStatus('todo');
+        setSelectedAgentId(null);
         setImages([]);
         setNewlyUploadedImageIds([]);
         setSelectedBranch('');
@@ -289,7 +294,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
                 description: description,
                 status,
                 parent_task_attempt: parentTaskAttemptId || null,
-                agent_id: null, // TODO: Add agent selector
+                agent_id: selectedAgentId,
                 image_ids: imageIds || null,
               },
             },
@@ -306,7 +311,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
-              agent_id: null, // TODO: Add agent selector
+              agent_id: selectedAgentId,
               image_ids: imageIds || null,
             },
             {
@@ -373,7 +378,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
-              agent_id: null, // TODO: Add agent selector
+              agent_id: selectedAgentId,
               image_ids: imageIds || null,
             },
             executor_profile_id: finalExecutorProfile,
@@ -520,6 +525,12 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
                   onBlur={() => setIsTextareaFocused(false)}
                 />
               </div>
+
+              <AgentSelector
+                value={selectedAgentId}
+                onChange={setSelectedAgentId}
+                disabled={isSubmitting || isSubmittingAndStart}
+              />
 
               <ImageUploadSection
                 ref={imageUploadRef}

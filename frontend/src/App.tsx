@@ -7,6 +7,7 @@ import { ProjectTasks } from '@/pages/project-tasks';
 import { FullAttemptLogsPage } from '@/pages/full-attempt-logs';
 import { FlowPage } from '@/pages/flow';
 import { FactoryFloorPage } from '@/pages/factory-floor';
+import { AgentsPage } from '@/pages/agents';
 import { NormalLayout } from '@/components/layout/NormalLayout';
 import { usePostHog } from 'posthog-js/react';
 
@@ -171,6 +172,7 @@ function AppContent() {
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:projectId" element={<Projects />} />
                 <Route path="/flow" element={<FlowPage />} />
+                <Route path="/agents" element={<AgentsPage />} />
                 <Route
                   path="/projects/:projectId/factory"
                   element={<FactoryFloorPage />}
