@@ -289,6 +289,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
                 description: description,
                 status,
                 parent_task_attempt: parentTaskAttemptId || null,
+                agent_id: null, // TODO: Add agent selector
                 image_ids: imageIds || null,
               },
             },
@@ -305,6 +306,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
+              agent_id: null, // TODO: Add agent selector
               image_ids: imageIds || null,
             },
             {
@@ -371,6 +373,7 @@ export const TaskFormDialog = NiceModal.create<TaskFormDialogProps>(
               title,
               description: description,
               parent_task_attempt: parentTaskAttemptId || null,
+              agent_id: null, // TODO: Add agent selector
               image_ids: imageIds || null,
             },
             executor_profile_id: finalExecutorProfile,
