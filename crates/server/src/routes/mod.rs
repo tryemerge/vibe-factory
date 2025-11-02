@@ -6,6 +6,7 @@ use axum::{
 
 use crate::DeploymentImpl;
 
+pub mod agents;
 pub mod approvals;
 pub mod auth;
 pub mod config;
@@ -35,6 +36,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(task_attempts::router(&deployment))
         .merge(execution_processes::router(&deployment))
         .merge(tags::router(&deployment))
+        .merge(agents::router(&deployment))
         .merge(auth::router(&deployment))
         .merge(filesystem::router())
         .merge(events::router(&deployment))

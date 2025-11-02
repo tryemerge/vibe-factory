@@ -1,52 +1,52 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                name,\n                role,\n                system_prompt,\n                capabilities,\n                tools,\n                description,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM agents\n               WHERE id = $1",
+  "query": "SELECT id as \"id!: Uuid\", project_id as \"project_id!: Uuid\", title, description, status as \"status!: TaskStatus\", parent_task_attempt as \"parent_task_attempt: Uuid\", agent_id as \"agent_id: Uuid\", created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM tasks \n               WHERE rowid = $1",
   "describe": {
     "columns": [
       {
         "name": "id!: Uuid",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Blob"
       },
       {
-        "name": "name",
+        "name": "project_id!: Uuid",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Blob"
       },
       {
-        "name": "role",
+        "name": "title",
         "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "system_prompt",
+        "name": "description",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "capabilities",
+        "name": "status!: TaskStatus",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "tools",
+        "name": "parent_task_attempt: Uuid",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Blob"
       },
       {
-        "name": "description",
+        "name": "agent_id: Uuid",
         "ordinal": 6,
         "type_info": "Text"
       },
       {
         "name": "created_at!: DateTime<Utc>",
         "ordinal": 7,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
         "ordinal": 8,
-        "type_info": "Datetime"
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -56,13 +56,13 @@
       true,
       false,
       false,
-      false,
       true,
+      false,
       true,
       true,
       false,
       false
     ]
   },
-  "hash": "aab0d91b5897833223eda5b39ffd47685e11ba636aafb506eccbf3c487ecefa9"
+  "hash": "d5d056744000719b6d728daa99e2da2f013d4eda36502f24c3c0902beff0b404"
 }

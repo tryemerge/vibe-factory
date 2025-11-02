@@ -533,6 +533,7 @@ impl TaskServer {
             description,
             status,
             parent_task_attempt: None,
+            agent_id: None,
             image_ids: None,
         };
         let url = self.url(&format!("/api/tasks/{}", task_id));

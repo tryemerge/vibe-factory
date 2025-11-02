@@ -5,7 +5,7 @@ use axum::{
     response::Response,
 };
 use db::models::{
-    execution_process::ExecutionProcess, project::Project, tag::Tag, task::Task,
+    agent::Agent, execution_process::ExecutionProcess, project::Project, tag::Tag, task::Task,
     task_attempt::TaskAttempt,
 };
 use deployment::Deployment;
@@ -199,6 +199,33 @@ pub async fn load_tag_middleware(
     // Insert the tag as an extension
     let mut request = request;
     request.extensions_mut().insert(tag);
+
+    // Continue with the next middleware/handler
+    Ok(next.run(request).await)
+}
+
+pub async fn load_agent_middleware(
+    State(deployment): State<DeploymentImpl>,
+    Path(agent_id): Path<Uuid>,
+    request: axum::extract::Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Load the agent from the database
+    let agent = match Agent::find_by_id(&deployment.db().pool, agent_id).await {
+        Ok(Some(agent)) => agent,
+        Ok(None) => {
+            tracing::warn!("Agent {} not found", agent_id);
+            return Err(StatusCode::NOT_FOUND);
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch agent {}: {}", agent_id, e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // Insert the agent as an extension
+    let mut request = request;
+    request.extensions_mut().insert(agent);
 
     // Continue with the next middleware/handler
     Ok(next.run(request).await)
