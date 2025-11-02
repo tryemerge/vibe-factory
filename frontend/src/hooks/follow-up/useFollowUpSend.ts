@@ -9,6 +9,7 @@ type Args = {
   reviewMarkdown: string;
   clickedMarkdown?: string;
   selectedVariant: string | null;
+  selectedAgentId: string | null;
   images: ImageResponse[];
   newlyUploadedImageIds: string[];
   clearComments: () => void;
@@ -25,6 +26,7 @@ export function useFollowUpSend({
   reviewMarkdown,
   clickedMarkdown,
   selectedVariant,
+  selectedAgentId,
   images,
   newlyUploadedImageIds,
   clearComments,
@@ -60,6 +62,7 @@ export function useFollowUpSend({
       await attemptsApi.followUp(attemptId, {
         prompt: finalPrompt,
         variant: selectedVariant,
+        agent_id: selectedAgentId,
         image_ids,
         retry_process_id: null,
         force_when_dirty: null,
@@ -87,6 +90,7 @@ export function useFollowUpSend({
     newlyUploadedImageIds,
     images,
     selectedVariant,
+    selectedAgentId,
     clearComments,
     clearClickedElements,
     jumpToLogsTab,
