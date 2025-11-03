@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM station_transitions\n               WHERE source_station_id = $1\n               ORDER BY created_at ASC",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                condition_type,\n                condition_value,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM station_transitions\n               WHERE source_station_id = $1\n               ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -34,13 +34,23 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "condition_type",
         "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "condition_value",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 8,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 7,
+        "ordinal": 9,
         "type_info": "Datetime"
       }
     ],
@@ -54,9 +64,11 @@
       false,
       true,
       true,
+      true,
+      true,
       false,
       false
     ]
   },
-  "hash": "a14ea1497e51ecee27e203931f0c1728fb8222da1fc99d55051526ef41ca649c"
+  "hash": "ca7b3ad2416e9e6d379b843cbd379d63e83256e71f12422eded2c17abcb80309"
 }

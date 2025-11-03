@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE workflow_stations\n               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, agent_id = $7, station_prompt = $8, output_context_keys = $9, updated_at = CURRENT_TIMESTAMP\n               WHERE id = $1\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                station_prompt,\n                output_context_keys,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "workflow_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "position",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "x_position",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "y_position",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "agent_id: Uuid",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "station_prompt",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "output_context_keys",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 10,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 11,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a4ccd253df65acf7033c71e157312dff707022ba909806d1c7ff2b16c65d9130"
+}

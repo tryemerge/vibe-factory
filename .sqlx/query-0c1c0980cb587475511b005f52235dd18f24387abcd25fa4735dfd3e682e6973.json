@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_id as \"task_id!: Uuid\",\n                station_id as \"station_id!: Uuid\",\n                context_key as \"context_key!: String\",\n                context_value as \"context_value!: String\",\n                context_type as \"context_type!: String\",\n                created_by_agent_id as \"created_by_agent_id: Uuid\",\n                created_at as \"created_at!: DateTime<Utc>\"\n               FROM station_context\n               WHERE task_id = $1 AND station_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "station_id!: Uuid",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "context_key!: String",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "context_value!: String",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "context_type!: String",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_by_agent_id: Uuid",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "0c1c0980cb587475511b005f52235dd18f24387abcd25fa4735dfd3e682e6973"
+}

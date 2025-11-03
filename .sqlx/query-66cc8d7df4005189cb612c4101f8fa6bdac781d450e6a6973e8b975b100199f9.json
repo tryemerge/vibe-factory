@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO workflow_stations (id, workflow_id, name, position, description, x_position, y_position)\n               VALUES ($1, $2, $3, $4, $5, $6, $7)\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                station_prompt,\n                output_context_keys,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM workflow_stations\n               WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -39,18 +39,33 @@
         "type_info": "Float"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "agent_id: Uuid",
         "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "station_prompt",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "output_context_keys",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 10,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 8,
+        "ordinal": 11,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 7
+      "Right": 1
     },
     "nullable": [
       true,
@@ -60,9 +75,12 @@
       true,
       false,
       false,
+      true,
+      true,
+      true,
       false,
       false
     ]
   },
-  "hash": "12c55ef6c3085fade891049367f3c4da22f76c5ec1d1278f74a7c4d865283d08"
+  "hash": "66cc8d7df4005189cb612c4101f8fa6bdac781d450e6a6973e8b975b100199f9"
 }

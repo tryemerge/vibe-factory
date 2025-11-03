@@ -13,6 +13,9 @@ pub struct WorkflowStation {
     pub description: Option<String>,
     pub x_position: f64,
     pub y_position: f64,
+    pub agent_id: Option<Uuid>, // Phase 1.1: One agent per station
+    pub station_prompt: Option<String>, // Phase 1.1: Instructions for this station's agent
+    pub output_context_keys: Option<String>, // JSON array: ["design_doc", "api_spec"]
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -25,6 +28,9 @@ pub struct CreateWorkflowStation {
     pub description: Option<String>,
     pub x_position: Option<f64>,
     pub y_position: Option<f64>,
+    pub agent_id: Option<Uuid>,
+    pub station_prompt: Option<String>,
+    pub output_context_keys: Option<String>,
 }
 
 #[derive(Debug, Deserialize, TS)]
@@ -34,6 +40,9 @@ pub struct UpdateWorkflowStation {
     pub description: Option<String>,
     pub x_position: Option<f64>,
     pub y_position: Option<f64>,
+    pub agent_id: Option<Uuid>,
+    pub station_prompt: Option<String>,
+    pub output_context_keys: Option<String>,
 }
 
 impl WorkflowStation {
@@ -51,6 +60,9 @@ impl WorkflowStation {
                 description,
                 x_position,
                 y_position,
+                agent_id as "agent_id: Uuid",
+                station_prompt,
+                output_context_keys,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM workflow_stations
@@ -73,6 +85,9 @@ impl WorkflowStation {
                 description,
                 x_position,
                 y_position,
+                agent_id as "agent_id: Uuid",
+                station_prompt,
+                output_context_keys,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM workflow_stations
@@ -93,8 +108,8 @@ impl WorkflowStation {
 
         sqlx::query_as!(
             WorkflowStation,
-            r#"INSERT INTO workflow_stations (id, workflow_id, name, position, description, x_position, y_position)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+            r#"INSERT INTO workflow_stations (id, workflow_id, name, position, description, x_position, y_position, agent_id, station_prompt, output_context_keys)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                RETURNING
                 id as "id!: Uuid",
                 workflow_id as "workflow_id!: Uuid",
@@ -103,6 +118,9 @@ impl WorkflowStation {
                 description,
                 x_position,
                 y_position,
+                agent_id as "agent_id: Uuid",
+                station_prompt,
+                output_context_keys,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             station_id,
@@ -111,7 +129,10 @@ impl WorkflowStation {
             data.position,
             data.description,
             x_position,
-            y_position
+            y_position,
+            data.agent_id,
+            data.station_prompt,
+            data.output_context_keys
         )
         .fetch_one(pool)
         .await
@@ -132,11 +153,14 @@ impl WorkflowStation {
         let description = data.description.or(existing.description);
         let x_position = data.x_position.unwrap_or(existing.x_position);
         let y_position = data.y_position.unwrap_or(existing.y_position);
+        let agent_id = data.agent_id.or(existing.agent_id);
+        let station_prompt = data.station_prompt.or(existing.station_prompt);
+        let output_context_keys = data.output_context_keys.or(existing.output_context_keys);
 
         sqlx::query_as!(
             WorkflowStation,
             r#"UPDATE workflow_stations
-               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, updated_at = CURRENT_TIMESTAMP
+               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, agent_id = $7, station_prompt = $8, output_context_keys = $9, updated_at = CURRENT_TIMESTAMP
                WHERE id = $1
                RETURNING
                 id as "id!: Uuid",
@@ -146,6 +170,9 @@ impl WorkflowStation {
                 description,
                 x_position,
                 y_position,
+                agent_id as "agent_id: Uuid",
+                station_prompt,
+                output_context_keys,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             id,
@@ -153,7 +180,10 @@ impl WorkflowStation {
             position,
             description,
             x_position,
-            y_position
+            y_position,
+            agent_id,
+            station_prompt,
+            output_context_keys
         )
         .fetch_one(pool)
         .await
