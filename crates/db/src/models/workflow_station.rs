@@ -14,7 +14,8 @@ pub struct WorkflowStation {
     pub x_position: f64,
     pub y_position: f64,
     pub agent_id: Option<Uuid>, // Phase 1.1: One agent per station
-    pub step_prompt: Option<String>, // Phase 1.1: Instructions for this station's agent
+    pub station_prompt: Option<String>, // Phase 1.1: Instructions for this station's agent
+    pub output_context_keys: Option<String>, // JSON array: ["design_doc", "api_spec"]
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -28,7 +29,8 @@ pub struct CreateWorkflowStation {
     pub x_position: Option<f64>,
     pub y_position: Option<f64>,
     pub agent_id: Option<Uuid>,
-    pub step_prompt: Option<String>,
+    pub station_prompt: Option<String>,
+    pub output_context_keys: Option<String>,
 }
 
 #[derive(Debug, Deserialize, TS)]
@@ -39,7 +41,8 @@ pub struct UpdateWorkflowStation {
     pub x_position: Option<f64>,
     pub y_position: Option<f64>,
     pub agent_id: Option<Uuid>,
-    pub step_prompt: Option<String>,
+    pub station_prompt: Option<String>,
+    pub output_context_keys: Option<String>,
 }
 
 impl WorkflowStation {
@@ -58,7 +61,7 @@ impl WorkflowStation {
                 x_position,
                 y_position,
                 agent_id as "agent_id: Uuid",
-                step_prompt,
+                station_prompt,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM workflow_stations
@@ -82,7 +85,7 @@ impl WorkflowStation {
                 x_position,
                 y_position,
                 agent_id as "agent_id: Uuid",
-                step_prompt,
+                station_prompt,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM workflow_stations
@@ -103,7 +106,7 @@ impl WorkflowStation {
 
         sqlx::query_as!(
             WorkflowStation,
-            r#"INSERT INTO workflow_stations (id, workflow_id, name, position, description, x_position, y_position, agent_id, step_prompt)
+            r#"INSERT INTO workflow_stations (id, workflow_id, name, position, description, x_position, y_position, agent_id, station_prompt)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                RETURNING
                 id as "id!: Uuid",
@@ -114,7 +117,7 @@ impl WorkflowStation {
                 x_position,
                 y_position,
                 agent_id as "agent_id: Uuid",
-                step_prompt,
+                station_prompt,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             station_id,
@@ -125,7 +128,7 @@ impl WorkflowStation {
             x_position,
             y_position,
             data.agent_id,
-            data.step_prompt
+            data.station_prompt
         )
         .fetch_one(pool)
         .await
@@ -147,12 +150,12 @@ impl WorkflowStation {
         let x_position = data.x_position.unwrap_or(existing.x_position);
         let y_position = data.y_position.unwrap_or(existing.y_position);
         let agent_id = data.agent_id.or(existing.agent_id);
-        let step_prompt = data.step_prompt.or(existing.step_prompt);
+        let station_prompt = data.station_prompt.or(existing.station_prompt);
 
         sqlx::query_as!(
             WorkflowStation,
             r#"UPDATE workflow_stations
-               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, agent_id = $7, step_prompt = $8, updated_at = CURRENT_TIMESTAMP
+               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, agent_id = $7, station_prompt = $8, updated_at = CURRENT_TIMESTAMP
                WHERE id = $1
                RETURNING
                 id as "id!: Uuid",
@@ -163,7 +166,7 @@ impl WorkflowStation {
                 x_position,
                 y_position,
                 agent_id as "agent_id: Uuid",
-                step_prompt,
+                station_prompt,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             id,
@@ -173,7 +176,7 @@ impl WorkflowStation {
             x_position,
             y_position,
             agent_id,
-            step_prompt
+            station_prompt
         )
         .fetch_one(pool)
         .await
