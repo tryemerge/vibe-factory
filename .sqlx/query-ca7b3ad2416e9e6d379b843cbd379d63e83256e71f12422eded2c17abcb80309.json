@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                condition_type,\n                condition_expression,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM station_transitions\n               WHERE id = $1",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                condition_type,\n                condition_value,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM station_transitions\n               WHERE source_station_id = $1\n               ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -39,7 +39,7 @@
         "type_info": "Text"
       },
       {
-        "name": "condition_expression",
+        "name": "condition_value",
         "ordinal": 7,
         "type_info": "Text"
       },
@@ -70,5 +70,5 @@
       false
     ]
   },
-  "hash": "e7b225cd82e3ccebdb3d413818937a5a3f5d7be389c626b59d30f80d9586470b"
+  "hash": "ca7b3ad2416e9e6d379b843cbd379d63e83256e71f12422eded2c17abcb80309"
 }

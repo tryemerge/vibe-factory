@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE station_transitions\n               SET condition = $2, label = $3, condition_type = $4, condition_expression = $5, updated_at = CURRENT_TIMESTAMP\n               WHERE id = $1\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                condition_type,\n                condition_expression,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                condition_type,\n                condition_value,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM station_transitions\n               WHERE workflow_id = $1\n               ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -39,7 +39,7 @@
         "type_info": "Text"
       },
       {
-        "name": "condition_expression",
+        "name": "condition_value",
         "ordinal": 7,
         "type_info": "Text"
       },
@@ -55,7 +55,7 @@
       }
     ],
     "parameters": {
-      "Right": 5
+      "Right": 1
     },
     "nullable": [
       true,
@@ -70,5 +70,5 @@
       false
     ]
   },
-  "hash": "de615209735339c606e3b28a452ad93a168f68f961b7bc23c33185675bdece06"
+  "hash": "6944a0015111aaa0dcfb32c459cfa135fd3886230c105d22da9e383fdf865217"
 }

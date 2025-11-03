@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_attempt_id as \"task_attempt_id!: Uuid\",\n                station_id as \"station_id!: Uuid\",\n                agent_id as \"agent_id!: Uuid\",\n                status,\n                started_at as \"started_at: DateTime<Utc>\",\n                completed_at as \"completed_at: DateTime<Utc>\",\n                error_message,\n                output_context,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM task_station_executions\n               WHERE station_id = $1\n               ORDER BY created_at DESC",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_id as \"task_id!: Uuid\",\n                station_id as \"station_id!: Uuid\",\n                status,\n                transition_taken_id as \"transition_taken_id: Uuid\",\n                attempt_number as \"attempt_number!: i64\",\n                started_at as \"started_at: DateTime<Utc>\",\n                completed_at as \"completed_at: DateTime<Utc>\",\n                error_message,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM task_station_executions\n               WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Text"
       },
       {
-        "name": "task_attempt_id!: Uuid",
+        "name": "task_id!: Uuid",
         "ordinal": 1,
         "type_info": "Text"
       },
@@ -19,32 +19,32 @@
         "type_info": "Text"
       },
       {
-        "name": "agent_id!: Uuid",
+        "name": "status",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "status",
+        "name": "transition_taken_id: Uuid",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "started_at: DateTime<Utc>",
+        "name": "attempt_number!: i64",
         "ordinal": 5,
-        "type_info": "Datetime"
+        "type_info": "Integer"
       },
       {
-        "name": "completed_at: DateTime<Utc>",
+        "name": "started_at: DateTime<Utc>",
         "ordinal": 6,
         "type_info": "Datetime"
       },
       {
-        "name": "error_message",
+        "name": "completed_at: DateTime<Utc>",
         "ordinal": 7,
-        "type_info": "Text"
+        "type_info": "Datetime"
       },
       {
-        "name": "output_context",
+        "name": "error_message",
         "ordinal": 8,
         "type_info": "Text"
       },
@@ -67,7 +67,7 @@
       false,
       false,
       false,
-      false,
+      true,
       true,
       true,
       true,
@@ -76,5 +76,5 @@
       false
     ]
   },
-  "hash": "c7a2f8e7eeb83b1f39b7c57105113ffa42bfca03a78eae2c8b9ebf4dfacf4f73"
+  "hash": "b795548009ee2081c25b5afe65743963b81f2d4863e5eb92de0651eda58b799a"
 }

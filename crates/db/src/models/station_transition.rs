@@ -10,10 +10,10 @@ pub struct StationTransition {
     pub workflow_id: Uuid,
     pub source_station_id: Uuid,
     pub target_station_id: Uuid,
-    pub condition: Option<String>, // Deprecated: use condition_type and condition_expression
+    pub condition: Option<String>, // Deprecated: use condition_type and condition_value
     pub label: Option<String>,
     pub condition_type: Option<String>, // Phase 1.1: 'success', 'failure', 'always', 'conditional'
-    pub condition_expression: Option<String>, // Phase 1.1: JSON expression for conditional logic
+    pub condition_value: Option<String>, // Phase 1.1: JSON expression for conditional logic
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -26,7 +26,7 @@ pub struct CreateStationTransition {
     pub condition: Option<String>,
     pub label: Option<String>,
     pub condition_type: Option<String>,
-    pub condition_expression: Option<String>,
+    pub condition_value: Option<String>,
 }
 
 #[derive(Debug, Deserialize, TS)]
@@ -34,7 +34,7 @@ pub struct UpdateStationTransition {
     pub condition: Option<String>,
     pub label: Option<String>,
     pub condition_type: Option<String>,
-    pub condition_expression: Option<String>,
+    pub condition_value: Option<String>,
 }
 
 impl StationTransition {
@@ -52,7 +52,7 @@ impl StationTransition {
                 condition,
                 label,
                 condition_type,
-                condition_expression,
+                condition_value,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM station_transitions
@@ -75,7 +75,7 @@ impl StationTransition {
                 condition,
                 label,
                 condition_type,
-                condition_expression,
+                condition_value,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM station_transitions
@@ -100,7 +100,7 @@ impl StationTransition {
                 condition,
                 label,
                 condition_type,
-                condition_expression,
+                condition_value,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM station_transitions
@@ -119,7 +119,7 @@ impl StationTransition {
     ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             StationTransition,
-            r#"INSERT INTO station_transitions (id, workflow_id, source_station_id, target_station_id, condition, label, condition_type, condition_expression)
+            r#"INSERT INTO station_transitions (id, workflow_id, source_station_id, target_station_id, condition, label, condition_type, condition_value)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                RETURNING
                 id as "id!: Uuid",
@@ -129,7 +129,7 @@ impl StationTransition {
                 condition,
                 label,
                 condition_type,
-                condition_expression,
+                condition_value,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             transition_id,
@@ -139,7 +139,7 @@ impl StationTransition {
             data.condition,
             data.label,
             data.condition_type,
-            data.condition_expression
+            data.condition_value
         )
         .fetch_one(pool)
         .await
@@ -158,12 +158,12 @@ impl StationTransition {
         let condition = data.condition.or(existing.condition);
         let label = data.label.or(existing.label);
         let condition_type = data.condition_type.or(existing.condition_type);
-        let condition_expression = data.condition_expression.or(existing.condition_expression);
+        let condition_value = data.condition_value.or(existing.condition_value);
 
         sqlx::query_as!(
             StationTransition,
             r#"UPDATE station_transitions
-               SET condition = $2, label = $3, condition_type = $4, condition_expression = $5, updated_at = CURRENT_TIMESTAMP
+               SET condition = $2, label = $3, condition_type = $4, condition_value = $5, updated_at = CURRENT_TIMESTAMP
                WHERE id = $1
                RETURNING
                 id as "id!: Uuid",
@@ -173,14 +173,14 @@ impl StationTransition {
                 condition,
                 label,
                 condition_type,
-                condition_expression,
+                condition_value,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             id,
             condition,
             label,
             condition_type,
-            condition_expression
+            condition_value
         )
         .fetch_one(pool)
         .await

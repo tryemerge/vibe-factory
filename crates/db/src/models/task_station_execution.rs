@@ -7,58 +7,59 @@ use uuid::Uuid;
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct TaskStationExecution {
     pub id: Uuid,
-    pub task_attempt_id: Uuid,
+    pub task_id: Uuid,
     pub station_id: Uuid,
-    pub agent_id: Uuid,
-    pub status: String, // 'pending', 'running', 'completed', 'failed'
+    pub status: String,  // 'pending', 'running', 'completed', 'failed'
+    pub transition_taken_id: Option<Uuid>,  // Which transition was followed
+    pub attempt_number: i64,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
-    pub output_context: Option<String>, // JSON output from this station's execution
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, TS)]
 pub struct CreateTaskStationExecution {
-    pub task_attempt_id: Uuid,
+    pub task_id: Uuid,
     pub station_id: Uuid,
-    pub agent_id: Uuid,
     pub status: String,
+    pub attempt_number: i64,
 }
 
 #[derive(Debug, Deserialize, TS)]
 pub struct UpdateTaskStationExecution {
-    pub status: String,
+    pub status: Option<String>,
+    pub transition_taken_id: Option<Uuid>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
-    pub output_context: Option<String>,
 }
 
 impl TaskStationExecution {
-    pub async fn find_by_task_attempt_id(
+    /// Get execution history for task
+    pub async fn find_by_task(
         pool: &SqlitePool,
-        task_attempt_id: Uuid,
+        task_id: Uuid,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
             TaskStationExecution,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_id as "task_id!: Uuid",
                 station_id as "station_id!: Uuid",
-                agent_id as "agent_id!: Uuid",
                 status,
+                transition_taken_id as "transition_taken_id: Uuid",
+                attempt_number as "attempt_number!: i64",
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
-                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM task_station_executions
-               WHERE task_attempt_id = $1
+               WHERE task_id = $1
                ORDER BY created_at ASC"#,
-            task_attempt_id
+            task_id
         )
         .fetch_all(pool)
         .await
@@ -69,14 +70,14 @@ impl TaskStationExecution {
             TaskStationExecution,
             r#"SELECT
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_id as "task_id!: Uuid",
                 station_id as "station_id!: Uuid",
-                agent_id as "agent_id!: Uuid",
                 status,
+                transition_taken_id as "transition_taken_id: Uuid",
+                attempt_number as "attempt_number!: i64",
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
-                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
                FROM task_station_executions
@@ -87,59 +88,34 @@ impl TaskStationExecution {
         .await
     }
 
-    pub async fn find_by_station_id(
-        pool: &SqlitePool,
-        station_id: Uuid,
-    ) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as!(
-            TaskStationExecution,
-            r#"SELECT
-                id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
-                station_id as "station_id!: Uuid",
-                agent_id as "agent_id!: Uuid",
-                status,
-                started_at as "started_at: DateTime<Utc>",
-                completed_at as "completed_at: DateTime<Utc>",
-                error_message,
-                output_context,
-                created_at as "created_at!: DateTime<Utc>",
-                updated_at as "updated_at!: DateTime<Utc>"
-               FROM task_station_executions
-               WHERE station_id = $1
-               ORDER BY created_at DESC"#,
-            station_id
-        )
-        .fetch_all(pool)
-        .await
-    }
-
     pub async fn create(
         pool: &SqlitePool,
         data: CreateTaskStationExecution,
         execution_id: Uuid,
     ) -> Result<Self, sqlx::Error> {
+        let attempt_number = data.attempt_number;
+
         sqlx::query_as!(
             TaskStationExecution,
-            r#"INSERT INTO task_station_executions (id, task_attempt_id, station_id, agent_id, status)
+            r#"INSERT INTO task_station_executions (id, task_id, station_id, status, attempt_number)
                VALUES ($1, $2, $3, $4, $5)
                RETURNING
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_id as "task_id!: Uuid",
                 station_id as "station_id!: Uuid",
-                agent_id as "agent_id!: Uuid",
                 status,
+                transition_taken_id as "transition_taken_id: Uuid",
+                attempt_number as "attempt_number!: i64",
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
-                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             execution_id,
-            data.task_attempt_id,
+            data.task_id,
             data.station_id,
-            data.agent_id,
-            data.status
+            data.status,
+            attempt_number
         )
         .fetch_one(pool)
         .await
@@ -150,29 +126,44 @@ impl TaskStationExecution {
         id: Uuid,
         data: UpdateTaskStationExecution,
     ) -> Result<Self, sqlx::Error> {
+        let existing = Self::find_by_id(pool, id)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)?;
+
+        let status = data.status.unwrap_or(existing.status);
+        let transition_taken_id = data.transition_taken_id.or(existing.transition_taken_id);
+        let started_at = data.started_at.or(existing.started_at);
+        let completed_at = data.completed_at.or(existing.completed_at);
+        let error_message = data.error_message.or(existing.error_message);
+
         sqlx::query_as!(
             TaskStationExecution,
             r#"UPDATE task_station_executions
-               SET status = $2, started_at = $3, completed_at = $4, error_message = $5, output_context = $6, updated_at = CURRENT_TIMESTAMP
+               SET status = $2,
+                   transition_taken_id = $3,
+                   started_at = $4,
+                   completed_at = $5,
+                   error_message = $6,
+                   updated_at = CURRENT_TIMESTAMP
                WHERE id = $1
                RETURNING
                 id as "id!: Uuid",
-                task_attempt_id as "task_attempt_id!: Uuid",
+                task_id as "task_id!: Uuid",
                 station_id as "station_id!: Uuid",
-                agent_id as "agent_id!: Uuid",
                 status,
+                transition_taken_id as "transition_taken_id: Uuid",
+                attempt_number as "attempt_number!: i64",
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
-                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             id,
-            data.status,
-            data.started_at,
-            data.completed_at,
-            data.error_message,
-            data.output_context
+            status,
+            transition_taken_id,
+            started_at,
+            completed_at,
+            error_message
         )
         .fetch_one(pool)
         .await

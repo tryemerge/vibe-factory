@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE workflow_stations\n               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, agent_id = $7, step_prompt = $8, updated_at = CURRENT_TIMESTAMP\n               WHERE id = $1\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                step_prompt,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "UPDATE workflow_stations\n               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, agent_id = $7, station_prompt = $8, output_context_keys = $9, updated_at = CURRENT_TIMESTAMP\n               WHERE id = $1\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                station_prompt,\n                output_context_keys,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
   "describe": {
     "columns": [
       {
@@ -44,23 +44,28 @@
         "type_info": "Text"
       },
       {
-        "name": "step_prompt",
+        "name": "station_prompt",
         "ordinal": 8,
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "output_context_keys",
         "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 10,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 10,
+        "ordinal": 11,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 8
+      "Right": 9
     },
     "nullable": [
       true,
@@ -72,9 +77,10 @@
       false,
       true,
       true,
+      true,
       false,
       false
     ]
   },
-  "hash": "63f1a2ba2a4400b8c22e1f6331f7680f3dae105c0b853318d0d45f837818e35e"
+  "hash": "a4ccd253df65acf7033c71e157312dff707022ba909806d1c7ff2b16c65d9130"
 }
