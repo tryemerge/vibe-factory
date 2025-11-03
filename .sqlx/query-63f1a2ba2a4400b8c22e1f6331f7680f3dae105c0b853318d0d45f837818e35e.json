@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM workflow_stations\n               WHERE id = $1",
+  "query": "UPDATE workflow_stations\n               SET name = $2, position = $3, description = $4, x_position = $5, y_position = $6, agent_id = $7, step_prompt = $8, updated_at = CURRENT_TIMESTAMP\n               WHERE id = $1\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                step_prompt,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
   "describe": {
     "columns": [
       {
@@ -39,18 +39,28 @@
         "type_info": "Float"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "agent_id: Uuid",
         "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "step_prompt",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 8,
+        "ordinal": 10,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 8
     },
     "nullable": [
       true,
@@ -60,9 +70,11 @@
       true,
       false,
       false,
+      true,
+      true,
       false,
       false
     ]
   },
-  "hash": "b5842d34a59945f3dd99fd9071226745557170b763c6c99e3d5c87e1f221072c"
+  "hash": "63f1a2ba2a4400b8c22e1f6331f7680f3dae105c0b853318d0d45f837818e35e"
 }

@@ -1,70 +1,61 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{Executor, FromRow, Sqlite, SqlitePool, Type};
-use strum_macros::{Display, EnumString};
+use sqlx::{Executor, FromRow, Sqlite, SqlitePool};
 use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, TS, EnumString, Display)]
-#[sqlx(type_name = "task_step_execution_status", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum TaskStepExecutionStatus {
-    Pending,
-    Running,
-    Completed,
-    Failed,
-}
-
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
-pub struct TaskStepExecution {
+pub struct TaskStationExecution {
     pub id: Uuid,
     pub task_attempt_id: Uuid,
-    pub station_step_id: Uuid,
+    pub station_id: Uuid,
     pub agent_id: Uuid,
-    pub status: TaskStepExecutionStatus,
+    pub status: String, // 'pending', 'running', 'completed', 'failed'
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
+    pub output_context: Option<String>, // JSON output from this station's execution
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, TS)]
-pub struct CreateTaskStepExecution {
+pub struct CreateTaskStationExecution {
     pub task_attempt_id: Uuid,
-    pub station_step_id: Uuid,
+    pub station_id: Uuid,
     pub agent_id: Uuid,
-    pub status: TaskStepExecutionStatus,
+    pub status: String,
 }
 
 #[derive(Debug, Deserialize, TS)]
-pub struct UpdateTaskStepExecution {
-    pub status: Option<TaskStepExecutionStatus>,
+pub struct UpdateTaskStationExecution {
+    pub status: String,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
+    pub output_context: Option<String>,
 }
 
-impl TaskStepExecution {
+impl TaskStationExecution {
     pub async fn find_by_task_attempt_id(
         pool: &SqlitePool,
         task_attempt_id: Uuid,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
-            TaskStepExecution,
+            TaskStationExecution,
             r#"SELECT
                 id as "id!: Uuid",
                 task_attempt_id as "task_attempt_id!: Uuid",
-                station_step_id as "station_step_id!: Uuid",
+                station_id as "station_id!: Uuid",
                 agent_id as "agent_id!: Uuid",
-                status as "status!: TaskStepExecutionStatus",
+                status,
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
+                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
-               FROM task_step_executions
+               FROM task_station_executions
                WHERE task_attempt_id = $1
                ORDER BY created_at ASC"#,
             task_attempt_id
@@ -75,19 +66,20 @@ impl TaskStepExecution {
 
     pub async fn find_by_id(pool: &SqlitePool, id: Uuid) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
-            TaskStepExecution,
+            TaskStationExecution,
             r#"SELECT
                 id as "id!: Uuid",
                 task_attempt_id as "task_attempt_id!: Uuid",
-                station_step_id as "station_step_id!: Uuid",
+                station_id as "station_id!: Uuid",
                 agent_id as "agent_id!: Uuid",
-                status as "status!: TaskStepExecutionStatus",
+                status,
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
+                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
-               FROM task_step_executions
+               FROM task_station_executions
                WHERE id = $1"#,
             id
         )
@@ -95,27 +87,28 @@ impl TaskStepExecution {
         .await
     }
 
-    pub async fn find_by_station_step_id(
+    pub async fn find_by_station_id(
         pool: &SqlitePool,
-        station_step_id: Uuid,
+        station_id: Uuid,
     ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
-            TaskStepExecution,
+            TaskStationExecution,
             r#"SELECT
                 id as "id!: Uuid",
                 task_attempt_id as "task_attempt_id!: Uuid",
-                station_step_id as "station_step_id!: Uuid",
+                station_id as "station_id!: Uuid",
                 agent_id as "agent_id!: Uuid",
-                status as "status!: TaskStepExecutionStatus",
+                status,
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
+                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>"
-               FROM task_step_executions
-               WHERE station_step_id = $1
+               FROM task_station_executions
+               WHERE station_id = $1
                ORDER BY created_at DESC"#,
-            station_step_id
+            station_id
         )
         .fetch_all(pool)
         .await
@@ -123,30 +116,30 @@ impl TaskStepExecution {
 
     pub async fn create(
         pool: &SqlitePool,
-        data: CreateTaskStepExecution,
+        data: CreateTaskStationExecution,
         execution_id: Uuid,
     ) -> Result<Self, sqlx::Error> {
-        let status = data.status;
         sqlx::query_as!(
-            TaskStepExecution,
-            r#"INSERT INTO task_step_executions (id, task_attempt_id, station_step_id, agent_id, status)
+            TaskStationExecution,
+            r#"INSERT INTO task_station_executions (id, task_attempt_id, station_id, agent_id, status)
                VALUES ($1, $2, $3, $4, $5)
                RETURNING
                 id as "id!: Uuid",
                 task_attempt_id as "task_attempt_id!: Uuid",
-                station_step_id as "station_step_id!: Uuid",
+                station_id as "station_id!: Uuid",
                 agent_id as "agent_id!: Uuid",
-                status as "status!: TaskStepExecutionStatus",
+                status,
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
+                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             execution_id,
             data.task_attempt_id,
-            data.station_step_id,
+            data.station_id,
             data.agent_id,
-            status
+            data.status
         )
         .fetch_one(pool)
         .await
@@ -155,51 +148,39 @@ impl TaskStepExecution {
     pub async fn update(
         pool: &SqlitePool,
         id: Uuid,
-        data: UpdateTaskStepExecution,
+        data: UpdateTaskStationExecution,
     ) -> Result<Self, sqlx::Error> {
-        // Get existing execution to preserve unchanged fields
-        let existing = Self::find_by_id(pool, id)
-            .await?
-            .ok_or(sqlx::Error::RowNotFound)?;
-
-        let status = data.status.unwrap_or(existing.status);
-        let started_at = data.started_at.or(existing.started_at);
-        let completed_at = data.completed_at.or(existing.completed_at);
-        let error_message = data.error_message.or(existing.error_message);
-
         sqlx::query_as!(
-            TaskStepExecution,
-            r#"UPDATE task_step_executions
-               SET status = $2, started_at = $3, completed_at = $4, error_message = $5, updated_at = CURRENT_TIMESTAMP
+            TaskStationExecution,
+            r#"UPDATE task_station_executions
+               SET status = $2, started_at = $3, completed_at = $4, error_message = $5, output_context = $6, updated_at = CURRENT_TIMESTAMP
                WHERE id = $1
                RETURNING
                 id as "id!: Uuid",
                 task_attempt_id as "task_attempt_id!: Uuid",
-                station_step_id as "station_step_id!: Uuid",
+                station_id as "station_id!: Uuid",
                 agent_id as "agent_id!: Uuid",
-                status as "status!: TaskStepExecutionStatus",
+                status,
                 started_at as "started_at: DateTime<Utc>",
                 completed_at as "completed_at: DateTime<Utc>",
                 error_message,
+                output_context,
                 created_at as "created_at!: DateTime<Utc>",
                 updated_at as "updated_at!: DateTime<Utc>""#,
             id,
-            status,
-            started_at,
-            completed_at,
-            error_message
+            data.status,
+            data.started_at,
+            data.completed_at,
+            data.error_message,
+            data.output_context
         )
         .fetch_one(pool)
         .await
     }
 
-    pub async fn update_status(
-        pool: &SqlitePool,
-        id: Uuid,
-        status: TaskStepExecutionStatus,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update_status(pool: &SqlitePool, id: Uuid, status: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE task_step_executions SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+            "UPDATE task_station_executions SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
             id,
             status
         )
@@ -212,7 +193,7 @@ impl TaskStepExecution {
     where
         E: Executor<'e, Database = Sqlite>,
     {
-        let result = sqlx::query!("DELETE FROM task_step_executions WHERE id = $1", id)
+        let result = sqlx::query!("DELETE FROM task_station_executions WHERE id = $1", id)
             .execute(executor)
             .await?;
         Ok(result.rows_affected())

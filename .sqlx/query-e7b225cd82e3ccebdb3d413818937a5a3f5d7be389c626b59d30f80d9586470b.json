@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE station_transitions\n               SET condition = $2, label = $3, updated_at = CURRENT_TIMESTAMP\n               WHERE id = $1\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                source_station_id as \"source_station_id!: Uuid\",\n                target_station_id as \"target_station_id!: Uuid\",\n                condition,\n                label,\n                condition_type,\n                condition_expression,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM station_transitions\n               WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -34,18 +34,28 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "condition_type",
         "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "condition_expression",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 8,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 7,
+        "ordinal": 9,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 1
     },
     "nullable": [
       true,
@@ -54,9 +64,11 @@
       false,
       true,
       true,
+      true,
+      true,
       false,
       false
     ]
   },
-  "hash": "86931b43d6bbd69d83d83bd03a0d7b8ff231acf605b867969ffbfd8aa4987e33"
+  "hash": "e7b225cd82e3ccebdb3d413818937a5a3f5d7be389c626b59d30f80d9586470b"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_attempt_id as \"task_attempt_id!: Uuid\",\n                station_step_id as \"station_step_id!: Uuid\",\n                agent_id as \"agent_id!: Uuid\",\n                status as \"status!: TaskStepExecutionStatus\",\n                started_at as \"started_at: DateTime<Utc>\",\n                completed_at as \"completed_at: DateTime<Utc>\",\n                error_message,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM task_step_executions\n               WHERE station_step_id = $1\n               ORDER BY created_at DESC",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                task_attempt_id as \"task_attempt_id!: Uuid\",\n                station_id as \"station_id!: Uuid\",\n                agent_id as \"agent_id!: Uuid\",\n                status,\n                started_at as \"started_at: DateTime<Utc>\",\n                completed_at as \"completed_at: DateTime<Utc>\",\n                error_message,\n                output_context,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM task_station_executions\n               WHERE station_id = $1\n               ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
         "type_info": "Text"
       },
       {
-        "name": "station_step_id!: Uuid",
+        "name": "station_id!: Uuid",
         "ordinal": 2,
         "type_info": "Text"
       },
@@ -24,7 +24,7 @@
         "type_info": "Text"
       },
       {
-        "name": "status!: TaskStepExecutionStatus",
+        "name": "status",
         "ordinal": 4,
         "type_info": "Text"
       },
@@ -44,13 +44,18 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "output_context",
         "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 9,
+        "ordinal": 10,
         "type_info": "Datetime"
       }
     ],
@@ -66,9 +71,10 @@
       true,
       true,
       true,
+      true,
       false,
       false
     ]
   },
-  "hash": "81d8e6c35ffadfeb78267bdc4957c340d1e424b8bba7b426abb53bd2821fd9f4"
+  "hash": "c7a2f8e7eeb83b1f39b7c57105113ffa42bfca03a78eae2c8b9ebf4dfacf4f73"
 }

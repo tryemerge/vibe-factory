@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM workflow_stations\n               WHERE workflow_id = $1\n               ORDER BY position ASC",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                step_prompt,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM workflow_stations\n               WHERE workflow_id = $1\n               ORDER BY position ASC",
   "describe": {
     "columns": [
       {
@@ -39,13 +39,23 @@
         "type_info": "Float"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "agent_id: Uuid",
         "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "step_prompt",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 8,
+        "ordinal": 10,
         "type_info": "Datetime"
       }
     ],
@@ -60,9 +70,11 @@
       true,
       false,
       false,
+      true,
+      true,
       false,
       false
     ]
   },
-  "hash": "fad7c8261c6c72a7da58c9877956d0ad0b5179a7b0701a88c03059f1a94872c7"
+  "hash": "82108fe2dcac350c4da0f6c5f3be9980ef2ad1e6c37a28f80557092bd4aeb70e"
 }

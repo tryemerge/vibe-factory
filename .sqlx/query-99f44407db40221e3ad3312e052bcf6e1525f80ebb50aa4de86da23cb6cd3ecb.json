@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO workflow_stations (id, workflow_id, name, position, description, x_position, y_position)\n               VALUES ($1, $2, $3, $4, $5, $6, $7)\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                step_prompt,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM workflow_stations\n               WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -39,18 +39,28 @@
         "type_info": "Float"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "agent_id: Uuid",
         "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "step_prompt",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 8,
+        "ordinal": 10,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 7
+      "Right": 1
     },
     "nullable": [
       true,
@@ -60,9 +70,11 @@
       true,
       false,
       false,
+      true,
+      true,
       false,
       false
     ]
   },
-  "hash": "12c55ef6c3085fade891049367f3c4da22f76c5ec1d1278f74a7c4d865283d08"
+  "hash": "99f44407db40221e3ad3312e052bcf6e1525f80ebb50aa4de86da23cb6cd3ecb"
 }

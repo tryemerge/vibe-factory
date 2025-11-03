@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO station_context (id, task_id, station_id, context_data)\n               VALUES ($1, $2, $3, $4)\n               RETURNING\n                id as \"id!: Uuid\",\n                task_id as \"task_id!: Uuid\",\n                station_id as \"station_id!: Uuid\",\n                context_data,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "station_id!: Uuid",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "context_data",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "59bf2665d6f8d09430d3ebef1fd6c635ea56772712a0912d953e25af2a2b25d0"
+}
