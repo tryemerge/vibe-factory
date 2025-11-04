@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id as \"id!: Uuid\", project_id as \"project_id!: Uuid\", title, description, status as \"status!: TaskStatus\", parent_task_attempt as \"parent_task_attempt: Uuid\", agent_id as \"agent_id: Uuid\", created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM tasks \n               WHERE rowid = $1",
+  "query": "SELECT id as \"id!: Uuid\", project_id as \"project_id!: Uuid\", title, description, status as \"status!: TaskStatus\", parent_task_attempt as \"parent_task_attempt: Uuid\", agent_id as \"agent_id: Uuid\", workflow_id as \"workflow_id: Uuid\", current_station_id as \"current_station_id: Uuid\", created_at as \"created_at!: DateTime<Utc>\", updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM tasks\n               WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -39,13 +39,23 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "workflow_id: Uuid",
         "ordinal": 7,
         "type_info": "Text"
       },
       {
-        "name": "updated_at!: DateTime<Utc>",
+        "name": "current_station_id: Uuid",
         "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 10,
         "type_info": "Text"
       }
     ],
@@ -60,9 +70,11 @@
       false,
       true,
       true,
+      true,
+      true,
       false,
       false
     ]
   },
-  "hash": "d5d056744000719b6d728daa99e2da2f013d4eda36502f24c3c0902beff0b404"
+  "hash": "58e19a26bfd227b8288174ec0c4e1e477355fb0488766d0ded89b405123601fe"
 }

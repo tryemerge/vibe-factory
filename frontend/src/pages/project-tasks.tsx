@@ -584,6 +584,8 @@ export function ProjectTasks() {
           status: newStatus,
           parent_task_attempt: task.parent_task_attempt,
           agent_id: task.agent_id,
+          workflow_id: null,
+          current_station_id: null,
           image_ids: null,
         });
       } catch (err) {
