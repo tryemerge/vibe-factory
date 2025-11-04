@@ -227,6 +227,8 @@ pub async fn update_task(
         .parent_task_attempt
         .or(existing_task.parent_task_attempt);
     let agent_id = payload.agent_id.or(existing_task.agent_id);
+    let workflow_id = payload.workflow_id.or(existing_task.workflow_id);
+    let current_station_id = payload.current_station_id.or(existing_task.current_station_id);
 
     let task = Task::update(
         &deployment.db().pool,
@@ -237,6 +239,8 @@ pub async fn update_task(
         status,
         parent_task_attempt,
         agent_id,
+        workflow_id,
+        current_station_id,
     )
     .await?;
 

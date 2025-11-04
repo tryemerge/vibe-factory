@@ -28,6 +28,8 @@ pub struct Task {
     pub status: TaskStatus,
     pub parent_task_attempt: Option<Uuid>, // Foreign key to parent TaskAttempt
     pub agent_id: Option<Uuid>, // Foreign key to Agent
+    pub workflow_id: Option<Uuid>, // Foreign key to Workflow
+    pub current_station_id: Option<Uuid>, // Foreign key to WorkflowStation
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -70,6 +72,7 @@ pub struct CreateTask {
     pub description: Option<String>,
     pub parent_task_attempt: Option<Uuid>,
     pub agent_id: Option<Uuid>,
+    pub workflow_id: Option<Uuid>,
     pub image_ids: Option<Vec<Uuid>>,
 }
 
@@ -85,6 +88,7 @@ impl CreateTask {
             description,
             parent_task_attempt: None,
             agent_id: None,
+            workflow_id: None,
             image_ids: None,
         }
     }
@@ -97,6 +101,8 @@ pub struct UpdateTask {
     pub status: Option<TaskStatus>,
     pub parent_task_attempt: Option<Uuid>,
     pub agent_id: Option<Uuid>,
+    pub workflow_id: Option<Uuid>,
+    pub current_station_id: Option<Uuid>,
     pub image_ids: Option<Vec<Uuid>>,
 }
 
@@ -126,6 +132,8 @@ impl Task {
   t.status                        AS "status!: TaskStatus",
   t.parent_task_attempt           AS "parent_task_attempt: Uuid",
   t.agent_id                      AS "agent_id: Uuid",
+  t.workflow_id                   AS "workflow_id: Uuid",
+  t.current_station_id            AS "current_station_id: Uuid",
   t.created_at                    AS "created_at!: DateTime<Utc>",
   t.updated_at                    AS "updated_at!: DateTime<Utc>",
 
@@ -178,6 +186,8 @@ ORDER BY t.created_at DESC"#,
                     status: rec.status,
                     parent_task_attempt: rec.parent_task_attempt,
                     agent_id: rec.agent_id,
+                    workflow_id: rec.workflow_id,
+                    current_station_id: rec.current_station_id,
                     created_at: rec.created_at,
                     updated_at: rec.updated_at,
                 },
@@ -194,8 +204,8 @@ ORDER BY t.created_at DESC"#,
     pub async fn find_by_id(pool: &SqlitePool, id: Uuid) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             Task,
-            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
-               FROM tasks 
+            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", workflow_id as "workflow_id: Uuid", current_station_id as "current_station_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
+               FROM tasks
                WHERE id = $1"#,
             id
         )
@@ -206,8 +216,8 @@ ORDER BY t.created_at DESC"#,
     pub async fn find_by_rowid(pool: &SqlitePool, rowid: i64) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             Task,
-            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
-               FROM tasks 
+            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", workflow_id as "workflow_id: Uuid", current_station_id as "current_station_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
+               FROM tasks
                WHERE rowid = $1"#,
             rowid
         )
@@ -222,8 +232,8 @@ ORDER BY t.created_at DESC"#,
     ) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             Task,
-            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
-               FROM tasks 
+            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", workflow_id as "workflow_id: Uuid", current_station_id as "current_station_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
+               FROM tasks
                WHERE id = $1 AND project_id = $2"#,
             id,
             project_id
@@ -239,16 +249,17 @@ ORDER BY t.created_at DESC"#,
     ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             Task,
-            r#"INSERT INTO tasks (id, project_id, title, description, status, parent_task_attempt, agent_id)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
-               RETURNING id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>""#,
+            r#"INSERT INTO tasks (id, project_id, title, description, status, parent_task_attempt, agent_id, workflow_id)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+               RETURNING id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", workflow_id as "workflow_id: Uuid", current_station_id as "current_station_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>""#,
             task_id,
             data.project_id,
             data.title,
             data.description,
             TaskStatus::Todo as TaskStatus,
             data.parent_task_attempt,
-            data.agent_id
+            data.agent_id,
+            data.workflow_id
         )
         .fetch_one(pool)
         .await
@@ -263,20 +274,24 @@ ORDER BY t.created_at DESC"#,
         status: TaskStatus,
         parent_task_attempt: Option<Uuid>,
         agent_id: Option<Uuid>,
+        workflow_id: Option<Uuid>,
+        current_station_id: Option<Uuid>,
     ) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             Task,
             r#"UPDATE tasks
-               SET title = $3, description = $4, status = $5, parent_task_attempt = $6, agent_id = $7
+               SET title = $3, description = $4, status = $5, parent_task_attempt = $6, agent_id = $7, workflow_id = $8, current_station_id = $9
                WHERE id = $1 AND project_id = $2
-               RETURNING id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>""#,
+               RETURNING id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", workflow_id as "workflow_id: Uuid", current_station_id as "current_station_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>""#,
             id,
             project_id,
             title,
             description,
             status,
             parent_task_attempt,
-            agent_id
+            agent_id,
+            workflow_id,
+            current_station_id
         )
         .fetch_one(pool)
         .await
@@ -347,8 +362,8 @@ ORDER BY t.created_at DESC"#,
         // Find only child tasks that have this attempt as their parent
         sqlx::query_as!(
             Task,
-            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
-               FROM tasks 
+            r#"SELECT id as "id!: Uuid", project_id as "project_id!: Uuid", title, description, status as "status!: TaskStatus", parent_task_attempt as "parent_task_attempt: Uuid", agent_id as "agent_id: Uuid", workflow_id as "workflow_id: Uuid", current_station_id as "current_station_id: Uuid", created_at as "created_at!: DateTime<Utc>", updated_at as "updated_at!: DateTime<Utc>"
+               FROM tasks
                WHERE parent_task_attempt = $1
                ORDER BY created_at DESC"#,
             attempt_id,
