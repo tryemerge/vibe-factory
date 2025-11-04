@@ -131,6 +131,7 @@ export function NoServerContent({
         description: COMPANION_INSTALL_TASK_DESCRIPTION,
         parent_task_attempt: null,
         agent_id: null,
+        workflow_id: null,
         image_ids: null,
       },
       executor_profile_id: config.executor_profile,
