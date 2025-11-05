@@ -80,17 +80,49 @@ async function verifyPorts(ports) {
 }
 
 /**
+ * Check if running in main repo vs worktree
+ */
+function isMainRepo() {
+  const gitPath = path.join(__dirname, "..", ".git");
+  try {
+    const stat = fs.statSync(gitPath);
+    // Main repo: .git is a directory
+    // Worktree: .git is a file
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Allocate ports for development
  */
 async function allocatePorts() {
-  // Try to load existing ports first
+  // Main repo uses fixed ports
+  if (isMainRepo()) {
+    const ports = {
+      frontend: 3401,
+      backend: 3501,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (process.argv[2] === "get") {
+      console.log("Main repo - using fixed ports:");
+      console.log(`Frontend: ${ports.frontend}`);
+      console.log(`Backend: ${ports.backend}`);
+    }
+
+    return ports;
+  }
+
+  // Worktree: try to load existing ports first
   const existingPorts = loadPorts();
 
   if (existingPorts) {
     // Verify existing ports are still available
     if (await verifyPorts(existingPorts)) {
       if (process.argv[2] === "get") {
-        console.log("Reusing existing dev ports:");
+        console.log("Worktree - reusing existing dev ports:");
         console.log(`Frontend: ${existingPorts.frontend}`);
         console.log(`Backend: ${existingPorts.backend}`);
       }
@@ -104,9 +136,9 @@ async function allocatePorts() {
     }
   }
 
-  // Find new free ports
-  const frontendPort = await findFreePort(3000);
-  const backendPort = await findFreePort(frontendPort + 1);
+  // Worktree: Find new free ports starting from 4500 for frontend, 4600 for backend
+  const frontendPort = await findFreePort(4500);
+  const backendPort = await findFreePort(4600);
 
   const ports = {
     frontend: frontendPort,
@@ -117,7 +149,7 @@ async function allocatePorts() {
   savePorts(ports);
 
   if (process.argv[2] === "get") {
-    console.log("Allocated new dev ports:");
+    console.log("Worktree - allocated new dev ports:");
     console.log(`Frontend: ${ports.frontend}`);
     console.log(`Backend: ${ports.backend}`);
   }
