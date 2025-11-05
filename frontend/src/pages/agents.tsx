@@ -45,7 +45,9 @@ export function AgentsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
-        <div className="text-center text-muted-foreground">Loading agents...</div>
+        <div className="text-center text-muted-foreground">
+          Loading agents...
+        </div>
       </div>
     );
   }

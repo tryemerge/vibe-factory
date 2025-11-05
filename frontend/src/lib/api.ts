@@ -50,6 +50,15 @@ import {
   RebaseTaskAttemptRequest,
   ChangeTargetBranchRequest,
   ChangeTargetBranchResponse,
+  Workflow,
+  CreateWorkflow,
+  UpdateWorkflow,
+  WorkflowStation,
+  CreateWorkflowStation,
+  UpdateWorkflowStation,
+  StationTransition,
+  CreateStationTransition,
+  UpdateStationTransition,
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -885,99 +894,144 @@ export const approvalsApi = {
   },
 };
 
-// Workflow APIs (Factory Floor workflows)
-// Note: Backend API endpoints may not be implemented yet
+// Workflow APIs
 export const workflowsApi = {
-  list: async (_projectId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow API not yet implemented');
-    return [];
+  getAll: async (): Promise<Workflow[]> => {
+    const response = await makeRequest('/api/workflows');
+    return handleApiResponse<Workflow[]>(response);
   },
 
-  get: async (_workflowId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow API not yet implemented');
-    return null;
+  getById: async (id: string): Promise<Workflow> => {
+    const response = await makeRequest(`/api/workflows/${id}`);
+    return handleApiResponse<Workflow>(response);
   },
 
-  create: async (_projectId: string, _name: string, _description?: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow API not yet implemented');
-    return null;
+  getByProjectId: async (projectId: string): Promise<Workflow[]> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/workflows`
+    );
+    return handleApiResponse<Workflow[]>(response);
   },
 
-  update: async (_workflowId: string, _updates: { name?: string; description?: string }) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow API not yet implemented');
-    return null;
+  create: async (projectId: string, data: CreateWorkflow): Promise<Workflow> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/workflows`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<Workflow>(response);
   },
 
-  delete: async (_workflowId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow API not yet implemented');
+  update: async (id: string, data: UpdateWorkflow): Promise<Workflow> => {
+    const response = await makeRequest(`/api/workflows/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<Workflow>(response);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const response = await makeRequest(`/api/workflows/${id}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
   },
 };
 
 // Workflow Station APIs
 export const workflowStationsApi = {
-  list: async (_workflowId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow Station API not yet implemented');
-    return [];
+  getByWorkflowId: async (workflowId: string): Promise<WorkflowStation[]> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/stations`
+    );
+    return handleApiResponse<WorkflowStation[]>(response);
   },
 
-  get: async (_stationId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow Station API not yet implemented');
-    return null;
+  getById: async (stationId: string): Promise<WorkflowStation> => {
+    const response = await makeRequest(`/api/stations/${stationId}`);
+    return handleApiResponse<WorkflowStation>(response);
   },
 
-  create: async (_workflowId: string, _data: any) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow Station API not yet implemented');
-    return null;
+  create: async (
+    workflowId: string,
+    data: CreateWorkflowStation
+  ): Promise<WorkflowStation> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/stations`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<WorkflowStation>(response);
   },
 
-  update: async (_stationId: string, _updates: any) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow Station API not yet implemented');
-    return null;
+  update: async (
+    id: string,
+    data: UpdateWorkflowStation
+  ): Promise<WorkflowStation> => {
+    const response = await makeRequest(`/api/stations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<WorkflowStation>(response);
   },
 
-  delete: async (_stationId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Workflow Station API not yet implemented');
+  delete: async (id: string): Promise<void> => {
+    const response = await makeRequest(`/api/stations/${id}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
   },
 };
 
 // Station Transition APIs
 export const stationTransitionsApi = {
-  list: async (_workflowId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Station Transition API not yet implemented');
-    return [];
+  getByWorkflowId: async (
+    workflowId: string
+  ): Promise<StationTransition[]> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/transitions`
+    );
+    return handleApiResponse<StationTransition[]>(response);
   },
 
-  get: async (_transitionId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Station Transition API not yet implemented');
-    return null;
+  getById: async (transitionId: string): Promise<StationTransition> => {
+    const response = await makeRequest(`/api/transitions/${transitionId}`);
+    return handleApiResponse<StationTransition>(response);
   },
 
-  create: async (_workflowId: string, _sourceStationId: string, _targetStationId: string, _data?: any) => {
-    // Placeholder for when backend is ready
-    console.warn('Station Transition API not yet implemented');
-    return null;
+  create: async (
+    workflowId: string,
+    data: CreateStationTransition
+  ): Promise<StationTransition> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/transitions`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<StationTransition>(response);
   },
 
-  update: async (_transitionId: string, _updates: any) => {
-    // Placeholder for when backend is ready
-    console.warn('Station Transition API not yet implemented');
-    return null;
+  update: async (
+    id: string,
+    data: UpdateStationTransition
+  ): Promise<StationTransition> => {
+    const response = await makeRequest(`/api/transitions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<StationTransition>(response);
   },
 
-  delete: async (_transitionId: string) => {
-    // Placeholder for when backend is ready
-    console.warn('Station Transition API not yet implemented');
+  delete: async (id: string): Promise<void> => {
+    const response = await makeRequest(`/api/transitions/${id}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
   },
 };

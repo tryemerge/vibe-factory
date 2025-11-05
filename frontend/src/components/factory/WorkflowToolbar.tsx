@@ -1,194 +1,231 @@
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  Plus,
   Save,
-  Undo,
-  Redo,
+  Trash2,
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Play,
-  Settings,
+  Download,
+  Circle,
 } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import type { Workflow } from 'shared/types';
+import { cn } from '@/lib/utils';
 
-export interface WorkflowToolbarProps {
+interface WorkflowToolbarProps {
+  workflows: Workflow[];
+  selectedWorkflowId: string | null;
+  onSelectWorkflow: (workflowId: string) => void;
+  onNewWorkflow: () => void;
   onSave: () => void;
-  onUndo: () => void;
-  onRedo: () => void;
+  onDelete: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onFitView: () => void;
-  onValidate: () => void;
-  onSettings: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-  isSaving: boolean;
-  hasUnsavedChanges: boolean;
+  onAutoLayout: () => void;
+  onExportJson: () => void;
+  hasUnsavedChanges?: boolean;
+  disabled?: boolean;
 }
 
 export function WorkflowToolbar({
+  workflows,
+  selectedWorkflowId,
+  onSelectWorkflow,
+  onNewWorkflow,
   onSave,
-  onUndo,
-  onRedo,
+  onDelete,
   onZoomIn,
   onZoomOut,
-  onFitView,
-  onValidate,
-  onSettings,
-  canUndo,
-  canRedo,
-  isSaving,
-  hasUnsavedChanges,
+  onAutoLayout,
+  onExportJson,
+  hasUnsavedChanges = false,
+  disabled = false,
 }: WorkflowToolbarProps) {
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    // Detect if user is on Mac for keyboard shortcut display
+    setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
+  }, []);
+
+  useEffect(() => {
+    // Handle Ctrl+S / Cmd+S keyboard shortcut
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        if (!disabled && selectedWorkflowId) {
+          onSave();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [disabled, selectedWorkflowId, onSave]);
+
+  const selectedWorkflow = workflows.find((w) => w.id === selectedWorkflowId);
+  const saveShortcut = isMac ? '⌘S' : 'Ctrl+S';
+
   return (
-    <TooltipProvider>
-      <div className="h-12 border-b bg-card px-3 flex items-center gap-2 shrink-0">
-        {/* Save Section */}
-        <div className="flex items-center gap-1 pr-2 border-r">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onSave}
-                disabled={isSaving || !hasUnsavedChanges}
-                className="h-8 px-2"
-              >
-                <Save className="h-4 w-4 mr-1" />
-                {isSaving ? 'Saving...' : 'Save'}
-                {hasUnsavedChanges && !isSaving && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-yellow-500" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {hasUnsavedChanges
-                ? 'Save workflow changes'
-                : 'No changes to save'}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+    <div className="flex items-center gap-2 p-4 border-b bg-background">
+      {/* Workflow Selector */}
+      <div className="flex items-center gap-2">
+        <Select
+          value={selectedWorkflowId || undefined}
+          onValueChange={onSelectWorkflow}
+          disabled={disabled}
+        >
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="Select a workflow..." />
+          </SelectTrigger>
+          <SelectContent>
+            {workflows.length === 0 ? (
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                No workflows available
+              </div>
+            ) : (
+              workflows.map((workflow) => (
+                <SelectItem key={workflow.id} value={workflow.id}>
+                  {workflow.name}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
 
-        {/* Undo/Redo Section */}
-        <div className="flex items-center gap-1 pr-2 border-r">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onUndo}
-                disabled={!canUndo}
-                className="h-8 w-8"
-              >
-                <Undo className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Undo</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onRedo}
-                disabled={!canRedo}
-                className="h-8 w-8"
-              >
-                <Redo className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Redo</TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Zoom Section */}
-        <div className="flex items-center gap-1 pr-2 border-r">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onZoomIn}
-                className="h-8 w-8"
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Zoom In</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onZoomOut}
-                className="h-8 w-8"
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Zoom Out</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onFitView}
-                className="h-8 w-8"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Fit View</TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Validation Section */}
-        <div className="flex items-center gap-1 pr-2 border-r">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onValidate}
-                className="h-8 px-2"
-              >
-                <Play className="h-4 w-4 mr-1" />
-                Validate
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Validate workflow for loops and missing connections
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Settings */}
-        <div className="ml-auto">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onSettings}
-                className="h-8 w-8"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Workflow Settings</TooltipContent>
-          </Tooltip>
-        </div>
+        {/* New Workflow Button */}
+        <Button
+          onClick={onNewWorkflow}
+          disabled={disabled}
+          size="sm"
+          variant="outline"
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          New Workflow
+        </Button>
       </div>
-    </TooltipProvider>
+
+      {/* Divider */}
+      <div className="h-8 w-px bg-border" />
+
+      {/* Save Button with Unsaved Indicator */}
+      <Button
+        onClick={onSave}
+        disabled={disabled || !selectedWorkflowId}
+        size="sm"
+        variant="outline"
+        className="gap-2 relative"
+        title={`Save workflow (${saveShortcut})`}
+      >
+        {hasUnsavedChanges && (
+          <Circle className="h-2 w-2 fill-orange-500 text-orange-500 absolute -top-1 -right-1" />
+        )}
+        <Save className="h-4 w-4" />
+        Save
+      </Button>
+
+      {/* Delete Button */}
+      <Button
+        onClick={onDelete}
+        disabled={disabled || !selectedWorkflowId}
+        size="sm"
+        variant="destructive"
+        className="gap-2"
+      >
+        <Trash2 className="h-4 w-4" />
+        Delete
+      </Button>
+
+      {/* Divider */}
+      <div className="h-8 w-px bg-border" />
+
+      {/* Zoom Controls */}
+      <div className="flex items-center gap-1">
+        <Button
+          onClick={onZoomOut}
+          disabled={disabled || !selectedWorkflowId}
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          title="Zoom out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={onZoomIn}
+          disabled={disabled || !selectedWorkflowId}
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          title="Zoom in"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Divider */}
+      <div className="h-8 w-px bg-border" />
+
+      {/* Auto Layout Button */}
+      <Button
+        onClick={onAutoLayout}
+        disabled={disabled || !selectedWorkflowId}
+        size="sm"
+        variant="outline"
+        className="gap-2"
+      >
+        <Maximize2 className="h-4 w-4" />
+        Auto Layout
+      </Button>
+
+      {/* Export Menu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            disabled={disabled || !selectedWorkflowId}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={onExportJson}>
+            Export as JSON
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled className="text-muted-foreground">
+            Export as Image (coming soon)
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Workflow Info */}
+      {selectedWorkflow && (
+        <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+          <span className={cn(hasUnsavedChanges && 'text-orange-500')}>
+            {hasUnsavedChanges ? 'Unsaved changes' : 'All changes saved'}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

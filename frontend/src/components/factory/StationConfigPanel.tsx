@@ -1,233 +1,299 @@
-import { useEffect, useState } from 'react';
-import { WorkflowStation, Agent } from 'shared/types';
+import { useState, useEffect } from 'react';
+import { X, Save, Trash2 } from 'lucide-react';
+import { WorkflowStation, UpdateWorkflowStation } from 'shared/types';
+import { useWorkflowStations } from '@/hooks/useWorkflowStations';
+import { AgentSelector } from '@/components/agents/AgentSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { X, Save, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { NewCardContent, NewCardHeader } from '@/components/ui/new-card';
 
-export interface StationConfigPanelProps {
+interface StationConfigPanelProps {
   station: WorkflowStation | null;
-  agents: Agent[];
-  onUpdate: (stationId: string, updates: Partial<WorkflowStation>) => void;
-  onDelete: (stationId: string) => void;
+  isOpen: boolean;
   onClose: () => void;
-  className?: string;
 }
 
 export function StationConfigPanel({
   station,
-  agents,
-  onUpdate,
-  onDelete,
+  isOpen,
   onClose,
-  className,
 }: StationConfigPanelProps) {
+  const { updateStation, deleteStation, isSaving } = useWorkflowStations({
+    workflowId: station?.workflow_id,
+    onSaveSuccess: () => onClose(),
+    onSaveError: (error) => {
+      console.error('Failed to save station:', error);
+      alert(`Failed to save station: ${error}`);
+    },
+  });
+
+  // Form state
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [agentId, setAgentId] = useState<string>('');
+  const [agentId, setAgentId] = useState<string | null>(null);
   const [stationPrompt, setStationPrompt] = useState('');
   const [outputContextKeys, setOutputContextKeys] = useState('');
-  const [hasChanges, setHasChanges] = useState(false);
+  const [xPosition, setXPosition] = useState('0');
+  const [yPosition, setYPosition] = useState('0');
+
+  // Validation state
+  const [errors, setErrors] = useState<{
+    name?: string;
+    xPosition?: string;
+    yPosition?: string;
+  }>({});
 
   // Load station data when it changes
   useEffect(() => {
     if (station) {
-      setName(station.name);
-      setDescription(station.description || '');
-      setAgentId(station.agent_id || '');
+      setName(station.name || '');
+      setAgentId(station.agent_id);
       setStationPrompt(station.station_prompt || '');
       setOutputContextKeys(station.output_context_keys || '');
-      setHasChanges(false);
+      setXPosition(String(station.x_position || 0));
+      setYPosition(String(station.y_position || 0));
+      setErrors({});
     }
   }, [station]);
 
-  // Mark changes
-  useEffect(() => {
-    if (!station) return;
+  // Validate form
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {};
 
-    const changed =
-      name !== station.name ||
-      description !== (station.description || '') ||
-      agentId !== (station.agent_id || '') ||
-      stationPrompt !== (station.station_prompt || '') ||
-      outputContextKeys !== (station.output_context_keys || '');
+    if (!name.trim()) {
+      newErrors.name = 'Station name is required';
+    }
 
-    setHasChanges(changed);
-  }, [name, description, agentId, stationPrompt, outputContextKeys, station]);
+    const x = parseFloat(xPosition);
+    if (isNaN(x)) {
+      newErrors.xPosition = 'X position must be a valid number';
+    }
 
-  const handleSave = () => {
-    if (!station) return;
+    const y = parseFloat(yPosition);
+    if (isNaN(y)) {
+      newErrors.yPosition = 'Y position must be a valid number';
+    }
 
-    onUpdate(station.id, {
-      name,
-      description: description || null,
-      agent_id: agentId || null,
-      station_prompt: stationPrompt || null,
-      output_context_keys: outputContextKeys || null,
-    });
-    setHasChanges(false);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleDelete = () => {
+  // Handle save
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm() || !station) {
+      return;
+    }
+
+    const data: UpdateWorkflowStation = {
+      name: name.trim(),
+      position: null, // Position in workflow sequence (not changed here)
+      description: null, // Description field (not in this form)
+      x_position: parseFloat(xPosition),
+      y_position: parseFloat(yPosition),
+      agent_id: agentId,
+      station_prompt: stationPrompt.trim() || null,
+      output_context_keys: outputContextKeys.trim() || null,
+    };
+
+    updateStation({ id: station.id, data });
+  };
+
+  // Handle remove
+  const handleRemove = () => {
     if (!station) return;
-    if (confirm(`Delete station "${station.name}"?`)) {
-      onDelete(station.id);
-      onClose();
+
+    if (
+      confirm(
+        `Are you sure you want to delete station "${station.name}"? This action cannot be undone.`
+      )
+    ) {
+      deleteStation(station.id);
     }
   };
 
-  if (!station) {
-    return (
-      <div
-        className={cn(
-          'w-80 border-l bg-muted/30 flex items-center justify-center',
-          className
-        )}
-      >
-        <div className="text-center text-sm text-muted-foreground p-4">
-          Select a station to configure
-        </div>
-      </div>
-    );
+  if (!isOpen || !station) {
+    return null;
   }
 
-  const selectedAgent = agents.find((a) => a.id === agentId);
-
   return (
-    <div className={cn('w-80 border-l bg-card flex flex-col', className)}>
-      {/* Header */}
-      <div className="p-3 border-b flex items-center justify-between">
-        <h2 className="font-semibold text-sm">Station Configuration</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="h-7 w-7"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className={[
+          'fixed inset-y-0 right-0 w-full md:w-[500px] z-50',
+          'bg-background border-l shadow-xl',
+          'transform transition-transform duration-300 ease-in-out',
+          isOpen ? 'translate-x-0' : 'translate-x-full',
+        ].join(' ')}
+      >
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <NewCardHeader
+            actions={
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                disabled={isSaving}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            }
+          >
+            <h2 className="text-lg font-semibold">Configure Station</h2>
+          </NewCardHeader>
+
+          {/* Form */}
+          <NewCardContent className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSave} className="p-4 space-y-4">
+              {/* Station Name */}
+              <div>
+                <Label htmlFor="station-name" className="text-sm font-medium">
+                  Station Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="station-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Code Review"
+                  disabled={isSaving}
+                  className={
+                    errors.name ? 'border-destructive mt-1.5' : 'mt-1.5'
+                  }
+                />
+                {errors.name && (
+                  <p className="text-sm text-destructive mt-1">{errors.name}</p>
+                )}
+              </div>
+
+              {/* Agent Selector */}
+              <AgentSelector
+                value={agentId}
+                onChange={setAgentId}
+                disabled={isSaving}
+                label="Agent"
+                placeholder="Select agent (optional)"
+                allowNull={true}
+              />
+
+              {/* Station Prompt */}
+              <div>
+                <Label htmlFor="station-prompt" className="text-sm font-medium">
+                  Station Prompt
+                </Label>
+                <Textarea
+                  id="station-prompt"
+                  value={stationPrompt}
+                  onChange={(e) => setStationPrompt(e.target.value)}
+                  placeholder="Enter instructions for this station..."
+                  disabled={isSaving}
+                  className="mt-1.5 min-h-[120px]"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Instructions that will be provided to the agent at this
+                  station
+                </p>
+              </div>
+
+              {/* Output Context Keys */}
+              <div>
+                <Label
+                  htmlFor="output-context-keys"
+                  className="text-sm font-medium"
+                >
+                  Output Context Keys
+                </Label>
+                <Input
+                  id="output-context-keys"
+                  value={outputContextKeys}
+                  onChange={(e) => setOutputContextKeys(e.target.value)}
+                  placeholder="e.g., review_result, code_quality_score"
+                  disabled={isSaving}
+                  className="mt-1.5"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Comma-separated keys for data this station produces
+                </p>
+              </div>
+
+              {/* Position Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="x-position" className="text-sm font-medium">
+                    X Position <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="x-position"
+                    type="number"
+                    step="any"
+                    value={xPosition}
+                    onChange={(e) => setXPosition(e.target.value)}
+                    placeholder="0"
+                    disabled={isSaving}
+                    className={
+                      errors.xPosition ? 'border-destructive mt-1.5' : 'mt-1.5'
+                    }
+                  />
+                  {errors.xPosition && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.xPosition}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="y-position" className="text-sm font-medium">
+                    Y Position <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="y-position"
+                    type="number"
+                    step="any"
+                    value={yPosition}
+                    onChange={(e) => setYPosition(e.target.value)}
+                    placeholder="0"
+                    disabled={isSaving}
+                    className={
+                      errors.yPosition ? 'border-destructive mt-1.5' : 'mt-1.5'
+                    }
+                  />
+                  {errors.yPosition && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.yPosition}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" disabled={isSaving} className="flex-1">
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? 'Saving...' : 'Save'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleRemove}
+                  disabled={isSaving}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isSaving ? 'Removing...' : 'Remove'}
+                </Button>
+              </div>
+            </form>
+          </NewCardContent>
+        </div>
       </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="station-name">Station Name</Label>
-          <Input
-            id="station-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Design Review"
-          />
-        </div>
-
-        {/* Description */}
-        <div className="space-y-2">
-          <Label htmlFor="station-description">Description</Label>
-          <Textarea
-            id="station-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe what this station does..."
-            rows={3}
-          />
-        </div>
-
-        {/* Agent Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="station-agent">Agent</Label>
-          <Select value={agentId} onValueChange={setAgentId}>
-            <SelectTrigger id="station-agent">
-              <SelectValue placeholder="Select an agent" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">No Agent</SelectItem>
-              {agents.map((agent) => (
-                <SelectItem key={agent.id} value={agent.id}>
-                  {agent.name} - {agent.role}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedAgent && (
-            <p className="text-xs text-muted-foreground">
-              {selectedAgent.description}
-            </p>
-          )}
-        </div>
-
-        {/* Station Prompt */}
-        <div className="space-y-2">
-          <Label htmlFor="station-prompt">Station Prompt</Label>
-          <Textarea
-            id="station-prompt"
-            value={stationPrompt}
-            onChange={(e) => setStationPrompt(e.target.value)}
-            placeholder="Additional instructions for this station's agent..."
-            rows={4}
-          />
-          <p className="text-xs text-muted-foreground">
-            Custom instructions that will be added to the agent's prompt when
-            executing this station.
-          </p>
-        </div>
-
-        {/* Output Context Keys */}
-        <div className="space-y-2">
-          <Label htmlFor="output-context">Output Context Keys</Label>
-          <Input
-            id="output-context"
-            value={outputContextKeys}
-            onChange={(e) => setOutputContextKeys(e.target.value)}
-            placeholder='["design_doc", "api_spec"]'
-          />
-          <p className="text-xs text-muted-foreground">
-            JSON array of context keys this station will produce (e.g., files,
-            decisions, artifacts).
-          </p>
-        </div>
-
-        {/* Position Info */}
-        <div className="pt-4 border-t space-y-2">
-          <div className="text-xs text-muted-foreground">
-            <div>Position: {String(station.position)}</div>
-            <div>
-              Coordinates: ({station.x_position.toFixed(0)},{' '}
-              {station.y_position.toFixed(0)})
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="p-3 border-t flex items-center gap-2">
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges}
-          className="flex-1"
-          size="sm"
-        >
-          <Save className="h-4 w-4 mr-1" />
-          Save Changes
-        </Button>
-        <Button
-          onClick={handleDelete}
-          variant="destructive"
-          size="sm"
-          className="px-2"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }

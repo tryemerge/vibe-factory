@@ -1,75 +1,163 @@
-import { useMemo, useState } from 'react';
-import { Agent } from 'shared/types';
-import { Input } from '@/components/ui/input';
-import { Search, Bot, Plus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { useDraggable } from '@dnd-kit/core';
+import { Bot, Plus, Search, X } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { agentsApi } from '@/lib/api';
+import type { Agent } from 'shared/types';
 import { cn } from '@/lib/utils';
 
-export interface AgentPaletteProps {
-  agents: Agent[];
-  onCreateAgent?: () => void;
+/**
+ * AgentPalette component props
+ *
+ * @property className - Optional Tailwind CSS classes for styling the palette container
+ */
+interface AgentPaletteProps {
   className?: string;
 }
 
-export interface AgentPaletteItemProps {
+interface DraggableAgentCardProps {
   agent: Agent;
 }
 
-function AgentPaletteItem({ agent }: AgentPaletteItemProps) {
-  const onDragStart = (event: React.DragEvent<HTMLDivElement>) => {
-    event.dataTransfer.setData('application/vibe-agent', agent.id);
-    event.dataTransfer.effectAllowed = 'copy';
-  };
+/**
+ * Internal component: Draggable agent card
+ *
+ * Provides drag data in the format:
+ * ```typescript
+ * {
+ *   id: `agent-${agent.id}`,
+ *   data: {
+ *     type: 'agent',
+ *     agent: Agent  // Full agent object
+ *   }
+ * }
+ * ```
+ *
+ * Parent must handle drop via DndContext:
+ * ```typescript
+ * <DndContext onDragEnd={handleDragEnd}>
+ *   <AgentPalette />
+ * </DndContext>
+ *
+ * const handleDragEnd = (event: DragEndEvent) => {
+ *   if (event.active.data.current?.type === 'agent') {
+ *     const agent = event.active.data.current.agent as Agent;
+ *     // Create station at drop position
+ *   }
+ * };
+ * ```
+ */
+function DraggableAgentCard({ agent }: DraggableAgentCardProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `agent-${agent.id}`,
+    data: {
+      type: 'agent',
+      agent,
+    },
+  });
 
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       className={cn(
-        'group relative p-3 rounded-md border bg-card cursor-grab active:cursor-grabbing',
-        'hover:bg-accent hover:border-accent-foreground/20 transition-colors',
-        'touch-none select-none'
+        'p-3 border rounded-lg cursor-grab active:cursor-grabbing',
+        'hover:shadow-md transition-all',
+        'bg-background',
+        isDragging && 'opacity-50 shadow-lg'
       )}
     >
-      <div className="flex items-start gap-2">
-        <div className="shrink-0 mt-0.5">
-          <Bot className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate">{agent.name}</div>
-          <div className="text-xs text-muted-foreground truncate">
-            {agent.role}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Bot className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <h4 className="font-medium text-sm line-clamp-1">{agent.name}</h4>
           </div>
-          {agent.description && (
-            <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              {agent.description}
-            </div>
-          )}
+          <Badge variant="secondary" className="text-xs shrink-0">
+            {agent.executor}
+          </Badge>
         </div>
-      </div>
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="text-xs text-muted-foreground bg-background px-1.5 py-0.5 rounded border">
-          Drag to canvas
-        </div>
+        <p className="text-xs text-muted-foreground line-clamp-1">
+          {agent.role}
+        </p>
       </div>
     </div>
   );
 }
 
-export function AgentPalette({
-  agents,
-  onCreateAgent,
-  className,
-}: AgentPaletteProps) {
+/**
+ * AgentPalette - A draggable palette of agents for the Factory Floor
+ *
+ * ## Architecture
+ * This component uses a self-contained pattern:
+ * - Fetches its own agent data via React Query (automatic caching & refetching)
+ * - Provides draggable agents via @dnd-kit/core
+ * - Parent handles drop events via DndContext
+ *
+ * ## Integration Example
+ * ```typescript
+ * import { DndContext, DragEndEvent } from '@dnd-kit/core';
+ * import { AgentPalette } from '@/components/factory';
+ *
+ * function FactoryFloor() {
+ *   const handleDragEnd = (event: DragEndEvent) => {
+ *     const { active, delta } = event;
+ *     if (active.data.current?.type === 'agent') {
+ *       const agent = active.data.current.agent as Agent;
+ *       createStationAtPosition(agent, { x: delta.x, y: delta.y });
+ *     }
+ *   };
+ *
+ *   return (
+ *     <DndContext onDragEnd={handleDragEnd}>
+ *       <AgentPalette className="w-80 border-r" />
+ *       <Canvas />
+ *     </DndContext>
+ *   );
+ * }
+ * ```
+ *
+ * ## Features
+ * - Real-time search/filter (searches: name, role, executor, description)
+ * - Drag agents onto canvas to create stations
+ * - Links to /agents page for full agent management
+ * - Create new agent button
+ * - Loading, empty, and filtered-empty states
+ *
+ * ## Drag Data Format
+ * Each agent provides:
+ * ```typescript
+ * {
+ *   id: `agent-${agent.id}`,
+ *   data: {
+ *     type: 'agent',
+ *     agent: Agent  // Full agent object from API
+ *   }
+ * }
+ * ```
+ *
+ * See `AgentPalette.integration.md` for complete integration guide.
+ *
+ * @param props - Component props
+ * @param props.className - Optional Tailwind CSS classes for container styling
+ */
+export function AgentPalette({ className }: AgentPaletteProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
+  const { data: agents, isLoading } = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => agentsApi.list(),
+  });
+
+  // Filter agents based on search query
   const filteredAgents = useMemo(() => {
+    if (!agents) return [];
     if (!searchQuery.trim()) return agents;
 
     const query = searchQuery.toLowerCase();
@@ -77,77 +165,90 @@ export function AgentPalette({
       (agent) =>
         agent.name.toLowerCase().includes(query) ||
         agent.role.toLowerCase().includes(query) ||
-        agent.description?.toLowerCase().includes(query)
+        agent.executor.toLowerCase().includes(query) ||
+        (agent.description && agent.description.toLowerCase().includes(query))
     );
   }, [agents, searchQuery]);
 
   return (
-    <TooltipProvider>
-      <div
-        className={cn(
-          'w-64 border-r bg-muted/30 flex flex-col shrink-0',
-          className
-        )}
-      >
-        {/* Header */}
-        <div className="p-3 border-b bg-card flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-sm">Agent Palette</h2>
-            <p className="text-xs text-muted-foreground">
-              {agents.length} agents
-            </p>
+    <Card className={cn('flex flex-col h-full', className)}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            Agent Palette
+          </span>
+          <Link to="/agents">
+            <Button size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-1" />
+              New
+            </Button>
+          </Link>
+        </CardTitle>
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search agents..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 pr-8 h-9"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="text-center text-sm text-muted-foreground py-8">
+            Loading agents...
           </div>
-          {onCreateAgent && (
-            <Tooltip>
-              <TooltipTrigger asChild>
+        ) : filteredAgents.length === 0 ? (
+          <div className="text-center space-y-4 py-8">
+            {searchQuery ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  No agents match "{searchQuery}"
+                </p>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onCreateAgent}
-                  className="h-7 w-7"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSearchQuery('')}
                 >
-                  <Plus className="h-4 w-4" />
+                  Clear search
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>Create New Agent</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-
-        {/* Search */}
-        <div className="p-2 border-b bg-card">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search agents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 text-sm"
-            />
+              </>
+            ) : (
+              <>
+                <Bot className="h-8 w-8 mx-auto text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">No agents yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Create your first agent to get started
+                  </p>
+                </div>
+                <Link to="/agents">
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Agent
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
-        </div>
-
-        {/* Agent List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-2">
-          {filteredAgents.length === 0 ? (
-            <div className="text-center text-sm text-muted-foreground p-4">
-              {searchQuery.trim()
-                ? 'No agents found'
-                : 'No agents available'}
-            </div>
-          ) : (
-            filteredAgents.map((agent) => (
-              <AgentPaletteItem key={agent.id} agent={agent} />
-            ))
-          )}
-        </div>
-
-        {/* Help Text */}
-        <div className="p-3 border-t bg-card text-xs text-muted-foreground">
-          Drag agents onto the canvas to create workflow stations
-        </div>
-      </div>
-    </TooltipProvider>
+        ) : (
+          <div className="space-y-2">
+            {filteredAgents.map((agent) => (
+              <DraggableAgentCard key={agent.id} agent={agent} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
