@@ -23,6 +23,7 @@ pub mod projects;
 pub mod tags;
 pub mod task_attempts;
 pub mod tasks;
+pub mod workflows;
 
 pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
     // Create routers with different middleware layers
@@ -37,6 +38,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(execution_processes::router(&deployment))
         .merge(tags::router(&deployment))
         .merge(agents::router(&deployment))
+        .merge(workflows::router(&deployment))
         .merge(auth::router(&deployment))
         .merge(filesystem::router())
         .merge(events::router(&deployment))
