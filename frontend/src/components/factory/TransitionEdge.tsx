@@ -12,6 +12,7 @@ type TransitionEdgeData = {
   sourcePosition?: number;
   targetPosition?: number;
   onEdit?: (transition: StationTransition) => void;
+  isActive?: boolean;
 };
 
 /**
@@ -19,13 +20,15 @@ type TransitionEdgeData = {
  *
  * Features:
  * - Color-coded by condition type:
- *   - Green: on_approval
- *   - Red: on_failure
- *   - Blue: on_tests_pass
- *   - Yellow: on_tests_fail
+ *   - Green: "always" or "on_approval"
+ *   - Red: "on_failure" or "on_rejection"
+ *   - Blue: "on_tests_pass"
+ *   - Yellow: "on_tests_fail"
  *   - Gray: default/no condition
+ * - Dashed lines for failure conditions (on_failure, on_rejection, on_tests_fail)
  * - Loopback indicator (🔁) when target comes before source
- * - Clickable label to edit condition
+ * - Clickable edge and label to edit condition
+ * - Animated pulse for active transitions
  */
 export const TransitionEdge = memo(
   ({
@@ -64,9 +67,11 @@ export const TransitionEdge = memo(
 
       const conditionType = transition.condition_type.toLowerCase();
       switch (conditionType) {
+        case 'always':
         case 'on_approval':
           return '#22c55e'; // green-500
         case 'on_failure':
+        case 'on_rejection':
           return '#ef4444'; // red-500
         case 'on_tests_pass':
           return '#3b82f6'; // blue-500
@@ -75,6 +80,17 @@ export const TransitionEdge = memo(
         default:
           return '#6b7280'; // gray-500
       }
+    }, [transition?.condition_type]);
+
+    // Determine if this is a failure condition (uses dashed lines)
+    const isFailureCondition = useMemo(() => {
+      if (!transition?.condition_type) return false;
+      const conditionType = transition.condition_type.toLowerCase();
+      return (
+        conditionType === 'on_failure' ||
+        conditionType === 'on_rejection' ||
+        conditionType === 'on_tests_fail'
+      );
     }, [transition?.condition_type]);
 
     // Calculate edge path
@@ -113,15 +129,30 @@ export const TransitionEdge = memo(
       return parts.length > 0 ? parts.join(' ') : null;
     }, [transition, isLoopback]);
 
-    const handleLabelClick = (e: React.MouseEvent) => {
+    const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (transition && onEdit) {
         onEdit(transition);
       }
     };
 
+    const isActive = data?.isActive ?? false;
+
     return (
       <>
+        {/* Invisible wider path for better click detection */}
+        {onEdit && (
+          <path
+            d={edgePath}
+            fill="none"
+            stroke="transparent"
+            strokeWidth={20}
+            style={{ cursor: 'pointer' }}
+            onClick={handleClick}
+            className="react-flow__edge-interaction"
+          />
+        )}
+        {/* Visible edge */}
         <BaseEdge
           id={id}
           path={edgePath}
@@ -130,6 +161,11 @@ export const TransitionEdge = memo(
             ...style,
             stroke: edgeColor,
             strokeWidth: 2,
+            strokeDasharray: isFailureCondition ? '5,5' : undefined,
+            pointerEvents: 'none', // Let the invisible path handle clicks
+            animation: isActive
+              ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+              : undefined,
           }}
         />
         {labelText && (
@@ -143,7 +179,7 @@ export const TransitionEdge = memo(
               className="nodrag nopan"
             >
               <button
-                onClick={handleLabelClick}
+                onClick={handleClick}
                 className="px-2 py-1 text-xs font-medium rounded-md shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
                 style={{
                   backgroundColor: 'white',
@@ -156,6 +192,16 @@ export const TransitionEdge = memo(
             </div>
           </EdgeLabelRenderer>
         )}
+        <style>{`
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.5;
+            }
+          }
+        `}</style>
       </>
     );
   }

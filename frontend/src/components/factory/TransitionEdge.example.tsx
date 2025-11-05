@@ -81,6 +81,34 @@ const exampleStations: WorkflowStation[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
+  {
+    id: 'station-5',
+    workflow_id: 'workflow-1',
+    name: 'Auto Archive',
+    position: BigInt(4),
+    x_position: 700,
+    y_position: 100,
+    agent_id: null,
+    station_prompt: null,
+    output_context_keys: null,
+    description: 'Automatically archive completed work',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'station-6',
+    workflow_id: 'workflow-1',
+    name: 'Manual Review',
+    position: BigInt(5),
+    x_position: 500,
+    y_position: 300,
+    agent_id: null,
+    station_prompt: null,
+    output_context_keys: null,
+    description: 'Manual review for rejected items',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
 ];
 
 // Example transitions
@@ -141,6 +169,42 @@ const exampleTransitions: StationTransition[] = [
     condition: 'on_failure',
     label: 'Deploy Failed',
     condition_type: 'on_failure',
+    condition_value: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'transition-6',
+    workflow_id: 'workflow-1',
+    source_station_id: 'station-3',
+    target_station_id: 'station-5',
+    condition: 'always',
+    label: 'Auto Archive',
+    condition_type: 'always',
+    condition_value: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'transition-7',
+    workflow_id: 'workflow-1',
+    source_station_id: 'station-1',
+    target_station_id: 'station-6',
+    condition: 'on_rejection',
+    label: 'Rejected',
+    condition_type: 'on_rejection',
+    condition_value: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'transition-8',
+    workflow_id: 'workflow-1',
+    source_station_id: 'station-6',
+    target_station_id: 'station-4',
+    condition: 'on_rejection',
+    label: 'Needs Rework',
+    condition_type: 'on_rejection',
     condition_value: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -231,35 +295,44 @@ export function TransitionEdgeExample() {
         </ReactFlow>
       </div>
       <div className="fixed bottom-4 right-4 bg-card border rounded-lg p-4 shadow-lg max-w-xs">
-        <h3 className="font-semibold mb-2">Edge Color Legend</h3>
+        <h3 className="font-semibold mb-2">Edge Legend</h3>
         <div className="space-y-1 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-green-500"></div>
-            <span>On Approval</span>
+            <div className="w-12 h-0.5 bg-green-500"></div>
+            <span className="text-xs">Always / On Approval</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-red-500"></div>
-            <span>On Failure</span>
+            <div
+              className="w-12 h-0.5 bg-red-500"
+              style={{ borderTop: '2px dashed #ef4444', height: 0 }}
+            ></div>
+            <span className="text-xs">On Failure / On Rejection</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-blue-500"></div>
-            <span>On Tests Pass</span>
+            <div className="w-12 h-0.5 bg-blue-500"></div>
+            <span className="text-xs">On Tests Pass</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-yellow-500"></div>
-            <span>On Tests Fail</span>
+            <div
+              className="w-12 h-0.5 bg-yellow-500"
+              style={{ borderTop: '2px dashed #eab308', height: 0 }}
+            ></div>
+            <span className="text-xs">On Tests Fail</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-gray-500"></div>
-            <span>Default/No Condition</span>
+            <div className="w-12 h-0.5 bg-gray-500"></div>
+            <span className="text-xs">Default/No Condition</span>
           </div>
         </div>
-        <div className="mt-3 pt-3 border-t">
+        <div className="mt-3 pt-3 border-t space-y-1">
           <p className="text-xs text-muted-foreground">
-            🔁 indicates a loopback edge (target position &lt; source position)
+            🔁 = Loopback (target position &lt; source)
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Click edge labels to edit conditions
+          <p className="text-xs text-muted-foreground">
+            Dashed lines = Failure conditions
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Click edges or labels to edit
           </p>
         </div>
       </div>
