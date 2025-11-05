@@ -8,7 +8,14 @@ import ReactFlow, {
   useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { DndContext, DragEndEvent, useDroppable } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragEndEvent,
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { useProject } from '@/contexts/project-context';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { Loader } from '@/components/ui/loader';
@@ -136,6 +143,15 @@ function FactoryFloorContent() {
     id: 'react-flow-canvas',
   });
 
+  // Configure sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before drag starts
+      },
+    })
+  );
+
   // Handle new workflow creation
   const handleNewWorkflow = useCallback(() => {
     if (!projectId) return;
@@ -180,23 +196,26 @@ function FactoryFloorContent() {
   // Handle drag end from agent palette
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      const { active, delta } = event;
-      if (!effectiveWorkflowId) return;
+      const { active, delta, over } = event;
+      if (!effectiveWorkflowId || !over) return;
 
       if (active.data.current?.type === 'agent') {
         const agent = active.data.current.agent as Agent;
 
-        // Calculate position in React Flow coordinates
+        // Get the final mouse position
+        const activatorEvent = event.activatorEvent as MouseEvent | null;
+        if (!activatorEvent) return;
+
+        const dropX = activatorEvent.clientX + delta.x;
+        const dropY = activatorEvent.clientY + delta.y;
+
+        // Convert screen coordinates to React Flow coordinates
         const position = reactFlowInstance.project({
-          x: event.activatorEvent
-            ? (event.activatorEvent as MouseEvent).clientX + delta.x
-            : delta.x,
-          y: event.activatorEvent
-            ? (event.activatorEvent as MouseEvent).clientY + delta.y
-            : delta.y,
+          x: dropX,
+          y: dropY,
         });
 
-        // Create new station
+        // Create new station at drop position
         createStation({
           workflowId: effectiveWorkflowId,
           data: {
@@ -366,7 +385,7 @@ function FactoryFloorContent() {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-full w-full overflow-hidden">
         {/* Navigation */}
         <ProjectViewNav currentView="factory" />
