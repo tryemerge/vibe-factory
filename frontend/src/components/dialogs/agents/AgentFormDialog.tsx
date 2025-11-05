@@ -19,7 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { agentsApi } from '@/lib/api';
-import type { Agent, ContextFile, CreateAgent, UpdateAgent } from 'shared/types';
+import type {
+  Agent,
+  ContextFile,
+  CreateAgent,
+  UpdateAgent,
+} from 'shared/types';
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
 
 export interface AgentFormDialogProps {
@@ -145,7 +150,10 @@ export const AgentFormDialog = NiceModal.create<AgentFormDialogProps>(
     const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
     return (
-      <Dialog open={modal.visible} onOpenChange={(open) => !open && modal.hide()}>
+      <Dialog
+        open={modal.visible}
+        onOpenChange={(open) => !open && modal.hide()}
+      >
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -251,8 +259,8 @@ export const AgentFormDialog = NiceModal.create<AgentFormDialogProps>(
 
               {contextFiles.length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-4 border rounded-md bg-muted/50">
-                  No context files configured. Click "Add Context File" to add file
-                  patterns.
+                  No context files configured. Click "Add Context File" to add
+                  file patterns.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -330,8 +338,8 @@ export const AgentFormDialog = NiceModal.create<AgentFormDialogProps>(
                     ? 'Updating...'
                     : 'Creating...'
                   : isEditMode
-                  ? 'Update Agent'
-                  : 'Create Agent'}
+                    ? 'Update Agent'
+                    : 'Create Agent'}
               </Button>
             </div>
           </form>
