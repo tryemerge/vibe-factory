@@ -50,6 +50,18 @@ import {
   RebaseTaskAttemptRequest,
   ChangeTargetBranchRequest,
   ChangeTargetBranchResponse,
+  Workflow,
+  CreateWorkflow,
+  UpdateWorkflow,
+  WorkflowStation,
+  CreateWorkflowStation,
+  UpdateWorkflowStation,
+  StationTransition,
+  CreateStationTransition,
+  UpdateStationTransition,
+  StationContext,
+  CreateStationContext,
+  UpdateStationContext,
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -882,5 +894,177 @@ export const approvalsApi = {
     });
 
     return handleApiResponse<ApprovalStatus>(res);
+  },
+};
+
+// Workflows APIs
+export const workflowsApi = {
+  list: async (projectId: string): Promise<Workflow[]> => {
+    const response = await makeRequest(
+      `/api/workflows?project_id=${projectId}`
+    );
+    return handleApiResponse<Workflow[]>(response);
+  },
+
+  get: async (workflowId: string): Promise<Workflow> => {
+    const response = await makeRequest(`/api/workflows/${workflowId}`);
+    return handleApiResponse<Workflow>(response);
+  },
+
+  create: async (data: CreateWorkflow): Promise<Workflow> => {
+    const response = await makeRequest('/api/workflows', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<Workflow>(response);
+  },
+
+  update: async (
+    workflowId: string,
+    data: UpdateWorkflow
+  ): Promise<Workflow> => {
+    const response = await makeRequest(`/api/workflows/${workflowId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<Workflow>(response);
+  },
+
+  delete: async (workflowId: string): Promise<void> => {
+    const response = await makeRequest(`/api/workflows/${workflowId}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
+  },
+};
+
+// Workflow Stations APIs
+export const stationsApi = {
+  list: async (workflowId: string): Promise<WorkflowStation[]> => {
+    const response = await makeRequest(
+      `/api/workflow-stations?workflow_id=${workflowId}`
+    );
+    return handleApiResponse<WorkflowStation[]>(response);
+  },
+
+  get: async (stationId: string): Promise<WorkflowStation> => {
+    const response = await makeRequest(`/api/workflow-stations/${stationId}`);
+    return handleApiResponse<WorkflowStation>(response);
+  },
+
+  create: async (data: CreateWorkflowStation): Promise<WorkflowStation> => {
+    const response = await makeRequest('/api/workflow-stations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<WorkflowStation>(response);
+  },
+
+  update: async (
+    stationId: string,
+    data: UpdateWorkflowStation
+  ): Promise<WorkflowStation> => {
+    const response = await makeRequest(`/api/workflow-stations/${stationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<WorkflowStation>(response);
+  },
+
+  delete: async (stationId: string): Promise<void> => {
+    const response = await makeRequest(`/api/workflow-stations/${stationId}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
+  },
+};
+
+// Station Transitions APIs
+export const transitionsApi = {
+  list: async (workflowId: string): Promise<StationTransition[]> => {
+    const response = await makeRequest(
+      `/api/station-transitions?workflow_id=${workflowId}`
+    );
+    return handleApiResponse<StationTransition[]>(response);
+  },
+
+  get: async (transitionId: string): Promise<StationTransition> => {
+    const response = await makeRequest(
+      `/api/station-transitions/${transitionId}`
+    );
+    return handleApiResponse<StationTransition>(response);
+  },
+
+  create: async (data: CreateStationTransition): Promise<StationTransition> => {
+    const response = await makeRequest('/api/station-transitions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<StationTransition>(response);
+  },
+
+  update: async (
+    transitionId: string,
+    data: UpdateStationTransition
+  ): Promise<StationTransition> => {
+    const response = await makeRequest(
+      `/api/station-transitions/${transitionId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<StationTransition>(response);
+  },
+
+  delete: async (transitionId: string): Promise<void> => {
+    const response = await makeRequest(
+      `/api/station-transitions/${transitionId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    return handleApiResponse<void>(response);
+  },
+};
+
+// Station Context APIs
+export const stationContextApi = {
+  list: async (taskId: string): Promise<StationContext[]> => {
+    const response = await makeRequest(
+      `/api/station-context?task_id=${taskId}`
+    );
+    return handleApiResponse<StationContext[]>(response);
+  },
+
+  get: async (contextId: string): Promise<StationContext> => {
+    const response = await makeRequest(`/api/station-context/${contextId}`);
+    return handleApiResponse<StationContext>(response);
+  },
+
+  create: async (data: CreateStationContext): Promise<StationContext> => {
+    const response = await makeRequest('/api/station-context', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<StationContext>(response);
+  },
+
+  update: async (
+    contextId: string,
+    data: UpdateStationContext
+  ): Promise<StationContext> => {
+    const response = await makeRequest(`/api/station-context/${contextId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<StationContext>(response);
+  },
+
+  delete: async (contextId: string): Promise<void> => {
+    const response = await makeRequest(`/api/station-context/${contextId}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
   },
 };
