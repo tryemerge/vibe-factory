@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Save, Trash2 } from 'lucide-react';
 import { WorkflowStation, UpdateWorkflowStation } from 'shared/types';
-import { workflowStationsApi } from '@/lib/api';
+import { useWorkflowStations } from '@/hooks/useWorkflowStations';
 import { AgentSelector } from '@/components/agents/AgentSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +20,14 @@ export function StationConfigPanel({
   isOpen,
   onClose,
 }: StationConfigPanelProps) {
-  const queryClient = useQueryClient();
+  const { updateStation, deleteStation, isSaving } = useWorkflowStations({
+    workflowId: station?.workflow_id,
+    onSaveSuccess: () => onClose(),
+    onSaveError: (error) => {
+      console.error('Failed to save station:', error);
+      alert(`Failed to save station: ${error}`);
+    },
+  });
 
   // Form state
   const [name, setName] = useState('');
@@ -51,38 +57,6 @@ export function StationConfigPanel({
     }
   }, [station]);
 
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: async (data: UpdateWorkflowStation) => {
-      if (!station) throw new Error('No station selected');
-      return workflowStationsApi.update(station.id, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workflow-stations'] });
-      onClose();
-    },
-    onError: (error: Error) => {
-      console.error('Failed to update station:', error);
-      alert(`Failed to update station: ${error.message}`);
-    },
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      if (!station) throw new Error('No station selected');
-      return workflowStationsApi.delete(station.id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workflow-stations'] });
-      onClose();
-    },
-    onError: (error: Error) => {
-      console.error('Failed to delete station:', error);
-      alert(`Failed to delete station: ${error.message}`);
-    },
-  });
-
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
@@ -106,10 +80,10 @@ export function StationConfigPanel({
   };
 
   // Handle save
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateForm() || !station) {
       return;
     }
 
@@ -124,11 +98,11 @@ export function StationConfigPanel({
       output_context_keys: outputContextKeys.trim() || null,
     };
 
-    await updateMutation.mutateAsync(data);
+    updateStation({ id: station.id, data });
   };
 
   // Handle remove
-  const handleRemove = async () => {
+  const handleRemove = () => {
     if (!station) return;
 
     if (
@@ -136,15 +110,13 @@ export function StationConfigPanel({
         `Are you sure you want to delete station "${station.name}"? This action cannot be undone.`
       )
     ) {
-      await deleteMutation.mutateAsync();
+      deleteStation(station.id);
     }
   };
 
   if (!isOpen || !station) {
     return null;
   }
-
-  const isLoading = updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <>
@@ -171,7 +143,7 @@ export function StationConfigPanel({
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isSaving}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -193,7 +165,7 @@ export function StationConfigPanel({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Code Review"
-                  disabled={isLoading}
+                  disabled={isSaving}
                   className={
                     errors.name ? 'border-destructive mt-1.5' : 'mt-1.5'
                   }
@@ -207,7 +179,7 @@ export function StationConfigPanel({
               <AgentSelector
                 value={agentId}
                 onChange={setAgentId}
-                disabled={isLoading}
+                disabled={isSaving}
                 label="Agent"
                 placeholder="Select agent (optional)"
                 allowNull={true}
@@ -223,7 +195,7 @@ export function StationConfigPanel({
                   value={stationPrompt}
                   onChange={(e) => setStationPrompt(e.target.value)}
                   placeholder="Enter instructions for this station..."
-                  disabled={isLoading}
+                  disabled={isSaving}
                   className="mt-1.5 min-h-[120px]"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -245,7 +217,7 @@ export function StationConfigPanel({
                   value={outputContextKeys}
                   onChange={(e) => setOutputContextKeys(e.target.value)}
                   placeholder="e.g., review_result, code_quality_score"
-                  disabled={isLoading}
+                  disabled={isSaving}
                   className="mt-1.5"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -266,7 +238,7 @@ export function StationConfigPanel({
                     value={xPosition}
                     onChange={(e) => setXPosition(e.target.value)}
                     placeholder="0"
-                    disabled={isLoading}
+                    disabled={isSaving}
                     className={
                       errors.xPosition ? 'border-destructive mt-1.5' : 'mt-1.5'
                     }
@@ -289,7 +261,7 @@ export function StationConfigPanel({
                     value={yPosition}
                     onChange={(e) => setYPosition(e.target.value)}
                     placeholder="0"
-                    disabled={isLoading}
+                    disabled={isSaving}
                     className={
                       errors.yPosition ? 'border-destructive mt-1.5' : 'mt-1.5'
                     }
@@ -304,18 +276,18 @@ export function StationConfigPanel({
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4">
-                <Button type="submit" disabled={isLoading} className="flex-1">
+                <Button type="submit" disabled={isSaving} className="flex-1">
                   <Save className="h-4 w-4 mr-2" />
-                  {updateMutation.isPending ? 'Saving...' : 'Save'}
+                  {isSaving ? 'Saving...' : 'Save'}
                 </Button>
                 <Button
                   type="button"
                   variant="destructive"
                   onClick={handleRemove}
-                  disabled={isLoading}
+                  disabled={isSaving}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {deleteMutation.isPending ? 'Removing...' : 'Remove'}
+                  {isSaving ? 'Removing...' : 'Remove'}
                 </Button>
               </div>
             </form>
