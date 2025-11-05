@@ -59,9 +59,10 @@ import {
   StationTransition,
   CreateStationTransition,
   UpdateStationTransition,
-  StationContext,
-  CreateStationContext,
-  UpdateStationContext,
+  // StationContext types commented out until backend support is added
+  // StationContext,
+  // CreateStationContext,
+  // UpdateStationContext,
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -900,9 +901,7 @@ export const approvalsApi = {
 // Workflows APIs
 export const workflowsApi = {
   list: async (projectId: string): Promise<Workflow[]> => {
-    const response = await makeRequest(
-      `/api/workflows?project_id=${projectId}`
-    );
+    const response = await makeRequest(`/api/projects/${projectId}/workflows`);
     return handleApiResponse<Workflow[]>(response);
   },
 
@@ -911,8 +910,11 @@ export const workflowsApi = {
     return handleApiResponse<Workflow>(response);
   },
 
-  create: async (data: CreateWorkflow): Promise<Workflow> => {
-    const response = await makeRequest('/api/workflows', {
+  create: async (
+    projectId: string,
+    data: CreateWorkflow
+  ): Promise<Workflow> => {
+    const response = await makeRequest(`/api/projects/${projectId}/workflows`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -941,22 +943,26 @@ export const workflowsApi = {
 // Workflow Stations APIs
 export const stationsApi = {
   list: async (workflowId: string): Promise<WorkflowStation[]> => {
-    const response = await makeRequest(
-      `/api/workflow-stations?workflow_id=${workflowId}`
-    );
+    const response = await makeRequest(`/api/workflows/${workflowId}/stations`);
     return handleApiResponse<WorkflowStation[]>(response);
   },
 
   get: async (stationId: string): Promise<WorkflowStation> => {
-    const response = await makeRequest(`/api/workflow-stations/${stationId}`);
+    const response = await makeRequest(`/api/stations/${stationId}`);
     return handleApiResponse<WorkflowStation>(response);
   },
 
-  create: async (data: CreateWorkflowStation): Promise<WorkflowStation> => {
-    const response = await makeRequest('/api/workflow-stations', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  create: async (
+    workflowId: string,
+    data: CreateWorkflowStation
+  ): Promise<WorkflowStation> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/stations`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
     return handleApiResponse<WorkflowStation>(response);
   },
 
@@ -964,7 +970,7 @@ export const stationsApi = {
     stationId: string,
     data: UpdateWorkflowStation
   ): Promise<WorkflowStation> => {
-    const response = await makeRequest(`/api/workflow-stations/${stationId}`, {
+    const response = await makeRequest(`/api/stations/${stationId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -972,7 +978,7 @@ export const stationsApi = {
   },
 
   delete: async (stationId: string): Promise<void> => {
-    const response = await makeRequest(`/api/workflow-stations/${stationId}`, {
+    const response = await makeRequest(`/api/stations/${stationId}`, {
       method: 'DELETE',
     });
     return handleApiResponse<void>(response);
@@ -983,23 +989,27 @@ export const stationsApi = {
 export const transitionsApi = {
   list: async (workflowId: string): Promise<StationTransition[]> => {
     const response = await makeRequest(
-      `/api/station-transitions?workflow_id=${workflowId}`
+      `/api/workflows/${workflowId}/transitions`
     );
     return handleApiResponse<StationTransition[]>(response);
   },
 
   get: async (transitionId: string): Promise<StationTransition> => {
-    const response = await makeRequest(
-      `/api/station-transitions/${transitionId}`
-    );
+    const response = await makeRequest(`/api/transitions/${transitionId}`);
     return handleApiResponse<StationTransition>(response);
   },
 
-  create: async (data: CreateStationTransition): Promise<StationTransition> => {
-    const response = await makeRequest('/api/station-transitions', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  create: async (
+    workflowId: string,
+    data: CreateStationTransition
+  ): Promise<StationTransition> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/transitions`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
     return handleApiResponse<StationTransition>(response);
   },
 
@@ -1007,64 +1017,61 @@ export const transitionsApi = {
     transitionId: string,
     data: UpdateStationTransition
   ): Promise<StationTransition> => {
-    const response = await makeRequest(
-      `/api/station-transitions/${transitionId}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }
-    );
+    const response = await makeRequest(`/api/transitions/${transitionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
     return handleApiResponse<StationTransition>(response);
   },
 
   delete: async (transitionId: string): Promise<void> => {
-    const response = await makeRequest(
-      `/api/station-transitions/${transitionId}`,
-      {
-        method: 'DELETE',
-      }
-    );
-    return handleApiResponse<void>(response);
-  },
-};
-
-// Station Context APIs
-export const stationContextApi = {
-  list: async (taskId: string): Promise<StationContext[]> => {
-    const response = await makeRequest(
-      `/api/station-context?task_id=${taskId}`
-    );
-    return handleApiResponse<StationContext[]>(response);
-  },
-
-  get: async (contextId: string): Promise<StationContext> => {
-    const response = await makeRequest(`/api/station-context/${contextId}`);
-    return handleApiResponse<StationContext>(response);
-  },
-
-  create: async (data: CreateStationContext): Promise<StationContext> => {
-    const response = await makeRequest('/api/station-context', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    return handleApiResponse<StationContext>(response);
-  },
-
-  update: async (
-    contextId: string,
-    data: UpdateStationContext
-  ): Promise<StationContext> => {
-    const response = await makeRequest(`/api/station-context/${contextId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return handleApiResponse<StationContext>(response);
-  },
-
-  delete: async (contextId: string): Promise<void> => {
-    const response = await makeRequest(`/api/station-context/${contextId}`, {
+    const response = await makeRequest(`/api/transitions/${transitionId}`, {
       method: 'DELETE',
     });
     return handleApiResponse<void>(response);
   },
 };
+
+// TODO: Station Context APIs
+// NOTE: Backend routes for station context have not been implemented yet.
+// Uncomment and update these when backend support is added.
+//
+// export const stationContextApi = {
+//   list: async (taskId: string): Promise<StationContext[]> => {
+//     const response = await makeRequest(
+//       `/api/station-context?task_id=${taskId}`
+//     );
+//     return handleApiResponse<StationContext[]>(response);
+//   },
+//
+//   get: async (contextId: string): Promise<StationContext> => {
+//     const response = await makeRequest(`/api/station-context/${contextId}`);
+//     return handleApiResponse<StationContext>(response);
+//   },
+//
+//   create: async (data: CreateStationContext): Promise<StationContext> => {
+//     const response = await makeRequest('/api/station-context', {
+//       method: 'POST',
+//       body: JSON.stringify(data),
+//     });
+//     return handleApiResponse<StationContext>(response);
+//   },
+//
+//   update: async (
+//     contextId: string,
+//     data: UpdateStationContext
+//   ): Promise<StationContext> => {
+//     const response = await makeRequest(`/api/station-context/${contextId}`, {
+//       method: 'PUT',
+//       body: JSON.stringify(data),
+//     });
+//     return handleApiResponse<StationContext>(response);
+//   },
+//
+//   delete: async (contextId: string): Promise<void> => {
+//     const response = await makeRequest(`/api/station-context/${contextId}`, {
+//       method: 'DELETE',
+//     });
+//     return handleApiResponse<void>(response);
+//   },
+// };
