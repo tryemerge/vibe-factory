@@ -907,15 +907,20 @@ export const workflowsApi = {
   },
 
   getByProjectId: async (projectId: string): Promise<Workflow[]> => {
-    const response = await makeRequest(`/api/workflows?project_id=${projectId}`);
+    const response = await makeRequest(
+      `/api/projects/${projectId}/workflows`
+    );
     return handleApiResponse<Workflow[]>(response);
   },
 
-  create: async (data: CreateWorkflow): Promise<Workflow> => {
-    const response = await makeRequest('/api/workflows', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  create: async (projectId: string, data: CreateWorkflow): Promise<Workflow> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/workflows`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
     return handleApiResponse<Workflow>(response);
   },
 
@@ -945,15 +950,21 @@ export const workflowStationsApi = {
   },
 
   getById: async (stationId: string): Promise<WorkflowStation> => {
-    const response = await makeRequest(`/api/workflow-stations/${stationId}`);
+    const response = await makeRequest(`/api/stations/${stationId}`);
     return handleApiResponse<WorkflowStation>(response);
   },
 
-  create: async (data: CreateWorkflowStation): Promise<WorkflowStation> => {
-    const response = await makeRequest('/api/workflow-stations', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+  create: async (
+    workflowId: string,
+    data: CreateWorkflowStation
+  ): Promise<WorkflowStation> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/stations`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
     return handleApiResponse<WorkflowStation>(response);
   },
 
@@ -961,7 +972,7 @@ export const workflowStationsApi = {
     id: string,
     data: UpdateWorkflowStation
   ): Promise<WorkflowStation> => {
-    const response = await makeRequest(`/api/workflow-stations/${id}`, {
+    const response = await makeRequest(`/api/stations/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -969,7 +980,7 @@ export const workflowStationsApi = {
   },
 
   delete: async (id: string): Promise<void> => {
-    const response = await makeRequest(`/api/workflow-stations/${id}`, {
+    const response = await makeRequest(`/api/stations/${id}`, {
       method: 'DELETE',
     });
     return handleApiResponse<void>(response);
@@ -988,19 +999,21 @@ export const stationTransitionsApi = {
   },
 
   getById: async (transitionId: string): Promise<StationTransition> => {
-    const response = await makeRequest(
-      `/api/station-transitions/${transitionId}`
-    );
+    const response = await makeRequest(`/api/transitions/${transitionId}`);
     return handleApiResponse<StationTransition>(response);
   },
 
   create: async (
+    workflowId: string,
     data: CreateStationTransition
   ): Promise<StationTransition> => {
-    const response = await makeRequest('/api/station-transitions', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/transitions`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
     return handleApiResponse<StationTransition>(response);
   },
 
@@ -1008,7 +1021,7 @@ export const stationTransitionsApi = {
     id: string,
     data: UpdateStationTransition
   ): Promise<StationTransition> => {
-    const response = await makeRequest(`/api/station-transitions/${id}`, {
+    const response = await makeRequest(`/api/transitions/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -1016,7 +1029,7 @@ export const stationTransitionsApi = {
   },
 
   delete: async (id: string): Promise<void> => {
-    const response = await makeRequest(`/api/station-transitions/${id}`, {
+    const response = await makeRequest(`/api/transitions/${id}`, {
       method: 'DELETE',
     });
     return handleApiResponse<void>(response);

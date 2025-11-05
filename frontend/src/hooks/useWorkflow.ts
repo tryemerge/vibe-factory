@@ -45,7 +45,13 @@ export function useWorkflow(options: UseWorkflowOptions = {}) {
 
   // Create workflow mutation
   const createWorkflow = useMutation({
-    mutationFn: (data: CreateWorkflow) => workflowsApi.create(data),
+    mutationFn: ({
+      projectId,
+      data,
+    }: {
+      projectId: string;
+      data: CreateWorkflow;
+    }) => workflowsApi.create(projectId, data),
     onSuccess: (workflow: Workflow) => {
       queryClient.setQueryData(['workflow', workflow.id], workflow);
       queryClient.invalidateQueries({

@@ -36,8 +36,13 @@ export function useWorkflowStations(options: UseWorkflowStationsOptions = {}) {
 
   // Create station mutation
   const createStation = useMutation({
-    mutationFn: (data: CreateWorkflowStation) =>
-      workflowStationsApi.create(data),
+    mutationFn: ({
+      workflowId,
+      data,
+    }: {
+      workflowId: string;
+      data: CreateWorkflowStation;
+    }) => workflowStationsApi.create(workflowId, data),
     onSuccess: (station: WorkflowStation) => {
       // Update stations list in cache
       queryClient.setQueryData<WorkflowStation[]>(

@@ -38,8 +38,13 @@ export function useWorkflowTransitions(
 
   // Create transition mutation
   const createTransition = useMutation({
-    mutationFn: (data: CreateStationTransition) =>
-      stationTransitionsApi.create(data),
+    mutationFn: ({
+      workflowId,
+      data,
+    }: {
+      workflowId: string;
+      data: CreateStationTransition;
+    }) => stationTransitionsApi.create(workflowId, data),
     onSuccess: (transition: StationTransition) => {
       // Update transitions list in cache
       queryClient.setQueryData<StationTransition[]>(
