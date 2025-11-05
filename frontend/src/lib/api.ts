@@ -884,3 +884,100 @@ export const approvalsApi = {
     return handleApiResponse<ApprovalStatus>(res);
   },
 };
+
+// Workflow APIs (Factory Floor workflows)
+// Note: Backend API endpoints may not be implemented yet
+export const workflowsApi = {
+  list: async (_projectId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow API not yet implemented');
+    return [];
+  },
+
+  get: async (_workflowId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow API not yet implemented');
+    return null;
+  },
+
+  create: async (_projectId: string, _name: string, _description?: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow API not yet implemented');
+    return null;
+  },
+
+  update: async (_workflowId: string, _updates: { name?: string; description?: string }) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow API not yet implemented');
+    return null;
+  },
+
+  delete: async (_workflowId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow API not yet implemented');
+  },
+};
+
+// Workflow Station APIs
+export const workflowStationsApi = {
+  list: async (_workflowId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow Station API not yet implemented');
+    return [];
+  },
+
+  get: async (_stationId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow Station API not yet implemented');
+    return null;
+  },
+
+  create: async (_workflowId: string, _data: any) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow Station API not yet implemented');
+    return null;
+  },
+
+  update: async (_stationId: string, _updates: any) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow Station API not yet implemented');
+    return null;
+  },
+
+  delete: async (_stationId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Workflow Station API not yet implemented');
+  },
+};
+
+// Station Transition APIs
+export const stationTransitionsApi = {
+  list: async (_workflowId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Station Transition API not yet implemented');
+    return [];
+  },
+
+  get: async (_transitionId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Station Transition API not yet implemented');
+    return null;
+  },
+
+  create: async (_workflowId: string, _sourceStationId: string, _targetStationId: string, _data?: any) => {
+    // Placeholder for when backend is ready
+    console.warn('Station Transition API not yet implemented');
+    return null;
+  },
+
+  update: async (_transitionId: string, _updates: any) => {
+    // Placeholder for when backend is ready
+    console.warn('Station Transition API not yet implemented');
+    return null;
+  },
+
+  delete: async (_transitionId: string) => {
+    // Placeholder for when backend is ready
+    console.warn('Station Transition API not yet implemented');
+  },
+};
