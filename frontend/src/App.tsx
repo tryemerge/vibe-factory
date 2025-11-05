@@ -6,6 +6,7 @@ import { Projects } from '@/pages/projects';
 import { ProjectTasks } from '@/pages/project-tasks';
 import { FullAttemptLogsPage } from '@/pages/full-attempt-logs';
 import { FlowPage } from '@/pages/flow';
+import { StationDemoPage } from '@/pages/station-demo';
 import { FactoryFloorPage } from '@/pages/factory-floor';
 import { AgentsPage } from '@/pages/agents';
 import { NormalLayout } from '@/components/layout/NormalLayout';
@@ -102,7 +103,13 @@ function AppContent() {
     };
 
     const checkOnboardingSteps = async () => {
-      if (!config || cancelled || onboardingInProgress || hasRunOnboarding.current) return;
+      if (
+        !config ||
+        cancelled ||
+        onboardingInProgress ||
+        hasRunOnboarding.current
+      )
+        return;
       onboardingInProgress = true;
       hasRunOnboarding.current = true;
 
@@ -180,6 +187,7 @@ function AppContent() {
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:projectId" element={<Projects />} />
                 <Route path="/flow" element={<FlowPage />} />
+                <Route path="/station-demo" element={<StationDemoPage />} />
                 <Route path="/agents" element={<AgentsPage />} />
                 <Route
                   path="/projects/:projectId/factory"
