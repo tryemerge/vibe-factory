@@ -102,7 +102,13 @@ function AppContent() {
     };
 
     const checkOnboardingSteps = async () => {
-      if (!config || cancelled || onboardingInProgress || hasRunOnboarding.current) return;
+      if (
+        !config ||
+        cancelled ||
+        onboardingInProgress ||
+        hasRunOnboarding.current
+      )
+        return;
       onboardingInProgress = true;
       hasRunOnboarding.current = true;
 
