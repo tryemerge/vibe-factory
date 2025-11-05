@@ -8,7 +8,7 @@ import ReactFlow, {
   useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { useProject } from '@/contexts/project-context';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { Loader } from '@/components/ui/loader';
@@ -130,6 +130,11 @@ function FactoryFloorContent() {
     if (!selectedStationId || !stations) return null;
     return stations.find((s) => s.id === selectedStationId) || null;
   }, [selectedStationId, stations]);
+
+  // Set up droppable zone for the React Flow canvas
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: 'react-flow-canvas',
+  });
 
   // Handle new workflow creation
   const handleNewWorkflow = useCallback(() => {
@@ -388,7 +393,7 @@ function FactoryFloorContent() {
           <AgentPalette className="w-80 border-r" />
 
           {/* Center - React Flow Canvas */}
-          <div className="flex-1 min-w-0 relative bg-muted/10">
+          <div ref={setDroppableRef} className="flex-1 min-w-0 relative bg-muted/10">
             {!effectiveWorkflowId ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center max-w-md space-y-4">
