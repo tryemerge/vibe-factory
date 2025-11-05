@@ -21,6 +21,7 @@ import { WorkflowToolbar } from '@/components/factory/WorkflowToolbar';
 import { AgentPalette } from '@/components/factory/AgentPalette';
 import { StationConfigPanel } from '@/components/factory/StationConfigPanel';
 import { TransitionConfigDialog } from '@/components/factory/TransitionConfigDialog';
+import { WorkflowCreateDialog } from '@/components/factory/WorkflowCreateDialog';
 import { StationNode } from '@/components/factory/StationNode';
 import { TransitionEdge } from '@/components/factory/TransitionEdge';
 import { useWorkflow } from '@/hooks/useWorkflow';
@@ -134,24 +135,25 @@ function FactoryFloorContent() {
   const handleNewWorkflow = useCallback(() => {
     if (!projectId) return;
 
-    const name = prompt('Enter workflow name:');
-    if (!name) return;
-
-    createWorkflow(
-      {
-        projectId,
-        data: {
-          project_id: projectId,
-          name,
-          description: null,
-        },
+    NiceModal.show(WorkflowCreateDialog, {
+      projectId,
+      onSave: async (data) => {
+        return new Promise<void>((resolve, reject) => {
+          createWorkflow(
+            { projectId, data },
+            {
+              onSuccess: (workflow) => {
+                setSelectedWorkflowId(workflow.id);
+                resolve();
+              },
+              onError: (error) => {
+                reject(error);
+              },
+            }
+          );
+        });
       },
-      {
-        onSuccess: (workflow) => {
-          setSelectedWorkflowId(workflow.id);
-        },
-      }
-    );
+    });
   }, [projectId, createWorkflow]);
 
   // Handle workflow deletion
