@@ -8,6 +8,7 @@ import type {
 } from 'shared/types';
 
 export interface StationNodeData {
+  station: WorkflowStation;
   label: string;
   description?: string | null;
   agentId?: string | null;
@@ -50,6 +51,7 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
         y: station.y_position,
       },
       data: {
+        station,  // Include full station object for StationNode component
         label: station.name,
         description: station.description,
         agentId: station.agent_id,
