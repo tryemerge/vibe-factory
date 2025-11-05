@@ -7,7 +7,17 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Loader2, XCircle, Circle, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  CheckCircle,
+  Loader2,
+  XCircle,
+  Circle,
+  Settings,
+  Trash2,
+  User,
+  FileText,
+} from 'lucide-react';
 import type { WorkflowStation, Agent } from 'shared/types';
 import { cn } from '@/lib/utils';
 
@@ -15,7 +25,8 @@ export interface StationNodeData {
   station: WorkflowStation;
   agent?: Agent | null;
   status?: StationStatus;
-  onClick?: (stationId: string) => void;
+  onConfigure?: (station: WorkflowStation) => void;
+  onDelete?: (stationId: string) => void;
 }
 
 export type StationStatus = 'idle' | 'running' | 'completed' | 'failed';
@@ -63,13 +74,21 @@ const statusConfig: Record<
 export const StationNode = memo(
   ({ data, selected }: NodeProps<StationNodeData>) => {
     const [isHovered, setIsHovered] = useState(false);
-    const { station, agent, status = 'idle', onClick } = data;
+    const { station, agent, status = 'idle', onConfigure, onDelete } = data;
     const config = statusConfig[status];
     const Icon = config.icon;
 
-    const handleClick = () => {
-      if (onClick) {
-        onClick(station.id);
+    const handleConfigure = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onConfigure) {
+        onConfigure(station);
+      }
+    };
+
+    const handleDelete = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onDelete) {
+        onDelete(station.id);
       }
     };
 
@@ -88,14 +107,13 @@ export const StationNode = memo(
 
         <Card
           className={cn(
-            'min-w-[200px] max-w-[280px] cursor-pointer transition-all duration-200',
+            'min-w-[200px] max-w-[280px] transition-all duration-200',
             config.bgColor,
             config.borderColor,
             'border-2',
             selected && 'ring-2 ring-blue-500 ring-offset-2',
             isHovered && 'shadow-lg scale-105'
           )}
-          onClick={handleClick}
         >
           <CardHeader className="p-4">
             <div className="flex items-start justify-between gap-2">
@@ -117,15 +135,23 @@ export const StationNode = memo(
                     status === 'running' && 'animate-spin'
                   )}
                 />
-                {isHovered && (
-                  <Settings className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                )}
               </div>
             </div>
+
+            {/* Station Prompt */}
+            {station.station_prompt && (
+              <div className="mt-2 flex items-start gap-1">
+                <FileText className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
+                <CardDescription className="text-xs line-clamp-2">
+                  {station.station_prompt}
+                </CardDescription>
+              </div>
+            )}
 
             {/* Agent Assignment */}
             {agent ? (
               <div className="mt-3 flex items-center gap-2">
+                <User className="h-3 w-3 text-muted-foreground" />
                 <Badge variant="secondary" className="text-xs font-normal">
                   {agent.name}
                 </Badge>
@@ -134,7 +160,8 @@ export const StationNode = memo(
                 </span>
               </div>
             ) : (
-              <div className="mt-3">
+              <div className="mt-3 flex items-center gap-2">
+                <User className="h-3 w-3 text-gray-400" />
                 <Badge
                   variant="outline"
                   className="text-xs font-normal text-gray-400"
@@ -156,6 +183,30 @@ export const StationNode = memo(
                 <span className={cn('text-xs font-medium', config.color)}>
                   {config.label}
                 </span>
+              </div>
+            )}
+
+            {/* Action Buttons (shown on hover) */}
+            {isHovered && (
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleConfigure}
+                  className="h-7 px-2 text-xs"
+                >
+                  <Settings className="h-3 w-3 mr-1" />
+                  Configure
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleDelete}
+                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Remove
+                </Button>
               </div>
             )}
           </CardHeader>
