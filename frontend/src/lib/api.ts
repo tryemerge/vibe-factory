@@ -50,6 +50,9 @@ import {
   RebaseTaskAttemptRequest,
   ChangeTargetBranchRequest,
   ChangeTargetBranchResponse,
+  WorkflowStation,
+  CreateWorkflowStation,
+  UpdateWorkflowStation,
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -882,5 +885,44 @@ export const approvalsApi = {
     });
 
     return handleApiResponse<ApprovalStatus>(res);
+  },
+};
+
+// Workflow Stations API
+export const workflowStationsApi = {
+  list: async (workflowId: string): Promise<WorkflowStation[]> => {
+    const response = await makeRequest(`/api/workflows/${workflowId}/stations`);
+    return handleApiResponse<WorkflowStation[]>(response);
+  },
+
+  get: async (stationId: string): Promise<WorkflowStation> => {
+    const response = await makeRequest(`/api/workflow-stations/${stationId}`);
+    return handleApiResponse<WorkflowStation>(response);
+  },
+
+  create: async (data: CreateWorkflowStation): Promise<WorkflowStation> => {
+    const response = await makeRequest('/api/workflow-stations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<WorkflowStation>(response);
+  },
+
+  update: async (
+    stationId: string,
+    data: UpdateWorkflowStation
+  ): Promise<WorkflowStation> => {
+    const response = await makeRequest(`/api/workflow-stations/${stationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<WorkflowStation>(response);
+  },
+
+  delete: async (stationId: string): Promise<void> => {
+    const response = await makeRequest(`/api/workflow-stations/${stationId}`, {
+      method: 'DELETE',
+    });
+    return handleApiResponse<void>(response);
   },
 };
