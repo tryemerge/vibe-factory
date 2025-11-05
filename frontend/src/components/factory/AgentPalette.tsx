@@ -11,6 +11,11 @@ import { agentsApi } from '@/lib/api';
 import type { Agent } from 'shared/types';
 import { cn } from '@/lib/utils';
 
+/**
+ * AgentPalette component props
+ *
+ * @property className - Optional Tailwind CSS classes for styling the palette container
+ */
 interface AgentPaletteProps {
   className?: string;
 }
@@ -19,6 +24,34 @@ interface DraggableAgentCardProps {
   agent: Agent;
 }
 
+/**
+ * Internal component: Draggable agent card
+ *
+ * Provides drag data in the format:
+ * ```typescript
+ * {
+ *   id: `agent-${agent.id}`,
+ *   data: {
+ *     type: 'agent',
+ *     agent: Agent  // Full agent object
+ *   }
+ * }
+ * ```
+ *
+ * Parent must handle drop via DndContext:
+ * ```typescript
+ * <DndContext onDragEnd={handleDragEnd}>
+ *   <AgentPalette />
+ * </DndContext>
+ *
+ * const handleDragEnd = (event: DragEndEvent) => {
+ *   if (event.active.data.current?.type === 'agent') {
+ *     const agent = event.active.data.current.agent as Agent;
+ *     // Create station at drop position
+ *   }
+ * };
+ * ```
+ */
 function DraggableAgentCard({ agent }: DraggableAgentCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `agent-${agent.id}`,
@@ -58,6 +91,62 @@ function DraggableAgentCard({ agent }: DraggableAgentCardProps) {
   );
 }
 
+/**
+ * AgentPalette - A draggable palette of agents for the Factory Floor
+ *
+ * ## Architecture
+ * This component uses a self-contained pattern:
+ * - Fetches its own agent data via React Query (automatic caching & refetching)
+ * - Provides draggable agents via @dnd-kit/core
+ * - Parent handles drop events via DndContext
+ *
+ * ## Integration Example
+ * ```typescript
+ * import { DndContext, DragEndEvent } from '@dnd-kit/core';
+ * import { AgentPalette } from '@/components/factory';
+ *
+ * function FactoryFloor() {
+ *   const handleDragEnd = (event: DragEndEvent) => {
+ *     const { active, delta } = event;
+ *     if (active.data.current?.type === 'agent') {
+ *       const agent = active.data.current.agent as Agent;
+ *       createStationAtPosition(agent, { x: delta.x, y: delta.y });
+ *     }
+ *   };
+ *
+ *   return (
+ *     <DndContext onDragEnd={handleDragEnd}>
+ *       <AgentPalette className="w-80 border-r" />
+ *       <Canvas />
+ *     </DndContext>
+ *   );
+ * }
+ * ```
+ *
+ * ## Features
+ * - Real-time search/filter (searches: name, role, executor, description)
+ * - Drag agents onto canvas to create stations
+ * - Links to /agents page for full agent management
+ * - Create new agent button
+ * - Loading, empty, and filtered-empty states
+ *
+ * ## Drag Data Format
+ * Each agent provides:
+ * ```typescript
+ * {
+ *   id: `agent-${agent.id}`,
+ *   data: {
+ *     type: 'agent',
+ *     agent: Agent  // Full agent object from API
+ *   }
+ * }
+ * ```
+ *
+ * See `AgentPalette.integration.md` for complete integration guide.
+ *
+ * @param props - Component props
+ * @param props.className - Optional Tailwind CSS classes for container styling
+ */
 export function AgentPalette({ className }: AgentPaletteProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
