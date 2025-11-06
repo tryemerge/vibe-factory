@@ -108,6 +108,7 @@ fn generate_types_content() -> String {
         db::models::merge::PullRequestInfo::decl(),
         db::models::draft::Draft::decl(),
         db::models::draft::DraftType::decl(),
+        db::models::agent::ContextFile::decl(),
         db::models::agent::Agent::decl(),
         db::models::agent::CreateAgent::decl(),
         db::models::agent::UpdateAgent::decl(),
