@@ -322,6 +322,18 @@ export type CreateTaskStationExecution = { task_id: string, station_id: string, 
 
 export type UpdateTaskStationExecution = { status: string | null, transition_taken_id: string | null, started_at: string | null, completed_at: string | null, error_message: string | null, };
 
+export type WorkflowExecution = { id: string, workflow_id: string, task_id: string, task_attempt_id: string | null, current_station_id: string | null, status: string, started_at: string | null, completed_at: string | null, created_at: string, updated_at: string, };
+
+export type CreateWorkflowExecution = { workflow_id: string, task_id: string, task_attempt_id: string | null, status: string, };
+
+export type UpdateWorkflowExecution = { current_station_id: string | null, status: string | null, started_at: string | null, completed_at: string | null, };
+
+export type StationExecution = { id: string, workflow_execution_id: string, station_id: string, execution_process_id: string | null, status: string, output_data: string | null, started_at: string | null, completed_at: string | null, created_at: string, updated_at: string, };
+
+export type CreateStationExecution = { workflow_execution_id: string, station_id: string, status: string, execution_process_id: string | null, };
+
+export type UpdateStationExecution = { execution_process_id: string | null, status: string | null, output_data: string | null, started_at: string | null, completed_at: string | null, };
+
 export type ExecuteWorkflowRequest = { task_id: string, base_branch: string, executor_profile_id: ExecutorProfileId | null, };
 
 export type ExecuteWorkflowResponse = { workflow_execution_id: string, task_attempt_id: string, current_station_id: string | null, status: string, };
