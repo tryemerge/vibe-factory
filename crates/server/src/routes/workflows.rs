@@ -1,8 +1,9 @@
 use axum::{
     Extension, Json, Router,
     extract::State,
+    middleware::from_fn_with_state,
     response::Json as ResponseJson,
-    routing::get,
+    routing::{get, post},
 };
 use db::models::{
     workflow::{Workflow, CreateWorkflow, UpdateWorkflow},
@@ -13,7 +14,9 @@ use deployment::Deployment;
 use utils::response::ApiResponse;
 use uuid::Uuid;
 
-use crate::{DeploymentImpl, error::ApiError};
+use crate::{DeploymentImpl, error::ApiError, middleware::load_workflow_middleware};
+
+pub mod workflow_executions;
 
 // ========================================
 // Workflow Routes
@@ -266,9 +269,15 @@ pub async fn delete_transition(
 // Router
 // ========================================
 
-pub fn router(_deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
-    // Simple router without middleware for now
-    // TODO: Add middleware for loading entities from path parameters
+pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
+    // Workflow ID-based routes with middleware
+    let workflow_id_router = Router::new()
+        .route("/execute", post(workflow_executions::execute_workflow))
+        .layer(from_fn_with_state(
+            deployment.clone(),
+            load_workflow_middleware,
+        ));
+
     Router::new()
         // Workflows by project: GET/POST /projects/{project_id}/workflows (per spec)
         .route("/projects/{project_id}/workflows",
@@ -277,4 +286,6 @@ pub fn router(_deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .route("/workflows/{workflow_id}/stations", get(get_stations_by_workflow).post(create_station))
         // Transitions by workflow: GET/POST /workflows/{workflow_id}/transitions
         .route("/workflows/{workflow_id}/transitions", get(get_transitions_by_workflow).post(create_transition))
+        // Workflow execution: POST /workflows/{workflow_id}/execute
+        .nest("/workflows/{id}", workflow_id_router)
 }
