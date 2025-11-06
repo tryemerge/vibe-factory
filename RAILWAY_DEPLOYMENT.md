@@ -66,30 +66,25 @@ Railway automatically sets `PORT` environment variable. The backend also support
 
 ## Environment Variables
 
-### Required Variables
+**For complete production environment configuration**, see **[RAILWAY_ENVIRONMENT.md](./RAILWAY_ENVIRONMENT.md)** which includes:
+- Comprehensive environment variable reference
+- GitHub OAuth app setup guide
+- Database strategy decision matrix (SQLite vs PostgreSQL)
+- Security best practices and secret rotation
+- Complete deployment checklist
 
-None! The application works with defaults.
+### Quick Reference
 
-### Optional Variables
+**Required**: None! Application works with Railway defaults.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | Server port (automatically set by Railway) |
-| `HOST` | `0.0.0.0` | Bind address (already configured in Dockerfile) |
-| `RUST_LOG` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
-| `VIBE_WORKTREE_DIR` | Platform temp | Custom directory for git worktrees |
-| `GIT_SCAN_TIMEOUT_MS` | `5000` | Git repository scan timeout |
-| `GIT_SCAN_MAX_DEPTH` | `3` | Maximum directory depth for git scanning |
+**Recommended for Production**:
+```bash
+RUST_LOG=info
+GITHUB_CLIENT_ID=<your-production-app-id>
+DATABASE_URL=sqlite:///data/db.sqlite  # Requires Railway volume
+```
 
-### Build-time Variables
-
-These must be set in Railway's environment variables **before building**:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GITHUB_CLIENT_ID` | `Ov23li9bxz3kKfPOIsGm` | GitHub OAuth app ID |
-| `POSTHOG_API_KEY` | Empty | PostHog analytics key |
-| `POSTHOG_API_ENDPOINT` | Empty | PostHog analytics endpoint |
+See [RAILWAY_ENVIRONMENT.md](./RAILWAY_ENVIRONMENT.md) for complete configuration details.
 
 ## Resource Requirements
 

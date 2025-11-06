@@ -13,12 +13,13 @@ yarn-error.log*
 /dist
 /build
 
-# Environment variables
+# Environment variables (actual secrets, not templates)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production  # Railway production secrets (use Railway dashboard instead)
 
 # IDE
 .vscode/
