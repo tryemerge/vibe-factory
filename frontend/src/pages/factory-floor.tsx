@@ -239,7 +239,7 @@ function FactoryFloorContent() {
         const dropY = activatorEvent.clientY + delta.y;
 
         // Convert screen coordinates to React Flow coordinates
-        const position = reactFlowInstance.project({
+        const position = reactFlowInstance.screenToFlowPosition({
           x: dropX,
           y: dropY,
         });
@@ -252,7 +252,7 @@ function FactoryFloorContent() {
           data: {
             workflow_id: effectiveWorkflowId,
             name: agent.name,
-            position: BigInt(stations?.length || 0),
+            position: stations?.length || 0,
             description: agent.description,
             x_position: position.x,
             y_position: position.y,
