@@ -8,6 +8,7 @@ import ReactFlow, {
   useReactFlow,
   useViewport,
   Panel,
+  SelectionMode,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 // Removed @dnd-kit/core - no longer using agent drag-and-drop
@@ -189,7 +190,7 @@ function FactoryFloorContent() {
       data: {
         workflow_id: effectiveWorkflowId,
         name: `Station ${(stations?.length || 0) + 1}`,
-        position: stations?.length || 0,
+        position: BigInt(stations?.length || 0),
         description: null,
         x_position: center.x,
         y_position: center.y,
@@ -402,7 +403,7 @@ function FactoryFloorContent() {
                 elementsSelectable={true}
                 panOnDrag={false}
                 selectionOnDrag={true}
-                selectionMode="partial"
+                selectionMode={SelectionMode.Partial}
                 panOnScroll
                 zoomOnScroll
                 minZoom={0.1}

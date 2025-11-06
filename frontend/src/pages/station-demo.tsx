@@ -104,9 +104,6 @@ const initialNodes: Node<StationNodeData>[] = [
       station: mockStation1,
       agent: mockAgent,
       status: 'completed' as StationStatus,
-      onConfigure: (station) =>
-        console.log('Configure station:', station.name, station),
-      onDelete: (stationId) => console.log('Delete station:', stationId),
     },
     position: { x: mockStation1.x_position, y: mockStation1.y_position },
   },
@@ -117,9 +114,6 @@ const initialNodes: Node<StationNodeData>[] = [
       station: mockStation2,
       agent: mockAgent,
       status: 'running' as StationStatus,
-      onConfigure: (station) =>
-        console.log('Configure station:', station.name, station),
-      onDelete: (stationId) => console.log('Delete station:', stationId),
     },
     position: { x: mockStation2.x_position, y: mockStation2.y_position },
   },
@@ -130,9 +124,6 @@ const initialNodes: Node<StationNodeData>[] = [
       station: mockStation3,
       agent: null,
       status: 'idle' as StationStatus,
-      onConfigure: (station) =>
-        console.log('Configure station:', station.name, station),
-      onDelete: (stationId) => console.log('Delete station:', stationId),
     },
     position: { x: mockStation3.x_position, y: mockStation3.y_position },
   },
@@ -143,9 +134,6 @@ const initialNodes: Node<StationNodeData>[] = [
       station: mockStation4,
       agent: mockAgent,
       status: 'failed' as StationStatus,
-      onConfigure: (station) =>
-        console.log('Configure station:', station.name, station),
-      onDelete: (stationId) => console.log('Delete station:', stationId),
     },
     position: { x: mockStation4.x_position, y: mockStation4.y_position },
   },
