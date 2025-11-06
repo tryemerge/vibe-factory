@@ -475,7 +475,6 @@ function FactoryFloorContent() {
           onClose={() => setSelectedStationId(null)}
         />
       </div>
-    </div>
   );
 }
 
