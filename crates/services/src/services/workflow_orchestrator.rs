@@ -1,3 +1,60 @@
+//! Workflow Orchestration Service
+//!
+//! This module provides the core orchestration logic for executing workflow stations sequentially.
+//!
+//! ## Integration Architecture
+//!
+//! ### Completion Detection Flow
+//!
+//! The workflow orchestrator integrates with the existing ExecutionProcess monitoring system:
+//!
+//! 1. **Station Execution Start** (`execute_station`)
+//!    - Creates StationExecution record
+//!    - Starts ExecutionProcess via ContainerService
+//!    - Links ExecutionProcess to StationExecution
+//!
+//! 2. **Process Monitoring** (`LocalContainerService::spawn_exit_monitor`)
+//!    - Background task polls process for completion
+//!    - Detects when ExecutionProcess finishes (success/failure)
+//!    - **Integration Point**: After commit/next-action, call `handle_station_completion`
+//!
+//! 3. **Station Completion** (`handle_station_completion`)
+//!    - Updates StationExecution status
+//!    - Determines next station via transitions
+//!    - Either:
+//!      a) Starts next station execution (advances workflow)
+//!      b) Completes workflow and moves task to InReview
+//!
+//! ### Output Data Extraction
+//!
+//! **Phase 1.1 Approach** (Manual):
+//! - Agents are instructed via prompt to provide outputs matching `output_context_keys`
+//! - For this phase, output extraction is **manual** - agents must format their outputs
+//! - Example prompt: "Please provide the following outputs: design_doc, api_spec"
+//! - Agents are expected to output JSON or structured data
+//!
+//! **Future Enhancement** (Phase 2+):
+//! - Automatic extraction from agent work products (files, commits, etc.)
+//! - Structured output parsing from agent responses
+//! - Tool-based output collection (agent uses tools to register outputs)
+//!
+//! ### Context Merging Strategy
+//!
+//! `gather_context_data()` merges outputs from all completed stations:
+//! - Later stations **intentionally overwrite** earlier stations if same key
+//! - Rationale: Allows stations to refine/update earlier decisions
+//! - Alternative: Could namespace by station_id (e.g., "station1_design_doc")
+//!   - Current design: Simpler for common case where keys don't conflict
+//!   - Can be changed if conflicts become problematic
+//!
+//! ### Transition Ordering
+//!
+//! `advance_to_next_station()` evaluates transitions in **database query order**:
+//! - **First matching transition wins** (short-circuit evaluation)
+//! - No explicit priority field (could be added if needed)
+//! - Recommendation: Design workflows with mutually exclusive conditions
+//! - For deterministic behavior with multiple matches, use explicit ordering in DB
+
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
@@ -118,27 +175,27 @@ impl WorkflowOrchestrator {
         // Build the prompt: agent.system_prompt + station.station_prompt + context
         let prompt = self.build_station_prompt(&agent, &station, context_data)?;
 
-        // Create the station execution record
+        // Create the station execution record directly as "running"
         let station_execution_id = Uuid::new_v4();
         let station_execution = StationExecution::create(
             self.pool(),
             CreateStationExecution {
                 workflow_execution_id,
                 station_id,
-                status: "pending".to_string(),
+                status: "running".to_string(),
                 execution_process_id: None,
             },
             station_execution_id,
         )
         .await?;
 
-        // Update station execution to "running"
+        // Update started_at timestamp
         let station_execution = StationExecution::update(
             self.pool(),
             station_execution.id,
             UpdateStationExecution {
-                status: Some("running".to_string()),
                 started_at: Some(Utc::now()),
+                status: None,
                 execution_process_id: None,
                 output_data: None,
                 completed_at: None,
@@ -658,6 +715,79 @@ impl WorkflowOrchestrator {
         }
 
         Ok(JsonValue::Object(context))
+    }
+
+    /// Check if an execution process is part of a workflow station execution
+    ///
+    /// This function is called from LocalContainerService::spawn_exit_monitor
+    /// to determine if workflow orchestration should be triggered.
+    ///
+    /// Returns: Option<(StationExecution, bool)> where bool indicates success
+    pub async fn check_execution_for_workflow(
+        &self,
+        execution_process_id: Uuid,
+        success: bool,
+    ) -> WorkflowOrchestratorResult<Option<(StationExecution, bool)>> {
+        // Check if this execution is linked to a station execution
+        let station_execution = StationExecution::find_by_execution_process(
+            self.pool(),
+            execution_process_id,
+        )
+        .await?;
+
+        Ok(station_execution.map(|se| (se, success)))
+    }
+
+    /// Trigger workflow progression after an execution completes
+    ///
+    /// This is the main integration point called from LocalContainerService::spawn_exit_monitor.
+    /// It should be called after commit/next-action logic completes.
+    ///
+    /// # Arguments
+    /// * `execution_process_id` - The completed ExecutionProcess ID
+    /// * `success` - Whether the execution succeeded
+    /// * `output_data` - Optional JSON output data extracted from the execution
+    ///
+    /// # Integration Example
+    /// ```ignore
+    /// // In LocalContainerService::spawn_exit_monitor, after commit/next-action:
+    /// if let Ok(Some((station_execution, success))) = workflow_orchestrator
+    ///     .check_execution_for_workflow(exec_id, success)
+    ///     .await
+    /// {
+    ///     // Extract output data from execution (Phase 1.1: manual for now)
+    ///     let output_data = None; // TODO: Implement output extraction
+    ///
+    ///     if let Err(e) = workflow_orchestrator
+    ///         .handle_station_completion(station_execution.id, success, output_data)
+    ///         .await
+    ///     {
+    ///         tracing::error!("Failed to handle workflow station completion: {}", e);
+    ///     }
+    /// }
+    /// ```
+    pub async fn trigger_workflow_progression(
+        &self,
+        execution_process_id: Uuid,
+        success: bool,
+        output_data: Option<String>,
+    ) -> WorkflowOrchestratorResult<()> {
+        // Check if this execution is part of a workflow
+        if let Some((station_execution, _)) = self
+            .check_execution_for_workflow(execution_process_id, success)
+            .await?
+        {
+            tracing::info!(
+                "Execution {} is part of workflow, triggering station completion",
+                execution_process_id
+            );
+
+            // Handle the station completion and advance workflow
+            self.handle_station_completion(station_execution.id, success, output_data)
+                .await?;
+        }
+
+        Ok(())
     }
 }
 
