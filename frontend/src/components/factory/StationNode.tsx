@@ -98,10 +98,10 @@ export const StationNode = memo(
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Input Handle (top) */}
+        {/* Input Handle (left) */}
         <Handle
           type="target"
-          position={Position.Top}
+          position={Position.Left}
           className="!bg-gray-400 !border-2 !border-white !w-3 !h-3"
         />
 
@@ -212,10 +212,10 @@ export const StationNode = memo(
           </CardHeader>
         </Card>
 
-        {/* Output Handle (bottom) */}
+        {/* Output Handle (right) */}
         <Handle
           type="source"
-          position={Position.Bottom}
+          position={Position.Right}
           className="!bg-gray-400 !border-2 !border-white !w-3 !h-3"
         />
       </div>
