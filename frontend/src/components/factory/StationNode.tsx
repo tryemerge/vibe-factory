@@ -1,20 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  CheckCircle,
-  Loader2,
-  XCircle,
-  Circle,
-  User,
-  FileText,
-} from 'lucide-react';
+import { Card, CardHeader } from '@/components/ui/card';
+import { CheckCircle, Loader2, XCircle, Circle, User } from 'lucide-react';
 import type { WorkflowStation, Agent } from 'shared/types';
 import { cn } from '@/lib/utils';
 
@@ -30,37 +17,27 @@ const statusConfig: Record<
   StationStatus,
   {
     color: string;
-    bgColor: string;
-    borderColor: string;
     icon: React.ElementType;
     label: string;
   }
 > = {
   idle: {
-    color: 'text-gray-500',
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-300',
+    color: 'text-muted-foreground',
     icon: Circle,
     label: 'Idle',
   },
   running: {
     color: 'text-blue-500',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-400',
     icon: Loader2,
     label: 'Running',
   },
   completed: {
     color: 'text-green-500',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-400',
     icon: CheckCircle,
     label: 'Completed',
   },
   failed: {
-    color: 'text-red-500',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-400',
+    color: 'text-destructive',
     icon: XCircle,
     label: 'Failed',
   },
@@ -78,88 +55,51 @@ export const StationNode = memo(
         <Handle
           type="target"
           position={Position.Left}
-          className="!bg-gray-400 !border-2 !border-white !w-3 !h-3"
+          className="!bg-border !w-2 !h-2 !border-0"
         />
 
         <Card
           className={cn(
-            'min-w-[200px] max-w-[280px] transition-shadow duration-200',
+            'min-w-[220px] max-w-[320px]',
             'cursor-grab active:cursor-grabbing',
-            config.bgColor,
-            config.borderColor,
-            'border-2',
-            selected && 'ring-2 ring-blue-500 ring-offset-2'
+            'border',
+            'bg-card',
+            selected && 'ring-2 ring-primary ring-inset'
           )}
         >
-          <CardHeader className="p-4">
+          <CardHeader className="p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-sm font-semibold line-clamp-2 mb-1 text-foreground">
+                <h4 className="text-sm font-medium line-clamp-1 text-foreground">
                   {station.name}
-                </CardTitle>
-                {station.description && (
-                  <CardDescription className="text-xs line-clamp-2 text-foreground/70">
-                    {station.description}
-                  </CardDescription>
-                )}
+                </h4>
               </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
+              {status !== 'idle' && (
                 <Icon
                   className={cn(
-                    'h-4 w-4',
+                    'h-3.5 w-3.5 shrink-0',
                     config.color,
                     status === 'running' && 'animate-spin'
                   )}
                 />
-              </div>
+              )}
             </div>
+
+            {/* Agent Assignment */}
+            {agent && (
+              <div className="flex items-center gap-1.5">
+                <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="text-xs text-foreground truncate">
+                  {agent.name}
+                </span>
+              </div>
+            )}
 
             {/* Station Prompt */}
             {station.station_prompt && (
-              <div className="mt-2 flex items-start gap-1">
-                <FileText className="h-3 w-3 text-foreground/60 mt-0.5 shrink-0" />
-                <CardDescription className="text-xs line-clamp-2 text-foreground/70">
-                  {station.station_prompt}
-                </CardDescription>
-              </div>
-            )}
-
-            {/* Agent Assignment */}
-            {agent ? (
-              <div className="mt-3 flex items-center gap-2">
-                <User className="h-3 w-3 text-foreground/60" />
-                <Badge variant="secondary" className="text-xs font-normal">
-                  {agent.name}
-                </Badge>
-                <span className="text-xs text-foreground/70 truncate">
-                  {agent.role}
-                </span>
-              </div>
-            ) : (
-              <div className="mt-3 flex items-center gap-2">
-                <User className="h-3 w-3 text-foreground/40" />
-                <Badge
-                  variant="outline"
-                  className="text-xs font-normal text-foreground/60"
-                >
-                  No agent assigned
-                </Badge>
-              </div>
-            )}
-
-            {/* Status Badge (shown when not idle) */}
-            {status !== 'idle' && (
-              <div className="mt-2 flex items-center gap-1">
-                <div
-                  className={cn(
-                    'h-2 w-2 rounded-full',
-                    config.color.replace('text-', 'bg-')
-                  )}
-                />
-                <span className={cn('text-xs font-medium', config.color)}>
-                  {config.label}
-                </span>
-              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {station.station_prompt}
+              </p>
             )}
           </CardHeader>
         </Card>
@@ -168,7 +108,7 @@ export const StationNode = memo(
         <Handle
           type="source"
           position={Position.Right}
-          className="!bg-gray-400 !border-2 !border-white !w-3 !h-3"
+          className="!bg-border !w-2 !h-2 !border-0"
         />
       </div>
     );

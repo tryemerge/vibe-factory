@@ -10,27 +10,16 @@ import ReactFlow, {
   Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import {
-  DndContext,
-  DragEndEvent,
-  DragStartEvent,
-  useDroppable,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragOverlay,
-  rectIntersection,
-} from '@dnd-kit/core';
+// Removed @dnd-kit/core - no longer using agent drag-and-drop
 import { useProject } from '@/contexts/project-context';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { Loader } from '@/components/ui/loader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
-import type { Agent } from 'shared/types';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Plus } from 'lucide-react';
 import { TaskTrayCard } from '@/components/factory/TaskTrayCard';
 import { ProjectViewNav } from '@/components/projects/ProjectViewNav';
 import { WorkflowToolbar } from '@/components/factory/WorkflowToolbar';
-import { AgentPalette } from '@/components/factory/AgentPalette';
 import { StationConfigPanel } from '@/components/factory/StationConfigPanel';
 import { TransitionConfigDialog } from '@/components/factory/TransitionConfigDialog';
 import { WorkflowCreateDialog } from '@/components/factory/WorkflowCreateDialog';
@@ -138,28 +127,11 @@ function FactoryFloorContent() {
     null
   );
 
-  // Track active drag for overlay
-  const [activeDragAgent, setActiveDragAgent] = useState<Agent | null>(null);
-
   // Get selected station object
   const selectedStation = useMemo(() => {
     if (!selectedStationId || !stations) return null;
     return stations.find((s) => s.id === selectedStationId) || null;
   }, [selectedStationId, stations]);
-
-  // Set up droppable zone for the React Flow canvas
-  const { setNodeRef: setDroppableRef } = useDroppable({
-    id: 'react-flow-canvas',
-  });
-
-  // Configure sensors for drag and drop
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Require 8px of movement before drag starts
-      },
-    })
-  );
 
   // Handle new workflow creation
   const handleNewWorkflow = useCallback(() => {
@@ -202,75 +174,31 @@ function FactoryFloorContent() {
     }
   }, [effectiveWorkflowId, workflows, deleteWorkflow]);
 
-  // Handle drag start from agent palette
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    console.log('🎬 Drag started:', event.active.id, event.active.data.current);
-    if (event.active.data.current?.type === 'agent') {
-      setActiveDragAgent(event.active.data.current.agent as Agent);
-    }
-  }, []);
+  // Handle adding a new station
+  const handleAddStation = useCallback(() => {
+    if (!effectiveWorkflowId) return;
 
-  // Handle drag end from agent palette
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      console.log('🎯 Drag ended:', {
-        activeId: event.active.id,
-        overId: event.over?.id,
-        delta: event.delta,
-        type: event.active.data.current?.type,
-      });
+    // Create station at center of viewport
+    const center = {
+      x: viewport.x + window.innerWidth / 2,
+      y: viewport.y + window.innerHeight / 2,
+    };
 
-      const { active, delta } = event;
-
-      if (!effectiveWorkflowId) {
-        console.log('❌ No workflow selected');
-        return;
-      }
-
-      if (active.data.current?.type === 'agent') {
-        const agent = active.data.current.agent as Agent;
-        console.log('✅ Creating station for agent:', agent.name);
-
-        // Get the final mouse position
-        const activatorEvent = event.activatorEvent as MouseEvent | null;
-        if (!activatorEvent) {
-          console.log('❌ No activator event');
-          return;
-        }
-
-        const dropX = activatorEvent.clientX + delta.x;
-        const dropY = activatorEvent.clientY + delta.y;
-
-        // Convert screen coordinates to React Flow coordinates
-        const position = reactFlowInstance.screenToFlowPosition({
-          x: dropX,
-          y: dropY,
-        });
-
-        console.log('📍 Drop position:', { screen: { dropX, dropY }, flow: position });
-
-        // Create new station at drop position
-        createStation({
-          workflowId: effectiveWorkflowId,
-          data: {
-            workflow_id: effectiveWorkflowId,
-            name: agent.name,
-            position: stations?.length || 0,
-            description: agent.description,
-            x_position: position.x,
-            y_position: position.y,
-            agent_id: agent.id,
-            station_prompt: null,
-            output_context_keys: null,
-          },
-        });
-      }
-
-      // Clear active drag agent
-      setActiveDragAgent(null);
-    },
-    [effectiveWorkflowId, stations, reactFlowInstance, createStation]
-  );
+    createStation({
+      workflowId: effectiveWorkflowId,
+      data: {
+        workflow_id: effectiveWorkflowId,
+        name: `Station ${(stations?.length || 0) + 1}`,
+        position: stations?.length || 0,
+        description: null,
+        x_position: center.x,
+        y_position: center.y,
+        agent_id: null,
+        station_prompt: null,
+        output_context_keys: null,
+      },
+    });
+  }, [effectiveWorkflowId, stations, viewport, createStation]);
 
   // Handle station node click
   const handleNodeClick = useCallback(
@@ -423,15 +351,9 @@ function FactoryFloorContent() {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={rectIntersection}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex flex-col h-full w-full overflow-hidden">
-        {/* Navigation */}
-        <ProjectViewNav currentView="factory" />
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      {/* Navigation */}
+      <ProjectViewNav currentView="factory" />
 
         {/* Workflow Toolbar */}
         <WorkflowToolbar
@@ -451,11 +373,8 @@ function FactoryFloorContent() {
 
         {/* Main content area */}
         <div className="flex-1 min-h-0 flex">
-          {/* Left - Agent Palette */}
-          <AgentPalette className="w-80 border-r" />
-
-          {/* Center - React Flow Canvas */}
-          <div ref={setDroppableRef} className="flex-1 min-w-0 relative bg-muted/10">
+          {/* React Flow Canvas */}
+          <div className="flex-1 min-w-0 relative bg-muted/10">
             {!effectiveWorkflowId ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center max-w-md space-y-4">
@@ -495,6 +414,16 @@ function FactoryFloorContent() {
                 <Panel position="bottom-left" className="bg-background/95 backdrop-blur-sm border rounded-md px-2 py-1 text-xs font-medium text-muted-foreground">
                   {Math.round(viewport.zoom * 100)}%
                 </Panel>
+                <Panel position="top-left" className="m-2">
+                  <Button
+                    onClick={handleAddStation}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Station
+                  </Button>
+                </Panel>
               </ReactFlow>
             )}
 
@@ -506,9 +435,9 @@ function FactoryFloorContent() {
                     No stations yet
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Drag agents from the left palette onto the canvas to create
-                    stations. Connect them by dragging from one station's handle
-                    to another.
+                    Click "Add Station" to create a station. Then configure the
+                    agent and prompt for each station. Connect stations by dragging
+                    from one station's handle to another.
                   </p>
                 </div>
               </div>
@@ -546,31 +475,7 @@ function FactoryFloorContent() {
           onClose={() => setSelectedStationId(null)}
         />
       </div>
-
-      {/* Drag overlay - shows the agent card following the cursor */}
-      <DragOverlay>
-        {activeDragAgent ? (
-          <div className="p-3 border rounded-lg bg-background shadow-lg cursor-grabbing">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="h-4 w-4 shrink-0">🤖</span>
-                  <h4 className="font-medium text-sm line-clamp-1">
-                    {activeDragAgent.name}
-                  </h4>
-                </div>
-                <span className="text-xs shrink-0 px-2 py-0.5 rounded bg-secondary">
-                  {activeDragAgent.executor}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {activeDragAgent.role}
-              </p>
-            </div>
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+    </div>
   );
 }
 
