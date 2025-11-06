@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  vibe-kanban-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: vibe-kanban-dev
+    ports:
+      - "3000:3000"  # Frontend
+      - "3001:3001"  # Backend
+    volumes:
+      # Mount source code for live editing
+      - ./crates:/app/crates
+      - ./frontend:/app/frontend
+      - ./npx-cli:/app/npx-cli
+      - ./scripts:/app/scripts
+      - ./shared:/app/shared
+      - ./Cargo.toml:/app/Cargo.toml
+      - ./Cargo.lock:/app/Cargo.lock
+      - ./package.json:/app/package.json
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml
+      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml
+      - ./tsconfig.json:/app/tsconfig.json
+
+      # Persist database
+      - ./dev_assets:/app/dev_assets
+
+      # Persist node_modules and Rust build cache for faster rebuilds
+      - node_modules:/app/node_modules
+      - frontend_node_modules:/app/frontend/node_modules
+      - npx_cli_node_modules:/app/npx-cli/node_modules
+      - cargo_target:/app/target
+      - cargo_registry:/root/.cargo/registry
+      - cargo_git:/root/.cargo/git
+    environment:
+      - RUST_LOG=debug
+      - HOST=0.0.0.0
+      - FRONTEND_PORT=3000
+      - BACKEND_PORT=3001
+      - DISABLE_WORKTREE_ORPHAN_CLEANUP=1
+    stdin_open: true
+    tty: true
+
+volumes:
+  node_modules:
+  frontend_node_modules:
+  npx_cli_node_modules:
+  cargo_target:
+  cargo_registry:
+  cargo_git:

@@ -1,0 +1,98 @@
+# Development Dockerfile with hot-reload support
+# This Dockerfile is designed for remote development with live code editing
+# and automatic reloading for both Rust backend and TypeScript frontend.
+
+FROM node:24-alpine
+
+# Install development dependencies including Rust toolchain and dev tools
+RUN apk add --no-cache \
+    curl \
+    build-base \
+    perl \
+    llvm-dev \
+    clang-dev \
+    git \
+    bash \
+    tini \
+    openssl-dev \
+    pkgconfig
+
+# Allow linking libclang on musl
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install development tools
+RUN cargo install cargo-watch sqlx-cli
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy package files and install dependencies
+# These are copied even though /app will be mounted as a volume
+# to ensure dependencies are available if the volume is empty
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY frontend/package*.json ./frontend/
+COPY npx-cli/package*.json ./npx-cli/
+
+RUN pnpm install
+
+# Create directory for database persistence
+RUN mkdir -p /app/dev_assets
+
+# Set development environment variables
+ENV RUST_LOG=debug
+ENV HOST=0.0.0.0
+ENV FRONTEND_PORT=3000
+ENV BACKEND_PORT=3001
+ENV DISABLE_WORKTREE_ORPHAN_CLEANUP=1
+
+# Expose ports for frontend and backend
+EXPOSE 3000 3001
+
+# Health check for backend
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD wget --quiet --tries=1 --spider "http://localhost:${BACKEND_PORT:-3001}" || exit 1
+
+# Create startup script for running both frontend and backend with hot-reload
+RUN cat > /start-dev.sh <<'EOF'
+#!/bin/bash
+set -e
+
+echo "Starting development servers with hot-reload..."
+
+# Check if node_modules exists, if not install dependencies
+if [ ! -d "/app/node_modules" ]; then
+    echo "Installing dependencies..."
+    pnpm install
+fi
+
+# Generate TypeScript types from Rust
+echo "Generating TypeScript types..."
+cargo run --bin generate_types
+
+# Start backend with cargo-watch (hot-reload for Rust)
+echo "Starting backend with cargo-watch..."
+RUST_LOG=debug cargo watch -w crates -x 'run --bin server' &
+
+# Start frontend with Vite (hot-reload for TypeScript)
+echo "Starting frontend with Vite..."
+cd frontend && pnpm run dev -- --port ${FRONTEND_PORT:-3000} --host 0.0.0.0 &
+
+# Wait for any process to exit
+wait -n
+
+# Exit with status of process that exited first
+exit $?
+EOF
+
+RUN chmod +x /start-dev.sh
+
+# Use tini to handle signals properly
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/start-dev.sh"]
