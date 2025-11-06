@@ -7,6 +7,25 @@ This guide explains how to use the Docker development environment for Vibe Kanba
 - Docker Desktop or Docker Engine (with docker-compose)
 - Git
 
+## First Time Setup
+
+When you first start the Docker development environment, the following happens automatically:
+
+1. **Database Initialization**: If `/app/dev_assets/db.sqlite` doesn't exist, it's copied from the template (`dev_assets_template/db.sqlite`) that's baked into the Docker image
+2. **Database Migrations**: All pending migrations are applied automatically from `crates/db/migrations/`
+3. **Dependency Installation**: If `node_modules` doesn't exist in the Docker volume, dependencies are installed via `pnpm install`
+4. **Server Startup**: Backend (cargo-watch) and frontend (Vite) servers start with hot-reload enabled
+
+**What gets persisted:**
+- ✅ Database (`dev_assets/db.sqlite`) - via volume mount
+- ✅ Node modules - via Docker named volume (performance optimization)
+- ✅ Cargo build cache - via Docker named volume (faster rebuilds)
+
+**What happens on restart:**
+- Database and build caches are preserved
+- Migrations are checked (only new ones are applied)
+- Servers restart with your latest code
+
 ## Quick Start
 
 ### Using docker-compose (Recommended)
@@ -79,6 +98,21 @@ Docker volumes are used to persist build artifacts for faster rebuilds:
 - `cargo_target` - Rust build artifacts
 - `cargo_registry` - Rust dependency cache
 
+**Important: Managing Dependencies**
+
+Because `node_modules` is in a Docker volume (not mounted from your host), you need to rebuild the container or manually install inside the container when you modify `package.json`:
+
+```bash
+# Option 1: Rebuild container (recommended for major dependency changes)
+docker-compose -f docker-compose.dev.yml build
+docker-compose -f docker-compose.dev.yml up
+
+# Option 2: Install inside running container (faster for minor changes)
+docker exec -it vibe-kanban-dev pnpm install
+```
+
+This volume strategy provides **much faster startup times** (no need to reinstall node_modules on every restart) at the cost of requiring manual intervention when dependencies change.
+
 ## Development Workflow
 
 ### Making Backend Changes
@@ -97,20 +131,24 @@ Docker volumes are used to persist build artifacts for faster rebuilds:
 
 ### Database Migrations
 
-To run database migrations inside the container:
+**Automatic migrations**: Database migrations run automatically on container startup. The startup script checks for pending migrations and applies them before starting the dev servers.
+
+**Manual migrations** (only needed if you want to run them outside of startup):
 
 ```bash
 # Enter the container
 docker exec -it vibe-kanban-dev sh
 
-# Run migrations
-sqlx migrate run
+# Run migrations manually
+cd /app && DATABASE_URL="sqlite:///app/dev_assets/db.sqlite" sqlx migrate run --source crates/db/migrations
 ```
 
 Or directly:
 ```bash
-docker exec -it vibe-kanban-dev sqlx migrate run
+docker exec -it vibe-kanban-dev sh -c "cd /app && DATABASE_URL='sqlite:///app/dev_assets/db.sqlite' sqlx migrate run --source crates/db/migrations"
 ```
+
+**Creating new migrations**: Create migration files on your host (in `crates/db/migrations/`), then restart the container to apply them automatically.
 
 ### Running Tests
 
