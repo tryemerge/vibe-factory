@@ -88,7 +88,29 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
 
   // Sync local state with server data when stations/transitions change
   useEffect(() => {
-    setNodes(derivedNodes);
+    setNodes((currentNodes) => {
+      // Create a map of current node positions (preserve local drag state)
+      const currentPositions = new Map(
+        currentNodes.map((node) => [node.id, node.position])
+      );
+
+      // Update nodes, preserving local positions for existing nodes
+      return derivedNodes.map((derivedNode) => {
+        const currentPosition = currentPositions.get(derivedNode.id);
+
+        // If node already exists locally, keep its position
+        // This preserves dragging state and prevents position resets
+        if (currentPosition) {
+          return {
+            ...derivedNode,
+            position: currentPosition,
+          };
+        }
+
+        // New node - use position from backend
+        return derivedNode;
+      });
+    });
   }, [derivedNodes]);
 
   useEffect(() => {
