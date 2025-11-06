@@ -17,6 +17,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  rectIntersection,
 } from '@dnd-kit/core';
 import { useProject } from '@/contexts/project-context';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
@@ -216,15 +217,10 @@ function FactoryFloorContent() {
         type: event.active.data.current?.type,
       });
 
-      const { active, delta, over } = event;
+      const { active, delta } = event;
 
       if (!effectiveWorkflowId) {
         console.log('❌ No workflow selected');
-        return;
-      }
-
-      if (!over) {
-        console.log('❌ Not dropped over droppable zone');
         return;
       }
 
@@ -423,7 +419,12 @@ function FactoryFloorContent() {
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rectIntersection}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <div className="flex flex-col h-full w-full overflow-hidden">
         {/* Navigation */}
         <ProjectViewNav currentView="factory" />
