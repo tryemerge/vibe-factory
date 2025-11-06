@@ -81,10 +81,21 @@ vibe-kanban-*.tgz
 dev_server.log
 dev_server.pid
 
+# Worktree-specific files (generated, not tracked)
+README_WORKTREE.md
+
 # Ignore runtime dev_assets but track template
 dev_assets/
 dev_assets_*/
 !dev_assets_template/
+
+# Database backups (keep locally, don't commit)
+dev_assets/backups/
+**/backups/*.sqlite
+**/backups/*.log
+
+# Worktree initialization marker
+dev_assets/.worktree_initialized
 
 /frontend/.env.sentry-build-plugin
 .ssh

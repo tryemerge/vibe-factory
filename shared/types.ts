@@ -286,8 +286,6 @@ export type Draft = { id: string, task_attempt_id: string, draft_type: DraftType
 
 export type DraftType = "follow_up" | "retry";
 
-export type ContextFile = { pattern: string, instruction: string | null, };
-
 export type Agent = { id: string, name: string, role: string, system_prompt: string, capabilities: string | null, tools: string | null, description: string | null, context_files: string | null, executor: string, created_at: string, updated_at: string, };
 
 export type CreateAgent = { name: string, role: string, system_prompt: string, capabilities: Array<string> | null, tools: Array<string> | null, description: string | null, context_files: Array<ContextFile> | null, executor: string | null, };

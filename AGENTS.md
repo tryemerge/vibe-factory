@@ -1,5 +1,23 @@
 # Repository Guidelines
 
+**🚨 IMPORTANT: Are you in a worktree?**
+
+If you see a file called `README_WORKTREE.md` in this directory, **YOU ARE IN A WORKTREE!**
+
+**Read this file IMMEDIATELY:**
+```bash
+cat README_WORKTREE.md
+```
+
+Your environment has **dedicated ports** different from the main repository. Do NOT use port 3000 or 3001!
+
+Check your assigned ports:
+```bash
+cat .dev-ports.json
+```
+
+---
+
 ## Project Structure & Module Organization
 - `crates/`: Rust workspace crates — `server` (API + bins), `db` (SQLx models/migrations), `executors`, `services`, `utils`, `deployment`, `local-deployment`.
 - `frontend/`: React + TypeScript app (Vite, Tailwind). Source in `frontend/src`.
@@ -37,4 +55,5 @@ Do not manually edit shared/types.ts, instead edit crates/server/src/bin/generat
 
 ## Security & Config Tips
 - Use `.env` for local overrides; never commit secrets. Key envs: `FRONTEND_PORT`, `BACKEND_PORT`, `HOST`, optional `GITHUB_CLIENT_ID` for custom OAuth.
-- Dev ports and assets are managed by `scripts/setup-dev-environment.js`.
+- Dev ports and assets are managed by `scripts/setup-dev-environment.js` (main repo) or `scripts/setup-worktree.sh` (worktrees).
+- **Worktrees:** If `README_WORKTREE.md` exists, you MUST use the ports specified there. Run `cat .dev-ports.json` to see your allocated ports.

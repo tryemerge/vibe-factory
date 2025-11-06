@@ -6,7 +6,8 @@ use axum::{
 };
 use db::models::{
     agent::Agent, execution_process::ExecutionProcess, project::Project, tag::Tag, task::Task,
-    task_attempt::TaskAttempt,
+    task_attempt::TaskAttempt, workflow::Workflow, workflow_station::WorkflowStation,
+    station_transition::StationTransition,
 };
 use deployment::Deployment;
 use uuid::Uuid;
@@ -226,6 +227,87 @@ pub async fn load_agent_middleware(
     // Insert the agent as an extension
     let mut request = request;
     request.extensions_mut().insert(agent);
+
+    // Continue with the next middleware/handler
+    Ok(next.run(request).await)
+}
+
+pub async fn load_workflow_middleware(
+    State(deployment): State<DeploymentImpl>,
+    Path(workflow_id): Path<Uuid>,
+    request: axum::extract::Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Load the workflow from the database
+    let workflow = match Workflow::find_by_id(&deployment.db().pool, workflow_id).await {
+        Ok(Some(workflow)) => workflow,
+        Ok(None) => {
+            tracing::warn!("Workflow {} not found", workflow_id);
+            return Err(StatusCode::NOT_FOUND);
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch workflow {}: {}", workflow_id, e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // Insert the workflow as an extension
+    let mut request = request;
+    request.extensions_mut().insert(workflow);
+
+    // Continue with the next middleware/handler
+    Ok(next.run(request).await)
+}
+
+pub async fn load_workflow_station_middleware(
+    State(deployment): State<DeploymentImpl>,
+    Path(station_id): Path<Uuid>,
+    request: axum::extract::Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Load the workflow station from the database
+    let station = match WorkflowStation::find_by_id(&deployment.db().pool, station_id).await {
+        Ok(Some(station)) => station,
+        Ok(None) => {
+            tracing::warn!("WorkflowStation {} not found", station_id);
+            return Err(StatusCode::NOT_FOUND);
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch workflow station {}: {}", station_id, e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // Insert the workflow station as an extension
+    let mut request = request;
+    request.extensions_mut().insert(station);
+
+    // Continue with the next middleware/handler
+    Ok(next.run(request).await)
+}
+
+pub async fn load_station_transition_middleware(
+    State(deployment): State<DeploymentImpl>,
+    Path(transition_id): Path<Uuid>,
+    request: axum::extract::Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Load the station transition from the database
+    let transition = match StationTransition::find_by_id(&deployment.db().pool, transition_id).await {
+        Ok(Some(transition)) => transition,
+        Ok(None) => {
+            tracing::warn!("StationTransition {} not found", transition_id);
+            return Err(StatusCode::NOT_FOUND);
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch station transition {}: {}", transition_id, e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // Insert the station transition as an extension
+    let mut request = request;
+    request.extensions_mut().insert(transition);
 
     // Continue with the next middleware/handler
     Ok(next.run(request).await)

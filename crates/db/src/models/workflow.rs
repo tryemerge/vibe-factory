@@ -4,6 +4,9 @@ use sqlx::{Executor, FromRow, Sqlite, SqlitePool};
 use ts_rs::TS;
 use uuid::Uuid;
 
+use super::workflow_station::WorkflowStation;
+use super::station_transition::StationTransition;
+
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct Workflow {
     pub id: Uuid,
@@ -25,6 +28,15 @@ pub struct CreateWorkflow {
 pub struct UpdateWorkflow {
     pub name: Option<String>,
     pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct WorkflowWithDetails {
+    #[ts(flatten)]
+    pub workflow: Workflow,
+    pub stations: Vec<WorkflowStation>,
+    pub transitions: Vec<StationTransition>,
 }
 
 impl Workflow {
