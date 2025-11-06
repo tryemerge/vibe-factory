@@ -11,10 +11,12 @@ import 'reactflow/dist/style.css';
 import {
   DndContext,
   DragEndEvent,
+  DragStartEvent,
   useDroppable,
   PointerSensor,
   useSensor,
   useSensors,
+  DragOverlay,
 } from '@dnd-kit/core';
 import { useProject } from '@/contexts/project-context';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
@@ -132,6 +134,9 @@ function FactoryFloorContent() {
     null
   );
 
+  // Track active drag for overlay
+  const [activeDragAgent, setActiveDragAgent] = useState<Agent | null>(null);
+
   // Get selected station object
   const selectedStation = useMemo(() => {
     if (!selectedStationId || !stations) return null;
@@ -193,18 +198,46 @@ function FactoryFloorContent() {
     }
   }, [effectiveWorkflowId, workflows, deleteWorkflow]);
 
+  // Handle drag start from agent palette
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    console.log('🎬 Drag started:', event.active.id, event.active.data.current);
+    if (event.active.data.current?.type === 'agent') {
+      setActiveDragAgent(event.active.data.current.agent as Agent);
+    }
+  }, []);
+
   // Handle drag end from agent palette
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      console.log('🎯 Drag ended:', {
+        activeId: event.active.id,
+        overId: event.over?.id,
+        delta: event.delta,
+        type: event.active.data.current?.type,
+      });
+
       const { active, delta, over } = event;
-      if (!effectiveWorkflowId || !over) return;
+
+      if (!effectiveWorkflowId) {
+        console.log('❌ No workflow selected');
+        return;
+      }
+
+      if (!over) {
+        console.log('❌ Not dropped over droppable zone');
+        return;
+      }
 
       if (active.data.current?.type === 'agent') {
         const agent = active.data.current.agent as Agent;
+        console.log('✅ Creating station for agent:', agent.name);
 
         // Get the final mouse position
         const activatorEvent = event.activatorEvent as MouseEvent | null;
-        if (!activatorEvent) return;
+        if (!activatorEvent) {
+          console.log('❌ No activator event');
+          return;
+        }
 
         const dropX = activatorEvent.clientX + delta.x;
         const dropY = activatorEvent.clientY + delta.y;
@@ -214,6 +247,8 @@ function FactoryFloorContent() {
           x: dropX,
           y: dropY,
         });
+
+        console.log('📍 Drop position:', { screen: { dropX, dropY }, flow: position });
 
         // Create new station at drop position
         createStation({
@@ -231,6 +266,9 @@ function FactoryFloorContent() {
           },
         });
       }
+
+      // Clear active drag agent
+      setActiveDragAgent(null);
     },
     [effectiveWorkflowId, stations, reactFlowInstance, createStation]
   );
@@ -385,7 +423,7 @@ function FactoryFloorContent() {
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-full w-full overflow-hidden">
         {/* Navigation */}
         <ProjectViewNav currentView="factory" />
@@ -497,6 +535,30 @@ function FactoryFloorContent() {
           onClose={() => setSelectedStationId(null)}
         />
       </div>
+
+      {/* Drag overlay - shows the agent card following the cursor */}
+      <DragOverlay>
+        {activeDragAgent ? (
+          <div className="p-3 border rounded-lg bg-background shadow-lg cursor-grabbing">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="h-4 w-4 shrink-0">🤖</span>
+                  <h4 className="font-medium text-sm line-clamp-1">
+                    {activeDragAgent.name}
+                  </h4>
+                </div>
+                <span className="text-xs shrink-0 px-2 py-0.5 rounded bg-secondary">
+                  {activeDragAgent.executor}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                {activeDragAgent.role}
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
