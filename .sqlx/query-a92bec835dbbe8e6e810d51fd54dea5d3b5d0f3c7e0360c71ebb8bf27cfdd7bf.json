@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE workflow_executions\n               SET current_station_id = $2,\n                   status = $3,\n                   started_at = $4,\n                   completed_at = $5,\n                   updated_at = CURRENT_TIMESTAMP\n               WHERE id = $1\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                task_id as \"task_id!: Uuid\",\n                task_attempt_id as \"task_attempt_id: Uuid\",\n                current_station_id as \"current_station_id: Uuid\",\n                status,\n                started_at as \"started_at: DateTime<Utc>\",\n                completed_at as \"completed_at: DateTime<Utc>\",\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "workflow_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_id!: Uuid",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_attempt_id: Uuid",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "current_station_id: Uuid",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "status",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "started_at: DateTime<Utc>",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "completed_at: DateTime<Utc>",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at!: DateTime<Utc>",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a92bec835dbbe8e6e810d51fd54dea5d3b5d0f3c7e0360c71ebb8bf27cfdd7bf"
+}

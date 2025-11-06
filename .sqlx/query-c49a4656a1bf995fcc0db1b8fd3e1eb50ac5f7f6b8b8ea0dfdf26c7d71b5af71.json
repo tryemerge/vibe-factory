@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE station_executions SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c49a4656a1bf995fcc0db1b8fd3e1eb50ac5f7f6b8b8ea0dfdf26c7d71b5af71"
+}
