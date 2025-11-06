@@ -1,0 +1,157 @@
+# Development Dockerfile with hot-reload support
+# This Dockerfile is designed for remote development with live code editing
+# and automatic reloading for both Rust backend and TypeScript frontend.
+
+FROM node:24-alpine
+
+# Install development dependencies including Rust toolchain and dev tools
+RUN apk add --no-cache \
+    curl \
+    build-base \
+    perl \
+    llvm-dev \
+    clang-dev \
+    git \
+    bash \
+    tini \
+    openssl-dev \
+    pkgconfig
+
+# Allow linking libclang on musl
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install development tools
+RUN cargo install cargo-watch sqlx-cli
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy package files and install dependencies
+# These are copied even though /app will be mounted as a volume
+# to ensure dependencies are available if the volume is empty
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY frontend/package*.json ./frontend/
+COPY npx-cli/package*.json ./npx-cli/
+
+RUN pnpm install
+
+# Copy database template for initialization
+# This provides a seed database for fresh installations
+COPY dev_assets_template/ /app/dev_assets_template/
+
+# Create directory for database persistence
+RUN mkdir -p /app/dev_assets
+
+# Set development environment variables
+ENV RUST_LOG=debug
+ENV HOST=0.0.0.0
+ENV FRONTEND_PORT=3000
+ENV BACKEND_PORT=3001
+ENV DISABLE_WORKTREE_ORPHAN_CLEANUP=1
+
+# Expose ports for frontend and backend
+EXPOSE 3000 3001
+
+# Health check for backend
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD wget --quiet --tries=1 --spider "http://localhost:${BACKEND_PORT:-3001}" || exit 1
+
+# Create startup script for running both frontend and backend with hot-reload
+RUN cat > /start-dev.sh <<'EOF'
+#!/bin/bash
+
+# Error handling: trap errors and cleanup background processes
+BACKEND_PID=""
+FRONTEND_PID=""
+
+cleanup() {
+    echo "Shutting down development servers..."
+    [ -n "$BACKEND_PID" ] && kill $BACKEND_PID 2>/dev/null
+    [ -n "$FRONTEND_PID" ] && kill $FRONTEND_PID 2>/dev/null
+    exit 1
+}
+
+trap cleanup SIGTERM SIGINT ERR
+
+echo "Starting development environment setup..."
+
+# 1. Initialize database if it doesn't exist
+if [ ! -f "/app/dev_assets/db.sqlite" ]; then
+    echo "⚙️  Initializing database from template..."
+    if [ -f "/app/dev_assets_template/db.sqlite" ]; then
+        cp /app/dev_assets_template/db.sqlite /app/dev_assets/db.sqlite
+        echo "✅ Database initialized"
+    else
+        echo "❌ ERROR: Database template not found at /app/dev_assets_template/db.sqlite"
+        exit 1
+    fi
+else
+    echo "✅ Database already exists"
+fi
+
+# 2. Check if node_modules exists, if not install dependencies
+if [ ! -d "/app/node_modules" ]; then
+    echo "⚙️  Installing dependencies..."
+    pnpm install
+    echo "✅ Dependencies installed"
+else
+    echo "✅ Dependencies already installed"
+fi
+
+# 3. Run database migrations
+echo "⚙️  Running database migrations..."
+cd /app
+export DATABASE_URL="sqlite:///app/dev_assets/db.sqlite"
+if sqlx migrate run --source crates/db/migrations; then
+    echo "✅ Migrations complete"
+else
+    echo "⚠️  Migration warning (may be already applied)"
+fi
+
+# 4. Start backend with cargo-watch (hot-reload for Rust)
+# Note: We skip type generation here since cargo-watch will build on first run
+# and generate types as part of the build process if needed
+echo "⚙️  Starting backend with cargo-watch..."
+RUST_LOG=debug cargo watch -w crates -x 'run --bin server' 2>&1 | sed 's/^/[BACKEND] /' &
+BACKEND_PID=$!
+echo "✅ Backend started (PID: $BACKEND_PID)"
+
+# Give backend a moment to start compiling
+sleep 2
+
+# 5. Start frontend with Vite (hot-reload for TypeScript)
+echo "⚙️  Starting frontend with Vite..."
+cd /app/frontend && pnpm run dev -- --port ${FRONTEND_PORT:-3000} --host 0.0.0.0 2>&1 | sed 's/^/[FRONTEND] /' &
+FRONTEND_PID=$!
+echo "✅ Frontend started (PID: $FRONTEND_PID)"
+
+echo ""
+echo "🚀 Development servers running:"
+echo "   Frontend: http://localhost:${FRONTEND_PORT:-3000}"
+echo "   Backend:  http://localhost:${BACKEND_PORT:-3001}"
+echo ""
+echo "📝 Watching for changes..."
+echo "   - Rust files (crates/*) → backend hot-reload"
+echo "   - TypeScript files (frontend/*) → frontend HMR"
+echo ""
+
+# Wait for any process to exit
+wait -n
+
+# If we get here, one process exited - cleanup and exit
+echo "⚠️  A development server exited unexpectedly"
+cleanup
+EOF
+
+RUN chmod +x /start-dev.sh
+
+# Use tini to handle signals properly
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/start-dev.sh"]
