@@ -400,6 +400,9 @@ function FactoryFloorContent() {
                 nodesDraggable={true}
                 nodesConnectable={true}
                 elementsSelectable={true}
+                panOnDrag={false}
+                selectionOnDrag={true}
+                selectionMode="partial"
                 panOnScroll
                 zoomOnScroll
                 minZoom={0.1}
