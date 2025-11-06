@@ -1,5 +1,6 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange } from 'reactflow';
+import { applyNodeChanges, applyEdgeChanges } from 'reactflow';
 import type {
   WorkflowStation,
   StationTransition,
@@ -41,8 +42,8 @@ interface UseReactFlowSyncOptions {
 export function useReactFlowSync(options: UseReactFlowSyncOptions) {
   const { stations, transitions, onStationUpdate } = options;
 
-  // Convert workflow stations to React Flow nodes
-  const nodes = useMemo<Node<StationNodeData>[]>(() => {
+  // Convert workflow stations to React Flow nodes format
+  const derivedNodes = useMemo<Node<StationNodeData>[]>(() => {
     return stations.map((station) => ({
       id: station.id,
       type: 'station',
@@ -62,8 +63,8 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
     }));
   }, [stations]);
 
-  // Convert station transitions to React Flow edges
-  const edges = useMemo<Edge<TransitionEdgeData>[]>(() => {
+  // Convert station transitions to React Flow edges format
+  const derivedEdges = useMemo<Edge<TransitionEdgeData>[]>(() => {
     return transitions.map((transition) => ({
       id: transition.id,
       source: transition.source_station_id,
@@ -81,20 +82,37 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
     }));
   }, [transitions]);
 
+  // Local state for React Flow (enables dragging)
+  const [nodes, setNodes] = useState<Node<StationNodeData>[]>(derivedNodes);
+  const [edges, setEdges] = useState<Edge<TransitionEdgeData>[]>(derivedEdges);
+
+  // Sync local state with server data when stations/transitions change
+  useEffect(() => {
+    setNodes(derivedNodes);
+  }, [derivedNodes]);
+
+  useEffect(() => {
+    setEdges(derivedEdges);
+  }, [derivedEdges]);
+
   // Handle node changes (position, selection, etc.)
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      if (!onStationUpdate) return;
+      // Apply changes to local state immediately (enables dragging)
+      setNodes((nds) => applyNodeChanges(changes, nds));
 
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position && !change.dragging) {
-          // Only update when drag ends
-          onStationUpdate(change.id, {
-            x_position: change.position.x,
-            y_position: change.position.y,
-          });
-        }
-      });
+      // Persist position changes to backend when drag ends
+      if (onStationUpdate) {
+        changes.forEach((change) => {
+          if (change.type === 'position' && change.position && !change.dragging) {
+            // Only persist when drag ends
+            onStationUpdate(change.id, {
+              x_position: change.position.x,
+              y_position: change.position.y,
+            });
+          }
+        });
+      }
     },
     [onStationUpdate]
   );
@@ -102,9 +120,8 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
   // Handle edge changes (connection, deletion, etc.)
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      // Edge changes are typically handled through mutations
-      // This is here for consistency with React Flow API
-      console.log('Edge changes:', changes);
+      // Apply changes to local state immediately
+      setEdges((eds) => applyEdgeChanges(changes, eds));
     },
     []
   );

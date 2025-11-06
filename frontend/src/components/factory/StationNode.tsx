@@ -74,10 +74,10 @@ export const StationNode = memo(
 
     return (
       <div className="relative">
-        {/* Input Handle (top) */}
+        {/* Input Handle (left) */}
         <Handle
           type="target"
-          position={Position.Top}
+          position={Position.Left}
           className="!bg-gray-400 !border-2 !border-white !w-3 !h-3"
         />
 
@@ -94,11 +94,11 @@ export const StationNode = memo(
           <CardHeader className="p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-sm font-semibold line-clamp-2 mb-1">
+                <CardTitle className="text-sm font-semibold line-clamp-2 mb-1 text-foreground">
                   {station.name}
                 </CardTitle>
                 {station.description && (
-                  <CardDescription className="text-xs line-clamp-2">
+                  <CardDescription className="text-xs line-clamp-2 text-foreground/70">
                     {station.description}
                   </CardDescription>
                 )}
@@ -117,8 +117,8 @@ export const StationNode = memo(
             {/* Station Prompt */}
             {station.station_prompt && (
               <div className="mt-2 flex items-start gap-1">
-                <FileText className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
-                <CardDescription className="text-xs line-clamp-2">
+                <FileText className="h-3 w-3 text-foreground/60 mt-0.5 shrink-0" />
+                <CardDescription className="text-xs line-clamp-2 text-foreground/70">
                   {station.station_prompt}
                 </CardDescription>
               </div>
@@ -127,20 +127,20 @@ export const StationNode = memo(
             {/* Agent Assignment */}
             {agent ? (
               <div className="mt-3 flex items-center gap-2">
-                <User className="h-3 w-3 text-muted-foreground" />
+                <User className="h-3 w-3 text-foreground/60" />
                 <Badge variant="secondary" className="text-xs font-normal">
                   {agent.name}
                 </Badge>
-                <span className="text-xs text-muted-foreground truncate">
+                <span className="text-xs text-foreground/70 truncate">
                   {agent.role}
                 </span>
               </div>
             ) : (
               <div className="mt-3 flex items-center gap-2">
-                <User className="h-3 w-3 text-gray-400" />
+                <User className="h-3 w-3 text-foreground/40" />
                 <Badge
                   variant="outline"
-                  className="text-xs font-normal text-gray-400"
+                  className="text-xs font-normal text-foreground/60"
                 >
                   No agent assigned
                 </Badge>
@@ -164,10 +164,10 @@ export const StationNode = memo(
           </CardHeader>
         </Card>
 
-        {/* Output Handle (bottom) */}
+        {/* Output Handle (right) */}
         <Handle
           type="source"
-          position={Position.Bottom}
+          position={Position.Right}
           className="!bg-gray-400 !border-2 !border-white !w-3 !h-3"
         />
       </div>
