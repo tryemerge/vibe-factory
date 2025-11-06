@@ -133,6 +133,8 @@ fn generate_types_content() -> String {
         db::models::station_execution::StationExecution::decl(),
         db::models::station_execution::CreateStationExecution::decl(),
         db::models::station_execution::UpdateStationExecution::decl(),
+        server::routes::workflows::workflow_executions::ExecuteWorkflowRequest::decl(),
+        server::routes::workflows::workflow_executions::ExecuteWorkflowResponse::decl(),
         executors::logs::CommandExitStatus::decl(),
         executors::logs::CommandRunResult::decl(),
         executors::logs::NormalizedEntry::decl(),
