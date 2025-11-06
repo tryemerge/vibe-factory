@@ -322,6 +322,10 @@ export type CreateTaskStationExecution = { task_id: string, station_id: string, 
 
 export type UpdateTaskStationExecution = { status: string | null, transition_taken_id: string | null, started_at: string | null, completed_at: string | null, error_message: string | null, };
 
+export type ExecuteWorkflowRequest = { task_id: string, base_branch: string, executor_profile_id: ExecutorProfileId | null, };
+
+export type ExecuteWorkflowResponse = { workflow_execution_id: string, task_attempt_id: string, current_station_id: string | null, status: string, };
+
 export type CommandExitStatus = { "type": "exit_code", code: number, } | { "type": "success", success: boolean, };
 
 export type CommandRunResult = { exit_status: CommandExitStatus | null, output: string | null, };

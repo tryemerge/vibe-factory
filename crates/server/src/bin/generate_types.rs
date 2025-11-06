@@ -126,6 +126,8 @@ fn generate_types_content() -> String {
         db::models::task_station_execution::TaskStationExecution::decl(),
         db::models::task_station_execution::CreateTaskStationExecution::decl(),
         db::models::task_station_execution::UpdateTaskStationExecution::decl(),
+        server::routes::workflows::workflow_executions::ExecuteWorkflowRequest::decl(),
+        server::routes::workflows::workflow_executions::ExecuteWorkflowResponse::decl(),
         executors::logs::CommandExitStatus::decl(),
         executors::logs::CommandRunResult::decl(),
         executors::logs::NormalizedEntry::decl(),
