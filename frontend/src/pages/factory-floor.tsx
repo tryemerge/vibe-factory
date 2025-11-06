@@ -6,6 +6,8 @@ import ReactFlow, {
   Connection,
   ReactFlowProvider,
   useReactFlow,
+  useViewport,
+  Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -57,6 +59,7 @@ function FactoryFloorContent() {
   } = useProject();
   const { tasks, isLoading: tasksLoading } = useProjectTasks(projectId || '');
   const reactFlowInstance = useReactFlow();
+  const viewport = useViewport();
 
   // Workflow state - get all workflows for this project
   const {
@@ -109,7 +112,7 @@ function FactoryFloorContent() {
   });
 
   // React Flow sync
-  const { nodes, edges, onNodesChange, isValidConnection } = useReactFlowSync({
+  const { nodes, edges, onNodesChange, onEdgesChange, isValidConnection } = useReactFlowSync({
     stations: stations || [],
     transitions: transitions || [],
     onStationUpdate: (id, data) => {
@@ -359,7 +362,8 @@ function FactoryFloorContent() {
   }, [reactFlowInstance]);
 
   const handleAutoLayout = useCallback(() => {
-    reactFlowInstance.fitView({ padding: 0.2 });
+    // Center the viewport and set zoom to 100% (1.0)
+    reactFlowInstance.setViewport({ x: 0, y: 0, zoom: 1 });
   }, [reactFlowInstance]);
 
   const handleExportJson = useCallback(() => {
@@ -468,14 +472,17 @@ function FactoryFloorContent() {
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
                 onNodeClick={handleNodeClick}
                 onEdgeClick={handleEdgeClick}
                 onConnect={handleConnect}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
+                nodesDraggable={true}
+                nodesConnectable={true}
+                elementsSelectable={true}
                 panOnScroll
                 zoomOnScroll
-                fitView
                 minZoom={0.1}
                 maxZoom={4}
               >
@@ -485,6 +492,9 @@ function FactoryFloorContent() {
                   gap={12}
                   size={1}
                 />
+                <Panel position="bottom-left" className="bg-background/95 backdrop-blur-sm border rounded-md px-2 py-1 text-xs font-medium text-muted-foreground">
+                  {Math.round(viewport.zoom * 100)}%
+                </Panel>
               </ReactFlow>
             )}
 

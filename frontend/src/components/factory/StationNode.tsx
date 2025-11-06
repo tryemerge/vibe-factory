@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import {
   Card,
@@ -7,14 +7,11 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   CheckCircle,
   Loader2,
   XCircle,
   Circle,
-  Settings,
-  Trash2,
   User,
   FileText,
 } from 'lucide-react';
@@ -25,8 +22,6 @@ export interface StationNodeData {
   station: WorkflowStation;
   agent?: Agent | null;
   status?: StationStatus;
-  onConfigure?: (station: WorkflowStation) => void;
-  onDelete?: (stationId: string) => void;
 }
 
 export type StationStatus = 'idle' | 'running' | 'completed' | 'failed';
@@ -73,31 +68,12 @@ const statusConfig: Record<
 
 export const StationNode = memo(
   ({ data, selected }: NodeProps<StationNodeData>) => {
-    const [isHovered, setIsHovered] = useState(false);
-    const { station, agent, status = 'idle', onConfigure, onDelete } = data;
+    const { station, agent, status = 'idle' } = data;
     const config = statusConfig[status];
     const Icon = config.icon;
 
-    const handleConfigure = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (onConfigure) {
-        onConfigure(station);
-      }
-    };
-
-    const handleDelete = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (onDelete) {
-        onDelete(station.id);
-      }
-    };
-
     return (
-      <div
-        className="relative"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
+      <div className="relative">
         {/* Input Handle (top) */}
         <Handle
           type="target"
@@ -107,12 +83,12 @@ export const StationNode = memo(
 
         <Card
           className={cn(
-            'min-w-[200px] max-w-[280px] transition-all duration-200',
+            'min-w-[200px] max-w-[280px] transition-shadow duration-200',
+            'cursor-grab active:cursor-grabbing',
             config.bgColor,
             config.borderColor,
             'border-2',
-            selected && 'ring-2 ring-blue-500 ring-offset-2',
-            isHovered && 'shadow-lg scale-105'
+            selected && 'ring-2 ring-blue-500 ring-offset-2'
           )}
         >
           <CardHeader className="p-4">
@@ -171,8 +147,8 @@ export const StationNode = memo(
               </div>
             )}
 
-            {/* Status Badge (shown when hovered or not idle) */}
-            {(isHovered || status !== 'idle') && (
+            {/* Status Badge (shown when not idle) */}
+            {status !== 'idle' && (
               <div className="mt-2 flex items-center gap-1">
                 <div
                   className={cn(
@@ -183,30 +159,6 @@ export const StationNode = memo(
                 <span className={cn('text-xs font-medium', config.color)}>
                   {config.label}
                 </span>
-              </div>
-            )}
-
-            {/* Action Buttons (shown on hover) */}
-            {isHovered && (
-              <div className="mt-3 flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleConfigure}
-                  className="h-7 px-2 text-xs"
-                >
-                  <Settings className="h-3 w-3 mr-1" />
-                  Configure
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleDelete}
-                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Remove
-                </Button>
               </div>
             )}
           </CardHeader>

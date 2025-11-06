@@ -43,15 +43,63 @@ export function useWorkflowStations(options: UseWorkflowStationsOptions = {}) {
       workflowId: string;
       data: CreateWorkflowStation;
     }) => workflowStationsApi.create(workflowId, data),
-    onSuccess: (station: WorkflowStation) => {
-      // Update stations list in cache
+    onMutate: async ({ workflowId, data }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: ['workflow-stations', workflowId],
+      });
+
+      // Snapshot previous value
+      const previousStations = queryClient.getQueryData<WorkflowStation[]>([
+        'workflow-stations',
+        workflowId,
+      ]);
+
+      // Create optimistic station with temporary ID
+      const optimisticStation: WorkflowStation = {
+        id: `temp-${Date.now()}`,
+        workflow_id: data.workflow_id,
+        name: data.name,
+        position: data.position,
+        description: data.description,
+        x_position: data.x_position,
+        y_position: data.y_position,
+        agent_id: data.agent_id,
+        station_prompt: data.station_prompt,
+        output_context_keys: data.output_context_keys,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Optimistically add to cache
+      queryClient.setQueryData<WorkflowStation[]>(
+        ['workflow-stations', workflowId],
+        (old) => (old ? [...old, optimisticStation] : [optimisticStation])
+      );
+
+      return { previousStations, optimisticStation };
+    },
+    onSuccess: (station: WorkflowStation, _variables, context) => {
+      // Replace optimistic station with real one
       queryClient.setQueryData<WorkflowStation[]>(
         ['workflow-stations', station.workflow_id],
-        (old) => (old ? [...old, station] : [station])
+        (old) =>
+          old
+            ? old.map((s) =>
+                s.id === context?.optimisticStation.id ? station : s
+              )
+            : [station]
       );
       onSaveSuccess?.(station);
     },
-    onError: (error) => {
+    onError: (error, { workflowId }, context) => {
+      // Rollback on error
+      if (context?.previousStations) {
+        queryClient.setQueryData(
+          ['workflow-stations', workflowId],
+          context.previousStations
+        );
+      }
       console.error('Failed to create station:', error);
       onSaveError?.(error);
     },

@@ -1,7 +1,6 @@
 use axum::{
     Extension, Json, Router,
     extract::State,
-    middleware::from_fn_with_state,
     response::Json as ResponseJson,
     routing::get,
 };
@@ -267,7 +266,7 @@ pub async fn delete_transition(
 // Router
 // ========================================
 
-pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
+pub fn router(_deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     // Simple router without middleware for now
     // TODO: Add middleware for loading entities from path parameters
     Router::new()
