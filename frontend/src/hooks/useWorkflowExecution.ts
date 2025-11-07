@@ -1,80 +1,124 @@
-import { useEffect, useState, useCallback } from 'react';
-import { workflowExecutionApi } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { workflowExecutionsApi } from '@/lib/api';
 import type {
   WorkflowExecutionDetailsResponse,
   StationExecutionSummary,
 } from 'shared/types';
 
-interface UseWorkflowExecutionResult {
-  execution: WorkflowExecutionDetailsResponse | null;
-  stations: StationExecutionSummary[];
-  currentStation: StationExecutionSummary | null;
-  isLoading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
+interface UseWorkflowExecutionOptions {
+  executionId?: string;
+  enabled?: boolean;
+  refetchInterval?: number | false;
 }
 
 /**
- * Hook to fetch and monitor workflow execution progress
- * Polls for updates every 2 seconds when workflow is running
+ * Hook to monitor workflow execution status (READ-ONLY)
+ *
+ * ⚠️ NOTE: This is different from PR #37's useWorkflowExecution
+ * - PR #37: Action hook for EXECUTING workflows (POST request)
+ * - This hook: Monitoring hook for READING execution status (GET request + polling)
+ *
+ * Provides real-time updates on:
+ * - Overall workflow execution status
+ * - Current station being executed
+ * - Individual station execution states
+ *
+ * Use with polling (refetchInterval) for real-time updates during execution
+ *
+ * Example:
+ * ```tsx
+ * const { stationStatusMap, progress, isRunning } = useWorkflowExecution({
+ *   executionId: 'uuid-here',
+ *   enabled: true,
+ *   refetchInterval: 2000, // Poll every 2 seconds
+ * });
+ * ```
  */
-export const useWorkflowExecution = (
-  executionId: string | undefined
-): UseWorkflowExecutionResult => {
-  const [execution, setExecution] =
-    useState<WorkflowExecutionDetailsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function useWorkflowExecution({
+  executionId,
+  enabled = true,
+  refetchInterval = false,
+}: UseWorkflowExecutionOptions) {
+  const {
+    data: execution,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<WorkflowExecutionDetailsResponse>({
+    queryKey: ['workflow-execution', executionId],
+    queryFn: () => {
+      if (!executionId) {
+        throw new Error('Execution ID is required');
+      }
+      return workflowExecutionsApi.getById(executionId);
+    },
+    enabled: enabled && !!executionId,
+    refetchInterval,
+    // Keep previous data while refetching for smooth transitions
+    placeholderData: (previousData: WorkflowExecutionDetailsResponse | undefined) => previousData,
+  });
 
-  const fetchExecution = useCallback(async () => {
-    if (!executionId) {
-      setIsLoading(false);
-      return;
-    }
+  /**
+   * Map station executions to a lookup by station ID
+   * This allows quick access to station status by station ID
+   */
+  const stationStatusMap =
+    execution?.stations.reduce<Record<string, StationExecutionSummary>>(
+      (acc, station) => {
+        acc[station.station_id] = station;
+        return acc;
+      },
+      {}
+    ) || {};
 
-    try {
-      const data = await workflowExecutionApi.getDetails(executionId);
-      setExecution(data);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to fetch workflow execution:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch workflow execution'
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [executionId]);
+  /**
+   * Get the status for a specific station
+   * Returns the most recent execution status for the station
+   */
+  const getStationStatus = (stationId: string): StationExecutionSummary | null => {
+    return stationStatusMap[stationId] || null;
+  };
 
-  // Initial fetch
-  useEffect(() => {
-    fetchExecution();
-  }, [fetchExecution]);
-
-  // Poll for updates when workflow is running
-  useEffect(() => {
-    if (!execution || execution.status === 'completed' || execution.status === 'failed' || execution.status === 'cancelled') {
-      return;
-    }
-
-    const pollInterval = setInterval(() => {
-      fetchExecution();
-    }, 2000); // Poll every 2 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [execution, fetchExecution]);
-
-  const stations = execution?.stations ?? [];
-  const currentStation = execution?.current_station_id
-    ? stations.find((s) => s.station_id === execution.current_station_id) ?? null
+  /**
+   * Calculate progress (completed stations / total stations)
+   */
+  const progress = execution
+    ? {
+        completed: execution.stations.filter((s) => s.status === 'completed').length,
+        total: execution.stations.length,
+        percentage:
+          execution.stations.length > 0
+            ? Math.round(
+                (execution.stations.filter((s) => s.status === 'completed').length /
+                  execution.stations.length) *
+                  100
+              )
+            : 0,
+      }
     : null;
+
+  /**
+   * Check if workflow is currently running
+   */
+  const isRunning = execution?.status === 'running';
+
+  /**
+   * Check if workflow is completed (success or failure)
+   */
+  const isCompleted =
+    execution?.status === 'completed' ||
+    execution?.status === 'failed' ||
+    execution?.status === 'cancelled';
 
   return {
     execution,
-    stations,
-    currentStation,
     isLoading,
     error,
-    refetch: fetchExecution,
+    refetch,
+    stationStatusMap,
+    getStationStatus,
+    progress,
+    isRunning,
+    isCompleted,
   };
-};
+}

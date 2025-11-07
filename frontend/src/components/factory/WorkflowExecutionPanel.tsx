@@ -10,9 +10,9 @@ import {
   StopCircle,
   RotateCcw,
 } from 'lucide-react';
-import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
+import { useWorkflowExecutionDetails } from '@/hooks/useWorkflowExecutionDetails';
 import { useExecutionProcesses } from '@/hooks/useExecutionProcesses';
-import { workflowExecutionApi } from '@/lib/api';
+import { workflowExecutionsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { NewCardContent, NewCardHeader } from '@/components/ui/new-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -32,7 +32,7 @@ export function WorkflowExecutionPanel({
   onClose,
 }: WorkflowExecutionPanelProps) {
   const { execution, stations, currentStation, isLoading, error, refetch } =
-    useWorkflowExecution(executionId);
+    useWorkflowExecutionDetails(executionId);
   const [selectedStation, setSelectedStation] =
     useState<StationExecutionSummary | null>(null);
   const [isActioning, setIsActioning] = useState(false);
@@ -57,7 +57,7 @@ export function WorkflowExecutionPanel({
 
     setIsActioning(true);
     try {
-      await workflowExecutionApi.cancel(executionId, {
+      await workflowExecutionsApi.cancel(executionId, {
         reason: 'Cancelled by user',
       });
       await refetch();
@@ -77,7 +77,7 @@ export function WorkflowExecutionPanel({
 
     setIsActioning(true);
     try {
-      await workflowExecutionApi.retryStation(executionId, {
+      await workflowExecutionsApi.retryStation(executionId, {
         station_execution_id: stationExecutionId,
       });
       await refetch();
@@ -584,7 +584,7 @@ function StationDetails({
                 </p>
                 {process.exit_code !== null && (
                   <p className="text-xs text-muted-foreground">
-                    Exit code: {process.exit_code}
+                    Exit code: {Number(process.exit_code)}
                   </p>
                 )}
               </div>
