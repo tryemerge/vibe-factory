@@ -59,7 +59,8 @@
         "pages": [
           "core-features/subtasks",
           "core-features/new-task-attempts",
-          "core-features/resolving-rebase-conflicts"
+          "core-features/resolving-rebase-conflicts",
+          "features/workflow-execution"
         ]
       },
       {

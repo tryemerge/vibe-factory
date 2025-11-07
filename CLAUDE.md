@@ -355,6 +355,15 @@ shared/types.ts    # Auto-generated TypeScript types from Rust
    - Tools: `list_projects`, `list_tasks`, `create_task`, `update_task`, etc.
    - AI agents can manage tasks via MCP protocol
 
+5. **Workflow Execution**: Multi-stage AI agent pipelines with conditional branching
+   - **Workflows**: Directed graphs of stations (processing stages) and transitions (conditional routing)
+   - **Stations**: Individual processing stages with assigned agents, prompts, and expected outputs
+   - **Transitions**: Conditional rules determining the next station based on current station's result
+   - **Context Accumulation**: Outputs from completed stations are merged and passed to subsequent stations
+   - **Execution Tracking**: Full audit trail of workflow runs, station executions, and outputs
+   - **Recovery**: Checkpoints enable resumption from failures, station-level retry without full workflow restart
+   - See `docs/features/workflow-execution.md` for comprehensive documentation
+
 ### API Patterns
 
 - REST endpoints under `/api/*`
