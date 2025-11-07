@@ -104,7 +104,7 @@ use db::{
     DBService,
     models::{
         agent::Agent,
-        execution_process::{ExecutionProcess, ExecutionProcessRunReason},
+        execution_process::{ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus},
         station_execution::{CreateStationExecution, StationExecution, UpdateStationExecution},
         station_transition::StationTransition,
         task::{Task, TaskStatus},
@@ -164,8 +164,104 @@ pub enum WorkflowOrchestratorError {
     #[error("Workflow execution not found: {0}")]
     WorkflowExecutionNotFound(Uuid),
 
+    #[error("Station execution not found: {0}")]
+    StationExecutionNotFound(Uuid),
+
+    #[error("Execution process not found: {0}")]
+    ExecutionProcessNotFound(Uuid),
+
+    #[error("Station execution timeout: {station_id} (timeout: {timeout_ms}ms)")]
+    StationExecutionTimeout { station_id: Uuid, timeout_ms: u64 },
+
+    #[error("Circular workflow detected: visited stations {0:?}")]
+    CircularWorkflow(Vec<Uuid>),
+
+    #[error("Invalid transition condition syntax: {0}")]
+    InvalidTransitionSyntax(String),
+
+    #[error("Missing output context keys: expected {expected:?}, got {actual:?}")]
+    MissingOutputKeys {
+        expected: Vec<String>,
+        actual: Vec<String>,
+    },
+
+    #[error("Station execution failed: {station_id} - {reason}")]
+    StationExecutionFailed { station_id: Uuid, reason: String },
+
+    #[error("Git conflict during execution: {0}")]
+    GitConflict(String),
+
+    #[error("Database connection lost during execution")]
+    DatabaseConnectionLost,
+
+    #[error("Workflow execution in invalid state: expected {expected}, got {actual}")]
+    InvalidWorkflowState { expected: String, actual: String },
+
+    #[error("Cannot resume workflow: {0}")]
+    ResumeError(String),
+
+    #[error("Retry limit exceeded for station {station_id}: {attempts} attempts")]
+    RetryLimitExceeded { station_id: Uuid, attempts: u32 },
+
     #[error("Other error: {0}")]
     Other(#[from] anyhow::Error),
+}
+
+/// Error context for structured logging and debugging
+#[derive(Debug, Clone)]
+pub struct ErrorContext {
+    pub station_id: Option<Uuid>,
+    pub station_execution_id: Option<Uuid>,
+    pub workflow_execution_id: Option<Uuid>,
+    pub execution_process_id: Option<Uuid>,
+    pub error_message: String,
+    pub timestamp: chrono::DateTime<Utc>,
+}
+
+impl ErrorContext {
+    pub fn new(error_message: String) -> Self {
+        Self {
+            station_id: None,
+            station_execution_id: None,
+            workflow_execution_id: None,
+            execution_process_id: None,
+            error_message,
+            timestamp: Utc::now(),
+        }
+    }
+
+    pub fn with_station(mut self, station_id: Uuid) -> Self {
+        self.station_id = Some(station_id);
+        self
+    }
+
+    pub fn with_station_execution(mut self, station_execution_id: Uuid) -> Self {
+        self.station_execution_id = Some(station_execution_id);
+        self
+    }
+
+    pub fn with_workflow_execution(mut self, workflow_execution_id: Uuid) -> Self {
+        self.workflow_execution_id = Some(workflow_execution_id);
+        self
+    }
+
+    pub fn with_execution_process(mut self, execution_process_id: Uuid) -> Self {
+        self.execution_process_id = Some(execution_process_id);
+        self
+    }
+
+    /// Log this error context with structured fields
+    pub fn log_error(&self) {
+        tracing::error!(
+            station_id = ?self.station_id,
+            station_execution_id = ?self.station_execution_id,
+            workflow_execution_id = ?self.workflow_execution_id,
+            execution_process_id = ?self.execution_process_id,
+            timestamp = %self.timestamp,
+            "Workflow orchestration error: {}",
+            self.error_message
+        );
+    }
 }
 
 /// Workflow orchestrator service for managing station execution
@@ -449,10 +545,11 @@ impl WorkflowOrchestrator {
     /// This function:
     /// 1. Evaluates transition conditions (if conditional)
     /// 2. Handles unconditional transitions
-    /// 3. Returns the next station or None if workflow is complete
+    /// 3. Detects circular workflows
+    /// 4. Returns the next station or None if workflow is complete
     pub async fn advance_to_next_station(
         &self,
-        _workflow_execution_id: Uuid,
+        workflow_execution_id: Uuid,
         current_station_id: Uuid,
         station_execution: &StationExecution,
     ) -> WorkflowOrchestratorResult<Option<Uuid>> {
@@ -462,25 +559,51 @@ impl WorkflowOrchestrator {
 
         if transitions.is_empty() {
             tracing::info!(
-                "No transitions found from station {}, workflow complete",
-                current_station_id
+                workflow_execution_id = ?workflow_execution_id,
+                current_station_id = ?current_station_id,
+                "No transitions found from station, workflow complete"
             );
             return Ok(None);
         }
 
         // Evaluate transitions to find the next station
         for transition in transitions {
+            // Validate transition condition syntax first
+            Self::validate_transition_condition(
+                transition.condition_type.as_deref(),
+                transition.condition_value.as_deref(),
+            )?;
+
             if self.evaluate_transition(&transition, station_execution).await? {
+                let next_station_id = transition.target_station_id;
+
                 tracing::info!(
-                    "Transition {} matched, moving to station {}",
-                    transition.id,
-                    transition.target_station_id
+                    workflow_execution_id = ?workflow_execution_id,
+                    transition_id = ?transition.id,
+                    current_station_id = ?current_station_id,
+                    next_station_id = ?next_station_id,
+                    condition_type = ?transition.condition_type,
+                    "Transition matched, moving to next station"
                 );
-                return Ok(Some(transition.target_station_id));
+
+                // Detect circular workflows before advancing
+                self.detect_circular_workflow(workflow_execution_id, next_station_id).await?;
+
+                return Ok(Some(next_station_id));
             }
         }
 
         // No valid transition found
+        let error_ctx = ErrorContext::new(format!(
+            "No valid transition found from station {}",
+            current_station_id
+        ))
+        .with_station(current_station_id)
+        .with_workflow_execution(workflow_execution_id)
+        .with_station_execution(station_execution.id);
+
+        error_ctx.log_error();
+
         Err(WorkflowOrchestratorError::NoValidTransition(
             current_station_id,
         ))
@@ -695,6 +818,11 @@ impl WorkflowOrchestrator {
     /// ```json
     /// {"check_output_key": "review_passed", "expected_value": "true"}
     /// ```
+    ///
+    /// # Error Handling
+    /// - Returns error if output_data cannot be parsed
+    /// - Returns error if condition_value has invalid syntax
+    /// - Logs warnings for missing keys (returns false, not error)
     async fn evaluate_condition_expression(
         &self,
         condition_value: &str,
@@ -777,6 +905,7 @@ impl WorkflowOrchestrator {
     /// 2. Checks if station succeeded/failed
     /// 3. Advances to next station or completes workflow
     /// 4. Moves task to "inreview" when all stations complete
+    /// 5. Handles errors with structured logging and recovery
     pub async fn handle_station_completion<C: ContainerService + Sync>(
         &self,
         container_service: &C,
@@ -787,10 +916,9 @@ impl WorkflowOrchestrator {
         // Load the station execution
         let _station_execution = StationExecution::find_by_id(self.pool(), station_execution_id)
             .await?
-            .ok_or(WorkflowOrchestratorError::Other(anyhow!(
-                "Station execution not found: {}",
+            .ok_or(WorkflowOrchestratorError::StationExecutionNotFound(
                 station_execution_id
-            )))?;
+            ))?;
 
         // Update status and output data
         let status = if success { "completed" } else { "failed" };
@@ -808,9 +936,11 @@ impl WorkflowOrchestrator {
         .await?;
 
         tracing::info!(
-            "Station execution {} completed with status: {}",
-            station_execution_id,
-            status
+            station_id = ?station_execution.station_id,
+            station_execution_id = ?station_execution_id,
+            workflow_execution_id = ?station_execution.workflow_execution_id,
+            status = status,
+            "Station execution completed"
         );
 
         // Load the workflow execution
@@ -823,9 +953,17 @@ impl WorkflowOrchestrator {
 
         // Only advance if the station succeeded
         if !success {
+            let error_ctx = ErrorContext::new(format!("Station execution failed: {}", status))
+                .with_station(station_execution.station_id)
+                .with_station_execution(station_execution_id)
+                .with_workflow_execution(workflow_execution.id);
+
+            error_ctx.log_error();
+
             tracing::warn!(
-                "Station execution {} failed, not advancing to next station",
-                station_execution_id
+                station_execution_id = ?station_execution_id,
+                workflow_execution_id = ?workflow_execution.id,
+                "Station execution failed, marking workflow as failed"
             );
 
             // Mark workflow execution as failed
@@ -1190,6 +1328,318 @@ impl WorkflowOrchestrator {
 
         Ok(())
     }
+
+    /// Resume a workflow execution from its last checkpoint (current_station_id)
+    ///
+    /// This function allows recovering from system failures by restarting execution
+    /// from the current station. It handles the following recovery scenarios:
+    /// - Process crash/restart
+    /// - Database connection lost during execution
+    /// - System shutdown during workflow execution
+    ///
+    /// # Arguments
+    /// * `container_service` - Container service for starting station executions
+    /// * `workflow_execution_id` - The workflow execution to resume
+    ///
+    /// # Recovery Logic
+    /// 1. Validate workflow execution exists and is in "running" state
+    /// 2. Check if current_station_id is set (indicates checkpoint)
+    /// 3. Find the station execution for the current station
+    /// 4. If station execution is "running" but process is dead, restart it
+    /// 5. If station execution is "completed", advance to next station
+    /// 6. If no valid checkpoint, fail with error
+    pub async fn resume_workflow_execution<C: ContainerService + Sync>(
+        &self,
+        container_service: &C,
+        workflow_execution_id: Uuid,
+    ) -> WorkflowOrchestratorResult<()> {
+        tracing::info!(
+            workflow_execution_id = ?workflow_execution_id,
+            "Attempting to resume workflow execution"
+        );
+
+        // Load workflow execution
+        let workflow_execution = WorkflowExecution::find_by_id(self.pool(), workflow_execution_id)
+            .await?
+            .ok_or(WorkflowOrchestratorError::WorkflowExecutionNotFound(
+                workflow_execution_id,
+            ))?;
+
+        // Validate state
+        if workflow_execution.status != "running" {
+            return Err(WorkflowOrchestratorError::InvalidWorkflowState {
+                expected: "running".to_string(),
+                actual: workflow_execution.status.clone(),
+            });
+        }
+
+        // Get current station from checkpoint
+        let current_station_id = workflow_execution
+            .current_station_id
+            .ok_or_else(|| WorkflowOrchestratorError::ResumeError(
+                "No current station checkpoint found".to_string()
+            ))?;
+
+        tracing::info!(
+            workflow_execution_id = ?workflow_execution_id,
+            current_station_id = ?current_station_id,
+            "Found checkpoint at station"
+        );
+
+        // Find station executions for this workflow and current station
+        let station_executions =
+            StationExecution::find_by_workflow_execution(self.pool(), workflow_execution_id).await?;
+
+        let current_station_exec = station_executions
+            .iter()
+            .find(|se| se.station_id == current_station_id)
+            .ok_or_else(|| WorkflowOrchestratorError::ResumeError(
+                format!("No station execution found for current station {}", current_station_id)
+            ))?;
+
+        match current_station_exec.status.as_str() {
+            "running" => {
+                // Station was running when interrupted - check if process is still alive
+                if let Some(exec_process_id) = current_station_exec.execution_process_id {
+                    let exec_process = ExecutionProcess::find_by_id(self.pool(), exec_process_id)
+                        .await?
+                        .ok_or(WorkflowOrchestratorError::ExecutionProcessNotFound(exec_process_id))?;
+
+                    if exec_process.status != ExecutionProcessStatus::Running {
+                        tracing::warn!(
+                            station_execution_id = ?current_station_exec.id,
+                            execution_process_id = ?exec_process_id,
+                            process_status = ?exec_process.status,
+                            "Process is not running, restarting station execution"
+                        );
+
+                        // Restart the station execution
+                        return self.retry_station_execution(
+                            container_service,
+                            workflow_execution_id,
+                            current_station_id,
+                            workflow_execution.task_attempt_id.ok_or_else(|| {
+                                anyhow!("Workflow execution has no task_attempt_id")
+                            })?,
+                        ).await;
+                    } else {
+                        tracing::info!(
+                            station_execution_id = ?current_station_exec.id,
+                            execution_process_id = ?exec_process_id,
+                            "Process is still running, no action needed"
+                        );
+                    }
+                } else {
+                    tracing::warn!(
+                        station_execution_id = ?current_station_exec.id,
+                        "Station execution is running but has no execution_process_id, restarting"
+                    );
+
+                    // Restart the station execution
+                    return self.retry_station_execution(
+                        container_service,
+                        workflow_execution_id,
+                        current_station_id,
+                        workflow_execution.task_attempt_id.ok_or_else(|| {
+                            anyhow!("Workflow execution has no task_attempt_id")
+                        })?,
+                    ).await;
+                }
+            }
+            "completed" => {
+                tracing::info!(
+                    station_execution_id = ?current_station_exec.id,
+                    "Current station is completed, advancing to next station"
+                );
+
+                // Gather context from all completed stations
+                let context_data = self.gather_context_data(workflow_execution_id).await?;
+
+                // Try to advance to next station
+                let next_station_id = self
+                    .advance_to_next_station(
+                        workflow_execution_id,
+                        current_station_id,
+                        current_station_exec,
+                    )
+                    .await?;
+
+                if let Some(next_station_id) = next_station_id {
+                    // Update workflow execution with next station
+                    WorkflowExecution::update(
+                        self.pool(),
+                        workflow_execution_id,
+                        UpdateWorkflowExecution {
+                            current_station_id: Some(next_station_id),
+                            status: None,
+                            started_at: None,
+                            completed_at: None,
+                        },
+                    )
+                    .await?;
+
+                    // Start the next station
+                    let task_attempt_id = workflow_execution
+                        .task_attempt_id
+                        .ok_or_else(|| anyhow!("Workflow execution has no task_attempt_id"))?;
+
+                    self.execute_station(
+                        container_service,
+                        workflow_execution_id,
+                        next_station_id,
+                        task_attempt_id,
+                        Some(context_data),
+                    )
+                    .await?;
+                } else {
+                    // Workflow is complete
+                    WorkflowExecution::update(
+                        self.pool(),
+                        workflow_execution_id,
+                        UpdateWorkflowExecution {
+                            status: Some("completed".to_string()),
+                            completed_at: Some(Utc::now()),
+                            current_station_id: None,
+                            started_at: None,
+                        },
+                    )
+                    .await?;
+
+                    Task::update_status(self.pool(), workflow_execution.task_id, TaskStatus::InReview)
+                        .await?;
+                }
+            }
+            "failed" => {
+                return Err(WorkflowOrchestratorError::ResumeError(
+                    format!("Cannot resume from failed station execution {}", current_station_exec.id)
+                ));
+            }
+            _ => {
+                return Err(WorkflowOrchestratorError::ResumeError(
+                    format!("Unknown station execution status: {}", current_station_exec.status)
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Retry a station execution from a checkpoint
+    ///
+    /// This function allows retrying a failed or interrupted station execution.
+    /// It's useful for handling transient failures like network issues or timeout.
+    ///
+    /// # Arguments
+    /// * `container_service` - Container service for starting station executions
+    /// * `workflow_execution_id` - The workflow execution
+    /// * `station_id` - The station to retry
+    /// * `task_attempt_id` - The task attempt ID
+    pub async fn retry_station_execution<C: ContainerService + Sync>(
+        &self,
+        container_service: &C,
+        workflow_execution_id: Uuid,
+        station_id: Uuid,
+        task_attempt_id: Uuid,
+    ) -> WorkflowOrchestratorResult<()> {
+        tracing::info!(
+            workflow_execution_id = ?workflow_execution_id,
+            station_id = ?station_id,
+            "Retrying station execution"
+        );
+
+        // Gather context from previously completed stations
+        let context_data = self.gather_context_data(workflow_execution_id).await?;
+
+        // Create a new station execution (the old one stays as "failed" or "running" for audit)
+        self.execute_station(
+            container_service,
+            workflow_execution_id,
+            station_id,
+            task_attempt_id,
+            Some(context_data),
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Detect circular workflows by tracking visited stations
+    ///
+    /// This function prevents infinite loops by detecting when a workflow
+    /// would transition back to a station that has already been visited.
+    ///
+    /// # Arguments
+    /// * `workflow_execution_id` - The workflow execution to check
+    /// * `next_station_id` - The next station we're about to visit
+    ///
+    /// # Returns
+    /// * `Ok(())` if no circular reference detected
+    /// * `Err(CircularWorkflow)` if the station has already been visited
+    pub async fn detect_circular_workflow(
+        &self,
+        workflow_execution_id: Uuid,
+        next_station_id: Uuid,
+    ) -> WorkflowOrchestratorResult<()> {
+        // Get all station executions for this workflow
+        let station_executions =
+            StationExecution::find_by_workflow_execution(self.pool(), workflow_execution_id).await?;
+
+        // Extract visited station IDs
+        let visited_stations: Vec<Uuid> = station_executions
+            .iter()
+            .map(|se| se.station_id)
+            .collect();
+
+        // Check if next station has already been visited
+        if visited_stations.contains(&next_station_id) {
+            tracing::error!(
+                workflow_execution_id = ?workflow_execution_id,
+                next_station_id = ?next_station_id,
+                visited_stations = ?visited_stations,
+                "Circular workflow detected"
+            );
+
+            return Err(WorkflowOrchestratorError::CircularWorkflow(visited_stations));
+        }
+
+        Ok(())
+    }
+
+    /// Validate transition condition syntax
+    ///
+    /// This function validates that a transition condition is well-formed
+    /// before attempting to evaluate it. This prevents cryptic runtime errors.
+    fn validate_transition_condition(
+        condition_type: Option<&str>,
+        condition_value: Option<&str>,
+    ) -> WorkflowOrchestratorResult<()> {
+        match condition_type {
+            Some("conditional") => {
+                if let Some(value) = condition_value {
+                    // Try parsing as JSON to validate syntax
+                    if value.starts_with('{') {
+                        serde_json::from_str::<JsonValue>(value).map_err(|e| {
+                            WorkflowOrchestratorError::InvalidTransitionSyntax(format!(
+                                "Invalid JSON in condition_value: {}",
+                                e
+                            ))
+                        })?;
+                    }
+                    Ok(())
+                } else {
+                    Err(WorkflowOrchestratorError::InvalidTransitionSyntax(
+                        "Conditional transition requires condition_value".to_string(),
+                    ))
+                }
+            }
+            Some("success") | Some("failure") | Some("unconditional") | Some("always") | None => {
+                Ok(())
+            }
+            Some(unknown) => Err(WorkflowOrchestratorError::InvalidTransitionSyntax(
+                format!("Unknown condition_type: {}", unknown),
+            )),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1395,5 +1845,57 @@ mod tests {
             !result,
             "Should return false when there's no output data"
         );
+    }
+
+    // NOTE: Circular workflow detection test is in the integration tests
+    // because it requires a full database setup with foreign keys
+
+    #[test]
+    fn test_validate_transition_condition() {
+        use super::WorkflowOrchestrator;
+
+        // Valid conditions
+        assert!(WorkflowOrchestrator::validate_transition_condition(Some("success"), None).is_ok());
+        assert!(WorkflowOrchestrator::validate_transition_condition(Some("failure"), None).is_ok());
+        assert!(WorkflowOrchestrator::validate_transition_condition(Some("unconditional"), None).is_ok());
+        assert!(WorkflowOrchestrator::validate_transition_condition(None, None).is_ok());
+
+        // Valid conditional
+        assert!(WorkflowOrchestrator::validate_transition_condition(
+            Some("conditional"),
+            Some(r#"{"key": "test", "value": true}"#)
+        ).is_ok());
+
+        // Invalid: conditional without condition_value
+        assert!(WorkflowOrchestrator::validate_transition_condition(Some("conditional"), None).is_err());
+
+        // Invalid: conditional with malformed JSON
+        assert!(WorkflowOrchestrator::validate_transition_condition(
+            Some("conditional"),
+            Some(r#"{"key": "test", broken"#)
+        ).is_err());
+
+        // Invalid: unknown condition_type
+        assert!(WorkflowOrchestrator::validate_transition_condition(Some("unknown"), None).is_err());
+    }
+
+    #[test]
+    fn test_error_context_builder() {
+        let station_id = Uuid::new_v4();
+        let station_execution_id = Uuid::new_v4();
+        let workflow_execution_id = Uuid::new_v4();
+        let execution_process_id = Uuid::new_v4();
+
+        let error_ctx = ErrorContext::new("Test error".to_string())
+            .with_station(station_id)
+            .with_station_execution(station_execution_id)
+            .with_workflow_execution(workflow_execution_id)
+            .with_execution_process(execution_process_id);
+
+        assert_eq!(error_ctx.error_message, "Test error");
+        assert_eq!(error_ctx.station_id, Some(station_id));
+        assert_eq!(error_ctx.station_execution_id, Some(station_execution_id));
+        assert_eq!(error_ctx.workflow_execution_id, Some(workflow_execution_id));
+        assert_eq!(error_ctx.execution_process_id, Some(execution_process_id));
     }
 }
