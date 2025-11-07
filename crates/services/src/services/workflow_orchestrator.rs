@@ -1,6 +1,47 @@
 //! Workflow Orchestration Service
 //!
-//! This module provides the core orchestration logic for executing workflow stations sequentially.
+//! This module provides the core orchestration logic for executing workflow stations sequentially,
+//! including conditional transition evaluation for dynamic workflow routing.
+//!
+//! ## Transition Condition Evaluation
+//!
+//! The orchestrator supports multiple transition types for flexible workflow routing:
+//!
+//! ### Unconditional Transitions
+//! Always follow the transition, regardless of station output:
+//! ```text
+//! condition_type: "unconditional" (or "always" or null)
+//! condition_value: null
+//! ```
+//!
+//! ### Status-Based Transitions
+//! Route based on station execution status:
+//! - `"success"`: Only transition if station completed successfully
+//! - `"failure"`: Only transition if station failed
+//!
+//! ### Conditional Transitions
+//! Evaluate station output_data to determine routing:
+//!
+//! **Simple key existence check:**
+//! ```text
+//! condition_type: "conditional"
+//! condition_value: "review_passed"
+//! → Returns true if output_data contains the key "review_passed"
+//! ```
+//!
+//! **Value comparison:**
+//! ```text
+//! condition_type: "conditional"
+//! condition_value: {"key": "review_passed", "value": true}
+//! → Returns true if output_data.review_passed == true
+//! ```
+//!
+//! **Example Workflow:**
+//! ```text
+//! Station A: Code Review
+//!   ├─→ Station B (conditional: review_passed == true)
+//!   └─→ Station C (conditional: review_passed == false)
+//! ```
 //!
 //! ## Integration Architecture
 //!
@@ -393,7 +434,111 @@ impl WorkflowOrchestrator {
         ))
     }
 
+    /// Public helper function to evaluate a transition condition
+    ///
+    /// This is a convenience function that can be used for testing or external evaluation
+    /// of transition conditions without requiring a full workflow context.
+    ///
+    /// # Arguments
+    /// * `transition` - The StationTransition to evaluate
+    /// * `station_execution` - The StationExecution with output_data to evaluate against
+    ///
+    /// # Returns
+    /// * `Ok(true)` - The transition should be taken
+    /// * `Ok(false)` - The transition should not be taken
+    /// * `Err(...)` - Evaluation failed (invalid condition format, etc.)
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// use workflow_orchestrator::WorkflowOrchestrator;
+    /// use db::models::station_transition::StationTransition;
+    /// use db::models::station_execution::StationExecution;
+    ///
+    /// let orchestrator = WorkflowOrchestrator::new(db_service);
+    ///
+    /// // Evaluate a conditional transition
+    /// let should_take = orchestrator.evaluate_transition_condition(
+    ///     &transition,
+    ///     &station_execution
+    /// ).await?;
+    ///
+    /// if should_take {
+    ///     // Take the transition...
+    /// }
+    /// ```
+    pub async fn evaluate_transition_condition(
+        &self,
+        transition: &StationTransition,
+        station_execution: &StationExecution,
+    ) -> WorkflowOrchestratorResult<bool> {
+        self.evaluate_transition(transition, station_execution)
+            .await
+    }
+
     /// Evaluate whether a transition should be taken
+    ///
+    /// # Condition Types
+    ///
+    /// ## Unconditional Transitions
+    ///
+    /// **`unconditional`** or **`always`** or **`None`**: Always follow this transition
+    /// ```rust
+    /// // Example: Transition A -> B (always happens)
+    /// StationTransition {
+    ///     condition_type: Some("unconditional"),
+    ///     condition_value: None,
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// ## Status-Based Transitions
+    ///
+    /// **`success`**: Only transition if station succeeded (status == "completed")
+    /// ```rust
+    /// StationTransition {
+    ///     condition_type: Some("success"),
+    ///     condition_value: None,
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// **`failure`**: Only transition if station failed (status == "failed")
+    /// ```rust
+    /// StationTransition {
+    ///     condition_type: Some("failure"),
+    ///     condition_value: None,
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// ## Conditional Transitions
+    ///
+    /// **`conditional`**: Evaluate condition_value against station output_data
+    ///
+    /// ### Example 1: Key Existence
+    /// ```rust
+    /// // Transition if output contains "review_passed" key
+    /// StationTransition {
+    ///     condition_type: Some("conditional"),
+    ///     condition_value: Some("review_passed"),
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// ### Example 2: Value Comparison
+    /// ```rust
+    /// // Transition if output.review_passed == true
+    /// StationTransition {
+    ///     condition_type: Some("conditional"),
+    ///     condition_value: Some(r#"{"key": "review_passed", "value": true}"#),
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// # Returns
+    /// - `Ok(true)` if the transition should be taken
+    /// - `Ok(false)` if the transition should not be taken
+    /// - `Err(...)` if evaluation fails
     async fn evaluate_transition(
         &self,
         transition: &StationTransition,
@@ -401,30 +546,67 @@ impl WorkflowOrchestrator {
     ) -> WorkflowOrchestratorResult<bool> {
         // Check condition_type
         match transition.condition_type.as_deref() {
-            Some("always") | None => {
+            Some("unconditional") | Some("always") | None => {
                 // Always transition (default behavior)
+                tracing::debug!(
+                    "Transition {} is unconditional, always taking it",
+                    transition.id
+                );
                 Ok(true)
             }
             Some("success") => {
                 // Only transition if station succeeded
-                Ok(station_execution.status == "completed")
+                let should_transition = station_execution.status == "completed";
+                tracing::debug!(
+                    "Transition {} requires success, station status is '{}', result: {}",
+                    transition.id,
+                    station_execution.status,
+                    should_transition
+                );
+                Ok(should_transition)
             }
             Some("failure") => {
                 // Only transition if station failed
-                Ok(station_execution.status == "failed")
+                let should_transition = station_execution.status == "failed";
+                tracing::debug!(
+                    "Transition {} requires failure, station status is '{}', result: {}",
+                    transition.id,
+                    station_execution.status,
+                    should_transition
+                );
+                Ok(should_transition)
             }
             Some("conditional") => {
                 // Evaluate condition_value expression
                 if let Some(condition_value) = &transition.condition_value {
-                    self.evaluate_condition_expression(condition_value, station_execution)
-                        .await
+                    tracing::debug!(
+                        "Evaluating conditional transition {} with condition: {}",
+                        transition.id,
+                        condition_value
+                    );
+                    let result = self
+                        .evaluate_condition_expression(condition_value, station_execution)
+                        .await?;
+                    tracing::debug!(
+                        "Conditional transition {} evaluation result: {}",
+                        transition.id,
+                        result
+                    );
+                    Ok(result)
                 } else {
-                    // No condition value provided, default to false
+                    tracing::warn!(
+                        "Transition {} is conditional but has no condition_value, defaulting to false",
+                        transition.id
+                    );
                     Ok(false)
                 }
             }
             Some(unknown) => {
-                tracing::warn!("Unknown condition_type: {}", unknown);
+                tracing::warn!(
+                    "Unknown condition_type '{}' for transition {}, defaulting to false",
+                    unknown,
+                    transition.id
+                );
                 Ok(false)
             }
         }
@@ -432,43 +614,108 @@ impl WorkflowOrchestrator {
 
     /// Evaluate a conditional expression
     ///
-    /// For Phase 1.1, this is a simple implementation
-    /// In the future, this could use a proper expression evaluator
+    /// Supports multiple evaluation strategies:
+    /// 1. Simple key existence check
+    /// 2. Key-value comparison
+    /// 3. Legacy format (check_output_key + expected_value)
+    ///
+    /// # Condition Format Examples
+    ///
+    /// **Key Existence Check:**
+    /// ```json
+    /// "review_passed"
+    /// ```
+    /// Returns true if `output_data` contains a key "review_passed"
+    ///
+    /// **Key-Value Comparison (String):**
+    /// ```json
+    /// {"key": "review_passed", "value": "true"}
+    /// ```
+    /// Returns true if `output_data.review_passed == "true"`
+    ///
+    /// **Key-Value Comparison (Boolean):**
+    /// ```json
+    /// {"key": "tests_passed", "value": true}
+    /// ```
+    /// Returns true if `output_data.tests_passed == true`
+    ///
+    /// **Legacy Format (Deprecated):**
+    /// ```json
+    /// {"check_output_key": "review_passed", "expected_value": "true"}
+    /// ```
     async fn evaluate_condition_expression(
         &self,
         condition_value: &str,
         station_execution: &StationExecution,
     ) -> WorkflowOrchestratorResult<bool> {
-        // Parse condition_value as JSON
-        let condition: JsonValue = serde_json::from_str(condition_value).map_err(|e| {
-            WorkflowOrchestratorError::TransitionEvaluationError(format!(
-                "Failed to parse condition JSON: {}",
-                e
-            ))
-        })?;
-
-        // Simple evaluation: check if output_data contains expected values
-        // Example condition: {"check_output_key": "some_key", "expected_value": "some_value"}
-        if let Some(output_data) = &station_execution.output_data {
-            let output: JsonValue = serde_json::from_str(output_data).map_err(|e| {
+        // Parse station output_data (if available)
+        let output = if let Some(output_data) = &station_execution.output_data {
+            serde_json::from_str::<JsonValue>(output_data).map_err(|e| {
                 WorkflowOrchestratorError::OutputDataParseError(format!(
                     "Failed to parse station output data: {}",
                     e
                 ))
-            })?;
+            })?
+        } else {
+            // No output data, condition cannot be satisfied
+            return Ok(false);
+        };
 
-            // Check if the condition is met
-            if let Some(check_key) = condition.get("check_output_key").and_then(|v| v.as_str()) {
-                if let Some(expected_value) = condition.get("expected_value") {
-                    if let Some(actual_value) = output.get(check_key) {
+        // Try parsing condition_value as JSON
+        let condition_result = serde_json::from_str::<JsonValue>(condition_value);
+
+        match condition_result {
+            Ok(JsonValue::String(key)) => {
+                // Simple key existence check
+                // Example: condition_value = "review_passed"
+                // Returns true if output contains the key "review_passed"
+                Ok(output.get(&key).is_some())
+            }
+            Ok(JsonValue::Object(condition_obj)) => {
+                // Object-based evaluation
+
+                // Modern format: {"key": "...", "value": ...}
+                if let (Some(key), Some(expected_value)) = (
+                    condition_obj.get("key").and_then(|v| v.as_str()),
+                    condition_obj.get("value"),
+                ) {
+                    if let Some(actual_value) = output.get(key) {
                         return Ok(actual_value == expected_value);
+                    } else {
+                        // Key doesn't exist in output
+                        return Ok(false);
                     }
                 }
+
+                // Legacy format: {"check_output_key": "...", "expected_value": ...}
+                if let (Some(check_key), Some(expected_value)) = (
+                    condition_obj.get("check_output_key").and_then(|v| v.as_str()),
+                    condition_obj.get("expected_value"),
+                ) {
+                    if let Some(actual_value) = output.get(check_key) {
+                        return Ok(actual_value == expected_value);
+                    } else {
+                        return Ok(false);
+                    }
+                }
+
+                // Unknown object format
+                Err(WorkflowOrchestratorError::TransitionEvaluationError(
+                    format!("Unsupported condition object format. Expected {{\"key\": \"...\", \"value\": ...}} or {{\"check_output_key\": \"...\", \"expected_value\": ...}}, got: {}", condition_value)
+                ))
+            }
+            Ok(_) => {
+                // Other JSON types (array, number, boolean, null) are not supported
+                Err(WorkflowOrchestratorError::TransitionEvaluationError(
+                    format!("Unsupported condition type. Expected string (key name) or object, got: {}", condition_value)
+                ))
+            }
+            Err(_) => {
+                // Not valid JSON - try treating as plain string key name
+                // Example: condition_value = "review_passed" (without quotes)
+                Ok(output.get(condition_value).is_some())
             }
         }
-
-        // Default to false if condition cannot be evaluated
-        Ok(false)
     }
 
     /// Handle station completion
@@ -791,5 +1038,208 @@ impl WorkflowOrchestrator {
     }
 }
 
-// Integration tests would be added to test the full workflow orchestration
-// For now, the code is designed to be testable through the API endpoints
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    /// Test helper to create a station execution with output data
+    fn create_test_station_execution(
+        output_data: Option<&str>,
+        status: &str,
+    ) -> StationExecution {
+        StationExecution {
+            id: Uuid::new_v4(),
+            workflow_execution_id: Uuid::new_v4(),
+            station_id: Uuid::new_v4(),
+            execution_process_id: None,
+            status: status.to_string(),
+            output_data: output_data.map(|s| s.to_string()),
+            started_at: None,
+            completed_at: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    /// Test helper to create a station transition
+    fn create_test_transition(
+        condition_type: Option<&str>,
+        condition_value: Option<&str>,
+    ) -> StationTransition {
+        StationTransition {
+            id: Uuid::new_v4(),
+            workflow_id: Uuid::new_v4(),
+            source_station_id: Uuid::new_v4(),
+            target_station_id: Uuid::new_v4(),
+            condition: None,
+            label: None,
+            condition_type: condition_type.map(|s| s.to_string()),
+            condition_value: condition_value.map(|s| s.to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_condition_key_existence() {
+        // Test simple key existence check
+        let output_data = r#"{"review_passed": true, "tests_run": 42}"#;
+        let station_execution = create_test_station_execution(Some(output_data), "completed");
+
+        // Create a minimal orchestrator (we don't need a real DB for this test)
+        // Note: This test focuses on the logic, not DB operations
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let result = orchestrator
+            .evaluate_condition_expression("review_passed", &station_execution)
+            .await
+            .unwrap();
+
+        assert!(result, "Should return true when key exists");
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_condition_key_not_exists() {
+        let output_data = r#"{"review_passed": true}"#;
+        let station_execution = create_test_station_execution(Some(output_data), "completed");
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let result = orchestrator
+            .evaluate_condition_expression("nonexistent_key", &station_execution)
+            .await
+            .unwrap();
+
+        assert!(!result, "Should return false when key doesn't exist");
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_condition_value_comparison_true() {
+        let output_data = r#"{"review_passed": true}"#;
+        let station_execution = create_test_station_execution(Some(output_data), "completed");
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let condition = r#"{"key": "review_passed", "value": true}"#;
+        let result = orchestrator
+            .evaluate_condition_expression(condition, &station_execution)
+            .await
+            .unwrap();
+
+        assert!(result, "Should return true when values match");
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_condition_value_comparison_false() {
+        let output_data = r#"{"review_passed": true}"#;
+        let station_execution = create_test_station_execution(Some(output_data), "completed");
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let condition = r#"{"key": "review_passed", "value": false}"#;
+        let result = orchestrator
+            .evaluate_condition_expression(condition, &station_execution)
+            .await
+            .unwrap();
+
+        assert!(!result, "Should return false when values don't match");
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_condition_string_value() {
+        let output_data = r#"{"status": "approved", "reviewer": "alice"}"#;
+        let station_execution = create_test_station_execution(Some(output_data), "completed");
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let condition = r#"{"key": "status", "value": "approved"}"#;
+        let result = orchestrator
+            .evaluate_condition_expression(condition, &station_execution)
+            .await
+            .unwrap();
+
+        assert!(result, "Should return true when string values match");
+    }
+
+    #[tokio::test]
+    async fn test_transition_unconditional() {
+        let station_execution = create_test_station_execution(None, "completed");
+        let transition = create_test_transition(Some("unconditional"), None);
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let result = orchestrator
+            .evaluate_transition(&transition, &station_execution)
+            .await
+            .unwrap();
+
+        assert!(result, "Unconditional transition should always be true");
+    }
+
+    #[tokio::test]
+    async fn test_transition_success() {
+        let station_execution = create_test_station_execution(None, "completed");
+        let transition = create_test_transition(Some("success"), None);
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let result = orchestrator
+            .evaluate_transition(&transition, &station_execution)
+            .await
+            .unwrap();
+
+        assert!(result, "Success transition should be true for completed status");
+    }
+
+    #[tokio::test]
+    async fn test_transition_failure() {
+        let station_execution = create_test_station_execution(None, "failed");
+        let transition = create_test_transition(Some("failure"), None);
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let result = orchestrator
+            .evaluate_transition(&transition, &station_execution)
+            .await
+            .unwrap();
+
+        assert!(result, "Failure transition should be true for failed status");
+    }
+
+    #[tokio::test]
+    async fn test_no_output_data_returns_false() {
+        // When there's no output data, conditional transitions should return false
+        let station_execution = create_test_station_execution(None, "completed");
+
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        let db = DBService { pool };
+        let orchestrator = WorkflowOrchestrator::new(db);
+
+        let result = orchestrator
+            .evaluate_condition_expression("any_key", &station_execution)
+            .await
+            .unwrap();
+
+        assert!(
+            !result,
+            "Should return false when there's no output data"
+        );
+    }
+}
