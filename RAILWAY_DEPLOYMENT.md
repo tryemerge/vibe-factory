@@ -4,6 +4,50 @@
 
 Vibe Kanban is configured for deployment on Railway using the existing Dockerfile. This guide covers deployment configuration, resource requirements, and troubleshooting.
 
+## Quick Start: Automated Deployment Scripts
+
+For the easiest deployment experience, use the provided automation scripts:
+
+```bash
+# 1. Initial Railway setup (run once)
+./scripts/railway-setup.sh
+
+# 2. Deploy to Railway
+./scripts/deploy-to-railway.sh
+
+# 3. Monitor logs
+./scripts/railway-logs.sh
+
+# 4. Backup database
+./scripts/railway-backup-db.sh
+```
+
+**Available automation scripts:**
+
+| Script | Purpose |
+|--------|---------|
+| `railway-setup.sh` | Interactive setup for new Railway projects |
+| `deploy-to-railway.sh` | One-command deployment with safety checks |
+| `railway-logs.sh` | Stream and filter logs (`--errors`, `--database`, etc.) |
+| `railway-backup-db.sh` | Download database backup from Railway volume |
+| `railway-restore-db.sh` | Restore database from backup (with safety checks) |
+
+**Makefile shortcuts:**
+
+```bash
+# Use Makefile for common tasks
+make -f Makefile.railway setup    # Initial setup
+make -f Makefile.railway deploy   # Deploy
+make -f Makefile.railway logs     # Stream logs
+make -f Makefile.railway backup   # Backup database
+make -f Makefile.railway help     # Show all commands
+```
+
+**Additional resources:**
+- **[RAILWAY_CLI_REFERENCE.md](./RAILWAY_CLI_REFERENCE.md)** - Quick reference for Railway CLI commands
+- **[RAILWAY_ENVIRONMENT.md](./RAILWAY_ENVIRONMENT.md)** - Complete environment variable guide
+- **[RAILWAY_DATABASE_GUIDE.md](./RAILWAY_DATABASE_GUIDE.md)** - Database management and backups
+
 ## Configuration Files
 
 ### `railway.toml`
@@ -121,14 +165,38 @@ Based on the application architecture:
 
 ## Deployment Steps
 
-### 1. Connect Repository
+### Option A: Automated Deployment (Recommended)
+
+Use the provided automation scripts for the easiest deployment:
+
+```bash
+# Step 1: Initial setup (interactive)
+./scripts/railway-setup.sh
+
+# Step 2: Deploy
+./scripts/deploy-to-railway.sh
+
+# Step 3: Monitor logs
+./scripts/railway-logs.sh
+```
+
+The setup script will guide you through:
+- Railway project creation/linking
+- Database configuration (SQLite volume or PostgreSQL)
+- Environment variable setup
+- GitHub OAuth configuration
+- Analytics configuration (optional)
+
+### Option B: Manual Deployment
+
+#### 1. Connect Repository
 
 1. Log in to Railway
 2. Create new project → "Deploy from GitHub repo"
 3. Select your Vibe Kanban repository
 4. Railway auto-detects the Dockerfile
 
-### 2. Configure Environment (Optional)
+#### 2. Configure Environment (Optional)
 
 If using custom GitHub OAuth app:
 
@@ -136,7 +204,7 @@ If using custom GitHub OAuth app:
 2. Add `GITHUB_CLIENT_ID` with your GitHub app client ID
 3. Redeploy to rebuild with new client ID
 
-### 3. Deploy
+#### 3. Deploy
 
 Railway automatically:
 1. Detects `railway.toml` or Dockerfile
@@ -145,12 +213,24 @@ Railway automatically:
 4. Sets PORT environment variable
 5. Routes traffic when health check passes
 
-### 4. Monitor Deployment
+#### 4. Monitor Deployment
 
 Check logs for:
 - ✅ `Server running on http://0.0.0.0:<PORT>`
 - ✅ Health check responding at `/`
 - ⚠️ Any git or database initialization errors
+
+Using the log viewer script:
+```bash
+# Stream all logs
+./scripts/railway-logs.sh
+
+# Filter for errors
+./scripts/railway-logs.sh --errors
+
+# Filter for database logs
+./scripts/railway-logs.sh --database
+```
 
 ## Known Limitations & Notes
 

@@ -1,0 +1,211 @@
+# ==============================================================================
+# Railway Deployment Makefile
+# ==============================================================================
+#
+# Shortcuts for common Railway operations.
+#
+# Usage:
+#   make -f Makefile.railway <target>
+#
+# Or create alias in your ~/.bashrc or ~/.zshrc:
+#   alias railway-make='make -f Makefile.railway'
+#
+# Then use:
+#   railway-make setup
+#   railway-make deploy
+#   railway-make logs
+#
+# ==============================================================================
+
+.PHONY: help setup deploy logs logs-errors logs-db status backup restore open variables restart
+
+# Default target - show help
+help:
+	@echo "Railway Deployment Commands"
+	@echo "============================"
+	@echo ""
+	@echo "Setup & Deployment:"
+	@echo "  make -f Makefile.railway setup        Initial Railway project setup"
+	@echo "  make -f Makefile.railway deploy       Deploy to Railway"
+	@echo ""
+	@echo "Monitoring:"
+	@echo "  make -f Makefile.railway logs         Stream all logs"
+	@echo "  make -f Makefile.railway logs-errors  Stream error logs only"
+	@echo "  make -f Makefile.railway logs-db      Stream database logs"
+	@echo "  make -f Makefile.railway status       Show deployment status"
+	@echo ""
+	@echo "Database:"
+	@echo "  make -f Makefile.railway backup       Backup database"
+	@echo "  make -f Makefile.railway restore      Restore database (requires BACKUP_FILE)"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  make -f Makefile.railway open         Open Railway dashboard"
+	@echo "  make -f Makefile.railway variables    List environment variables"
+	@echo "  make -f Makefile.railway restart      Restart Railway service"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make -f Makefile.railway backup"
+	@echo "  make -f Makefile.railway restore BACKUP_FILE=railway-backups/backup-20251106.sqlite"
+	@echo ""
+	@echo "Tip: Create alias for easier use:"
+	@echo "  alias railway-make='make -f Makefile.railway'"
+	@echo ""
+
+# ==============================================================================
+# Setup & Deployment
+# ==============================================================================
+
+setup:
+	@echo "🚀 Running Railway setup..."
+	@./scripts/railway-setup.sh
+
+deploy:
+	@echo "📦 Deploying to Railway..."
+	@./scripts/deploy-to-railway.sh
+
+# ==============================================================================
+# Monitoring
+# ==============================================================================
+
+logs:
+	@echo "📜 Streaming logs..."
+	@./scripts/railway-logs.sh
+
+logs-errors:
+	@echo "🚨 Streaming error logs..."
+	@./scripts/railway-logs.sh --errors
+
+logs-db:
+	@echo "🗄️  Streaming database logs..."
+	@./scripts/railway-logs.sh --database
+
+logs-migrations:
+	@echo "🔄 Streaming migration logs..."
+	@./scripts/railway-logs.sh --migrations
+
+logs-git:
+	@echo "📚 Streaming git logs..."
+	@./scripts/railway-logs.sh --git
+
+status:
+	@echo "📊 Railway deployment status:"
+	@echo ""
+	@railway status
+	@echo ""
+	@echo "Deployment URL:"
+	@railway domain || echo "Not available"
+
+# ==============================================================================
+# Database Operations
+# ==============================================================================
+
+backup:
+	@echo "💾 Backing up database..."
+	@./scripts/railway-backup-db.sh
+
+restore:
+	@if [ -z "$(BACKUP_FILE)" ]; then \
+		echo "❌ Error: BACKUP_FILE required"; \
+		echo ""; \
+		echo "Usage:"; \
+		echo "  make -f Makefile.railway restore BACKUP_FILE=path/to/backup.sqlite"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "♻️  Restoring database..."
+	@./scripts/railway-restore-db.sh $(BACKUP_FILE)
+
+# ==============================================================================
+# Utilities
+# ==============================================================================
+
+open:
+	@echo "🌐 Opening Railway dashboard..."
+	@railway open
+
+variables:
+	@echo "📝 Environment variables:"
+	@echo ""
+	@railway variables
+
+restart:
+	@echo "🔄 Restarting Railway service..."
+	@railway service restart || railway restart || echo "Restart not supported, redeploy instead"
+
+# ==============================================================================
+# Advanced Operations
+# ==============================================================================
+
+shell:
+	@echo "🐚 Opening Railway shell..."
+	@railway shell || echo "Shell not available for this service"
+
+volumes:
+	@echo "💾 Listing Railway volumes..."
+	@railway volume list
+
+link:
+	@echo "🔗 Linking to Railway project..."
+	@railway link
+
+whoami:
+	@echo "👤 Current Railway user:"
+	@railway whoami
+
+# ==============================================================================
+# Development Shortcuts
+# ==============================================================================
+
+check-types:
+	@echo "🔍 Checking TypeScript types..."
+	@pnpm run generate-types:check
+
+update-types:
+	@echo "🔄 Regenerating TypeScript types..."
+	@pnpm run generate-types
+
+test:
+	@echo "🧪 Running tests..."
+	@pnpm run check
+
+# ==============================================================================
+# Quick Deploy (checks + deploy)
+# ==============================================================================
+
+quick-deploy: check-types
+	@echo "🚀 Quick deploy (with type check)..."
+	@./scripts/deploy-to-railway.sh
+
+# ==============================================================================
+# Emergency Operations
+# ==============================================================================
+
+emergency-backup:
+	@echo "🚨 EMERGENCY BACKUP"
+	@echo "Creating timestamped backup..."
+	@./scripts/railway-backup-db.sh --output "emergency-backup-$$(date +%Y%m%d-%H%M%S).sqlite"
+	@echo ""
+	@echo "✅ Emergency backup created"
+
+# ==============================================================================
+# Info & Diagnostics
+# ==============================================================================
+
+info:
+	@echo "ℹ️  Railway Project Information"
+	@echo "=============================="
+	@echo ""
+	@echo "Project Status:"
+	@railway status
+	@echo ""
+	@echo "Deployment URL:"
+	@railway domain || echo "Not available"
+	@echo ""
+	@echo "Recent Deployments:"
+	@railway deployments || echo "Not available"
+	@echo ""
+	@echo "Environment Variables:"
+	@railway variables | head -10
+	@echo ""
+	@echo "Volumes:"
+	@railway volume list || echo "Not available"
