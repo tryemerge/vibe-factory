@@ -465,7 +465,7 @@ function FactoryFloorContent() {
                 </div>
               ) : (
                 inProgressTasks.map((task) => (
-                  <TaskTrayCard key={task.id} task={task} horizontal />
+                  <TaskTrayCard key={task.id} task={task} horizontal projectId={projectId || undefined} />
                 ))
               )}
             </div>

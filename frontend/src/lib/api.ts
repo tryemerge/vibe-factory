@@ -59,6 +59,8 @@ import {
   StationTransition,
   CreateStationTransition,
   UpdateStationTransition,
+  ExecuteWorkflowRequest,
+  ExecuteWorkflowResponse,
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -1033,5 +1035,22 @@ export const stationTransitionsApi = {
       method: 'DELETE',
     });
     return handleApiResponse<void>(response);
+  },
+};
+
+// Workflow Execution APIs
+export const workflowExecutionsApi = {
+  execute: async (
+    workflowId: string,
+    data: ExecuteWorkflowRequest
+  ): Promise<ExecuteWorkflowResponse> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/execute`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<ExecuteWorkflowResponse>(response);
   },
 };
