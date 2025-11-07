@@ -30,6 +30,7 @@ import { useWorkflow } from '@/hooks/useWorkflow';
 import { useWorkflowStations } from '@/hooks/useWorkflowStations';
 import { useWorkflowTransitions } from '@/hooks/useWorkflowTransitions';
 import { useReactFlowSync } from '@/hooks/useReactFlowSync';
+import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import NiceModal from '@ebay/nice-modal-react';
 
 // Custom node and edge types
@@ -64,6 +65,29 @@ function FactoryFloorContent() {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null
   );
+
+  // Active workflow execution ID (if a workflow is currently running)
+  // TODO: Wire this up to workflow execution start/stop actions
+  // When PR #37 (3.0a - Backend execution endpoint) is merged:
+  // 1. Add "Execute Workflow" button in WorkflowToolbar
+  // 2. Call workflowExecutionsApi.execute() on button click
+  // 3. Set activeExecutionId to response.workflow_execution_id
+  // 4. Add "Cancel" button to stop execution and clear activeExecutionId
+  const [activeExecutionId] = useState<string | null>(
+    null
+  );
+
+  // Track workflow execution status with polling when running
+  const {
+    stationStatusMap,
+    progress,
+    isRunning: executionIsRunning,
+  } = useWorkflowExecution({
+    executionId: activeExecutionId || undefined,
+    enabled: !!activeExecutionId,
+    // Poll every 2 seconds when execution is active
+    refetchInterval: activeExecutionId ? 2000 : false,
+  });
 
   // Automatically select first workflow if available
   const effectiveWorkflowId = useMemo(() => {
@@ -101,10 +125,11 @@ function FactoryFloorContent() {
     workflowId: effectiveWorkflowId || undefined,
   });
 
-  // React Flow sync
+  // React Flow sync (with execution status)
   const { nodes, edges, onNodesChange, onEdgesChange, isValidConnection } = useReactFlowSync({
     stations: stations || [],
     transitions: transitions || [],
+    stationStatusMap: stationStatusMap,
     onStationUpdate: (id, data) => {
       updateStation({
         id,
@@ -370,6 +395,8 @@ function FactoryFloorContent() {
           onExportJson={handleExportJson}
           hasUnsavedChanges={false} // Auto-save means no unsaved changes
           disabled={workflowSaving}
+          executionProgress={progress}
+          isExecutionRunning={executionIsRunning}
         />
 
         {/* Main content area */}

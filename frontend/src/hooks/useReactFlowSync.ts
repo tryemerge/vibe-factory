@@ -7,6 +7,8 @@ import type {
   UpdateWorkflowStation,
   UpdateStationTransition,
 } from 'shared/types';
+import type { StationExecutionSummary } from '@/types/workflow-execution';
+import type { StationStatus } from '@/components/factory/StationNode';
 
 export interface StationNodeData {
   station: WorkflowStation;
@@ -16,6 +18,7 @@ export interface StationNodeData {
   stationPrompt?: string | null;
   outputContextKeys?: string | null;
   stationId: string;
+  status?: StationStatus;
 }
 
 export interface TransitionEdgeData {
@@ -35,33 +38,69 @@ export type StationPositionUpdate = Partial<UpdateWorkflowStation> & {
 interface UseReactFlowSyncOptions {
   stations: WorkflowStation[];
   transitions: StationTransition[];
+  stationStatusMap?: Record<string, StationExecutionSummary>;
   onStationUpdate?: (id: string, data: StationPositionUpdate) => void;
   onTransitionUpdate?: (id: string, data: UpdateStationTransition) => void;
 }
 
+/**
+ * Map backend station execution status to frontend StationStatus enum
+ */
+function mapExecutionStatus(
+  backendStatus: string | undefined
+): StationStatus | undefined {
+  if (!backendStatus) return undefined;
+
+  // Backend statuses: 'pending', 'running', 'completed', 'failed', 'skipped'
+  // Frontend statuses: 'idle', 'pending', 'running', 'completed', 'failed'
+  switch (backendStatus.toLowerCase()) {
+    case 'pending':
+      return 'pending';
+    case 'running':
+      return 'running';
+    case 'completed':
+      return 'completed';
+    case 'failed':
+      return 'failed';
+    case 'skipped':
+      return 'completed'; // Treat skipped as completed for display
+    default:
+      return 'idle';
+  }
+}
+
 export function useReactFlowSync(options: UseReactFlowSyncOptions) {
-  const { stations, transitions, onStationUpdate } = options;
+  const { stations, transitions, stationStatusMap, onStationUpdate } = options;
 
   // Convert workflow stations to React Flow nodes format
   const derivedNodes = useMemo<Node<StationNodeData>[]>(() => {
-    return stations.map((station) => ({
-      id: station.id,
-      type: 'station',
-      position: {
-        x: station.x_position,
-        y: station.y_position,
-      },
-      data: {
-        station,  // Include full station object for StationNode component
-        label: station.name,
-        description: station.description,
-        agentId: station.agent_id,
-        stationPrompt: station.station_prompt,
-        outputContextKeys: station.output_context_keys,
-        stationId: station.id,
-      },
-    }));
-  }, [stations]);
+    return stations.map((station) => {
+      // Get execution status for this station (if running)
+      const stationExecution = stationStatusMap?.[station.id];
+      const status = stationExecution
+        ? mapExecutionStatus(stationExecution.status)
+        : 'idle';
+
+      return {
+        id: station.id,
+        type: 'station',
+        position: {
+          x: station.x_position,
+          y: station.y_position,
+        },
+        data: {
+          station,  // Include full station object for StationNode component
+          label: station.name,
+          description: station.description,
+          agentId: station.agent_id,
+          stationPrompt: station.station_prompt,
+          outputContextKeys: station.output_context_keys,
+          stationId: station.id,
+          status,
+        },
+      };
+    });
+  }, [stations, stationStatusMap]);
 
   // Convert station transitions to React Flow edges format
   const derivedEdges = useMemo<Edge<TransitionEdgeData>[]>(() => {
