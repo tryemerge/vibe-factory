@@ -441,7 +441,37 @@ impl LocalContainerService {
             }
 
             // Now that commit/next-action/finalization steps for this process are complete,
-            // capture the HEAD OID as the definitive "after" state (best-effort).
+            // check if this execution is part of a workflow and trigger workflow progression
+            if let Ok(ctx) = ExecutionProcess::load_context(&db.pool, exec_id).await {
+                let success = matches!(
+                    ctx.execution_process.status,
+                    ExecutionProcessStatus::Completed
+                ) && exit_code == Some(0);
+
+                // Create workflow orchestrator and check if this execution is part of a workflow
+                let workflow_orchestrator = services::services::workflow_orchestrator::WorkflowOrchestrator::new(db.clone());
+
+                if let Ok(Some((_station_execution, _))) = workflow_orchestrator
+                    .check_execution_for_workflow(exec_id, success)
+                    .await
+                {
+                    tracing::info!(
+                        "Execution {} is part of workflow, triggering station completion",
+                        exec_id
+                    );
+
+                    // Trigger workflow progression (this will handle station completion and advance workflow)
+                    // Note: output_data extraction is Phase 1.1 manual for now
+                    if let Err(e) = workflow_orchestrator
+                        .trigger_workflow_progression(&container, exec_id, success, None)
+                        .await
+                    {
+                        tracing::error!("Failed to handle workflow station completion: {}", e);
+                    }
+                }
+            }
+
+            // Capture the HEAD OID as the definitive "after" state (best-effort).
             if let Ok(ctx) = ExecutionProcess::load_context(&db.pool, exec_id).await {
                 let worktree_dir = container.task_attempt_to_current_dir(&ctx.task_attempt);
                 if let Ok(head) = container.git().get_head_info(&worktree_dir)
