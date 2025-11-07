@@ -377,6 +377,23 @@ pub struct CancelWorkflowExecutionResponse {
 
 /// Cancel a running workflow execution
 /// POST /api/workflow-executions/{id}/cancel
+///
+/// # Transaction Safety
+///
+/// This operation is **NOT** fully transactional due to the need to stop external processes.
+/// The operation follows this sequence:
+///
+/// 1. Stop execution processes (external side effect - cannot be rolled back)
+/// 2. Update station executions to "cancelled" (database operation)
+/// 3. Update workflow execution to "cancelled" (database operation)
+///
+/// If the workflow execution update fails after stopping processes, the processes will
+/// remain stopped but the workflow status may not reflect this. This is acceptable because:
+/// - The processes are already stopped (desired state achieved)
+/// - A retry of the cancel operation will succeed (idempotent)
+/// - The system remains in a consistent state (processes stopped)
+///
+/// Recovery: If database updates fail, the workflow can be cancelled again.
 pub async fn cancel_workflow_execution(
     State(deployment): State<DeploymentImpl>,
     Path(execution_id): Path<Uuid>,
@@ -400,7 +417,8 @@ pub async fn cancel_workflow_execution(
     // Find any running station executions
     let station_executions = StationExecution::find_by_workflow_execution(pool, execution_id).await?;
 
-    for station_execution in station_executions {
+    // Stop all running execution processes first (cannot be rolled back)
+    for station_execution in &station_executions {
         if station_execution.status == "running" {
             // Find the execution process for this station
             if let Some(execution_process_id) = station_execution.execution_process_id {
@@ -416,24 +434,43 @@ pub async fn cancel_workflow_execution(
                     }
                 }
             }
+        }
+    }
 
-            // Update station execution status to cancelled
-            StationExecution::update_status(pool, station_execution.id, "cancelled").await?;
+    // Start a database transaction for updating statuses
+    let mut tx = pool.begin().await?;
+
+    // Update station execution statuses to cancelled
+    for station_execution in station_executions {
+        if station_execution.status == "running" {
+            sqlx::query!(
+                "UPDATE station_executions SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+                station_execution.id,
+                "cancelled"
+            )
+            .execute(&mut *tx)
+            .await?;
         }
     }
 
     // Update workflow execution status to cancelled
-    let workflow_execution = WorkflowExecution::update(
-        pool,
+    let completed_at = Utc::now();
+    sqlx::query!(
+        "UPDATE workflow_executions SET status = $2, completed_at = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
         execution_id,
-        UpdateWorkflowExecution {
-            status: Some("cancelled".to_string()),
-            completed_at: Some(Utc::now()),
-            current_station_id: None,
-            started_at: None,
-        },
+        "cancelled",
+        completed_at
     )
+    .execute(&mut *tx)
     .await?;
+
+    // Commit the transaction
+    tx.commit().await?;
+
+    // Reload the workflow execution to get updated values
+    let workflow_execution = WorkflowExecution::find_by_id(pool, execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
 
     let message = if let Some(ref reason) = request.reason {
         format!("Workflow execution cancelled: {}", reason)
@@ -483,6 +520,29 @@ pub struct RetryStationResponse {
 
 /// Retry a failed station execution
 /// POST /api/workflow-executions/{id}/retry-station
+///
+/// # Transaction Safety
+///
+/// This operation involves multiple steps that cannot all be rolled back:
+///
+/// 1. Gather context from completed stations (read-only, safe)
+/// 2. Create new StationExecution record (database operation)
+/// 3. Start execution process (external side effect - cannot be rolled back)
+/// 4. Update workflow execution status (database operation)
+///
+/// The orchestrator.execute_station() method handles step 2 and 3 internally.
+/// If step 4 fails after the process is started, the process will continue running
+/// but the workflow status won't reflect this.
+///
+/// Recovery strategy:
+/// - If the update fails, the new station execution exists and process is running
+/// - The workflow orchestrator's completion handler will eventually update the workflow
+/// - Alternatively, the retry can be called again (it will fail validation but won't corrupt state)
+///
+/// This is acceptable because:
+/// - The new station execution is created and tracked in the database
+/// - The process will complete and trigger normal completion handlers
+/// - The system will eventually reach a consistent state
 pub async fn retry_station_execution(
     State(deployment): State<DeploymentImpl>,
     Path(execution_id): Path<Uuid>,
@@ -529,7 +589,8 @@ pub async fn retry_station_execution(
     let context_data = orchestrator.gather_context_data(execution_id).await
         .map_err(|e| ApiError::Validation(format!("Failed to gather context: {}", e)))?;
 
-    // Create a new station execution for the retry
+    // Create a new station execution for the retry (this also starts the process)
+    // Note: This is not transactional with the workflow update below
     let new_station_execution = orchestrator
         .execute_station(
             deployment.container(),
@@ -542,6 +603,7 @@ pub async fn retry_station_execution(
         .map_err(|e| ApiError::Validation(format!("Failed to execute station: {}", e)))?;
 
     // Update workflow execution to point to the retried station
+    // If this fails, the station execution still exists and will complete normally
     WorkflowExecution::update(
         pool,
         execution_id,
