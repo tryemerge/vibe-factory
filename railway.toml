@@ -8,3 +8,27 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 healthcheckPath = "/"
 healthcheckTimeout = 300
+
+# ============================================================================
+# DATABASE PERSISTENCE CONFIGURATION
+# ============================================================================
+#
+# IMPORTANT: Railway volumes must be created manually via the Railway dashboard.
+# This configuration documents the required setup but does NOT auto-create volumes.
+#
+# Setup Instructions:
+# 1. Go to Railway project dashboard
+# 2. Click on your service
+# 3. Navigate to "Data" or "Storage" tab
+# 4. Click "New Volume"
+# 5. Set mount path: /data
+# 6. Confirm creation
+# 7. Set environment variable: DATABASE_URL=sqlite:///data/db.sqlite
+#
+# The entrypoint script (scripts/railway-entrypoint.sh) will:
+# - Initialize database from template on first deploy
+# - Ensure /data directory exists
+# - Migrations run automatically via Rust application
+#
+# For backup/restore procedures, see RAILWAY_DATABASE_GUIDE.md
+# ============================================================================
