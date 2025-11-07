@@ -59,7 +59,17 @@ import {
   StationTransition,
   CreateStationTransition,
   UpdateStationTransition,
+  ExecuteWorkflowRequest,
+  ExecuteWorkflowResponse,
 } from 'shared/types';
+import type {
+  WorkflowExecutionDetailsResponse,
+  StationExecutionSummary,
+  CancelWorkflowExecutionRequest,
+  CancelWorkflowExecutionResponse,
+  RetryStationRequest,
+  RetryStationResponse,
+} from '@/types/workflow-execution';
 
 // Re-export types for convenience
 export type { RepositoryInfo } from 'shared/types';
@@ -1033,5 +1043,68 @@ export const stationTransitionsApi = {
       method: 'DELETE',
     });
     return handleApiResponse<void>(response);
+  },
+};
+
+// Workflow Execution APIs
+export const workflowExecutionsApi = {
+  execute: async (
+    workflowId: string,
+    data: ExecuteWorkflowRequest
+  ): Promise<ExecuteWorkflowResponse> => {
+    const response = await makeRequest(
+      `/api/workflows/${workflowId}/execute`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<ExecuteWorkflowResponse>(response);
+  },
+
+  getById: async (
+    executionId: string
+  ): Promise<WorkflowExecutionDetailsResponse> => {
+    const response = await makeRequest(
+      `/api/workflow-executions/${executionId}`
+    );
+    return handleApiResponse<WorkflowExecutionDetailsResponse>(response);
+  },
+
+  getStations: async (
+    executionId: string
+  ): Promise<StationExecutionSummary[]> => {
+    const response = await makeRequest(
+      `/api/workflow-executions/${executionId}/stations`
+    );
+    return handleApiResponse<StationExecutionSummary[]>(response);
+  },
+
+  cancel: async (
+    executionId: string,
+    data: CancelWorkflowExecutionRequest
+  ): Promise<CancelWorkflowExecutionResponse> => {
+    const response = await makeRequest(
+      `/api/workflow-executions/${executionId}/cancel`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<CancelWorkflowExecutionResponse>(response);
+  },
+
+  retryStation: async (
+    executionId: string,
+    data: RetryStationRequest
+  ): Promise<RetryStationResponse> => {
+    const response = await makeRequest(
+      `/api/workflow-executions/${executionId}/retry-station`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<RetryStationResponse>(response);
   },
 };

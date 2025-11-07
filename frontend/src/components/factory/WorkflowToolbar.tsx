@@ -23,9 +23,16 @@ import {
   Maximize2,
   Download,
   Circle,
+  Loader2,
 } from 'lucide-react';
 import type { Workflow } from 'shared/types';
 import { cn } from '@/lib/utils';
+
+interface WorkflowExecutionProgress {
+  completed: number;
+  total: number;
+  percentage: number;
+}
 
 interface WorkflowToolbarProps {
   workflows: Workflow[];
@@ -40,6 +47,8 @@ interface WorkflowToolbarProps {
   onExportJson: () => void;
   hasUnsavedChanges?: boolean;
   disabled?: boolean;
+  executionProgress?: WorkflowExecutionProgress | null;
+  isExecutionRunning?: boolean;
 }
 
 export function WorkflowToolbar({
@@ -55,6 +64,8 @@ export function WorkflowToolbar({
   onExportJson,
   hasUnsavedChanges = false,
   disabled = false,
+  executionProgress = null,
+  isExecutionRunning = false,
 }: WorkflowToolbarProps) {
   const [isMac, setIsMac] = useState(false);
 
@@ -218,8 +229,26 @@ export function WorkflowToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* Execution Progress Indicator */}
+      {isExecutionRunning && executionProgress && (
+        <>
+          <div className="h-8 w-px bg-border" />
+          <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+            <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                Workflow Running
+              </span>
+              <span className="text-xs text-blue-600 dark:text-blue-400">
+                Station {executionProgress.completed} of {executionProgress.total} ({executionProgress.percentage}%)
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Workflow Info */}
-      {selectedWorkflow && (
+      {selectedWorkflow && !isExecutionRunning && (
         <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
           <span className={cn(hasUnsavedChanges && 'text-orange-500')}>
             {hasUnsavedChanges ? 'Unsaved changes' : 'All changes saved'}

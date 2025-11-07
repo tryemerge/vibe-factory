@@ -11,7 +11,12 @@ export interface StationNodeData {
   status?: StationStatus;
 }
 
-export type StationStatus = 'idle' | 'running' | 'completed' | 'failed';
+export type StationStatus =
+  | 'idle'
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed';
 
 const statusConfig: Record<
   StationStatus,
@@ -19,12 +24,19 @@ const statusConfig: Record<
     color: string;
     icon: React.ElementType;
     label: string;
+    pulse?: boolean;
   }
 > = {
   idle: {
     color: 'text-muted-foreground',
     icon: Circle,
     label: 'Idle',
+  },
+  pending: {
+    color: 'text-yellow-500',
+    icon: Circle,
+    label: 'Pending',
+    pulse: true,
   },
   running: {
     color: 'text-blue-500',
@@ -79,7 +91,8 @@ export const StationNode = memo(
                   className={cn(
                     'h-3.5 w-3.5 shrink-0',
                     config.color,
-                    status === 'running' && 'animate-spin'
+                    status === 'running' && 'animate-spin',
+                    config.pulse && 'animate-pulse'
                   )}
                 />
               )}
