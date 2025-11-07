@@ -52,7 +52,7 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
         y: station.y_position,
       },
       data: {
-        station,  // Include full station object for StationNode component
+        station, // Include full station object for StationNode component
         label: station.name,
         description: station.description,
         agentId: station.agent_id,
@@ -126,7 +126,11 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
       // Persist position changes to backend when drag ends
       if (onStationUpdate) {
         changes.forEach((change) => {
-          if (change.type === 'position' && change.position && !change.dragging) {
+          if (
+            change.type === 'position' &&
+            change.position &&
+            !change.dragging
+          ) {
             // Only persist when drag ends
             onStationUpdate(change.id, {
               x_position: change.position.x,
@@ -140,13 +144,10 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
   );
 
   // Handle edge changes (connection, deletion, etc.)
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      // Apply changes to local state immediately
-      setEdges((eds) => applyEdgeChanges(changes, eds));
-    },
-    []
-  );
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    // Apply changes to local state immediately
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
 
   // Convert React Flow node to station update
   const nodeToStationUpdate = useCallback(
@@ -180,7 +181,9 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
 
   // Batch update node positions (useful after auto-layout)
   const batchUpdateNodePositions = useCallback(
-    (nodeUpdates: Array<{ id: string; position: { x: number; y: number } }>) => {
+    (
+      nodeUpdates: Array<{ id: string; position: { x: number; y: number } }>
+    ) => {
       if (!onStationUpdate) return;
 
       nodeUpdates.forEach(({ id, position }) => {

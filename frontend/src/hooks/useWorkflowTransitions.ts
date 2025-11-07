@@ -61,13 +61,8 @@ export function useWorkflowTransitions(
 
   // Update transition mutation
   const updateTransition = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: UpdateStationTransition;
-    }) => stationTransitionsApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateStationTransition }) =>
+      stationTransitionsApi.update(id, data),
     onMutate: async ({ id, data }) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({
@@ -75,9 +70,9 @@ export function useWorkflowTransitions(
       });
 
       // Snapshot previous value
-      const previousTransitions = queryClient.getQueryData<
-        StationTransition[]
-      >(['station-transitions', workflowId]);
+      const previousTransitions = queryClient.getQueryData<StationTransition[]>(
+        ['station-transitions', workflowId]
+      );
 
       // Optimistically update
       if (previousTransitions) {
@@ -144,9 +139,9 @@ export function useWorkflowTransitions(
       });
 
       // Snapshot previous value
-      const previousTransitions = queryClient.getQueryData<
-        StationTransition[]
-      >(['station-transitions', workflowId]);
+      const previousTransitions = queryClient.getQueryData<StationTransition[]>(
+        ['station-transitions', workflowId]
+      );
 
       // Optimistically update
       if (previousTransitions) {

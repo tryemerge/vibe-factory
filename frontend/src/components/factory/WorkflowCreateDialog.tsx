@@ -97,7 +97,10 @@ export const WorkflowCreateDialog = NiceModal.create<WorkflowCreateDialogProps>(
 
             {/* Description */}
             <div>
-              <Label htmlFor="workflow-description" className="text-sm font-medium">
+              <Label
+                htmlFor="workflow-description"
+                className="text-sm font-medium"
+              >
                 Description
               </Label>
               <Textarea

@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 import { workflowExecutionsApi } from '@/lib/api';
-import type { ExecuteWorkflowRequest, ExecuteWorkflowResponse } from 'shared/types';
+import type {
+  ExecuteWorkflowRequest,
+  ExecuteWorkflowResponse,
+} from 'shared/types';
 
 interface UseExecuteWorkflowReturn {
   executeWorkflow: (
@@ -33,11 +36,15 @@ export function useExecuteWorkflow(): UseExecuteWorkflowReturn {
       setError(null);
 
       try {
-        const response = await workflowExecutionsApi.execute(workflowId, request);
+        const response = await workflowExecutionsApi.execute(
+          workflowId,
+          request
+        );
         setLastExecutionId(response.workflow_execution_id);
         return response;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to execute workflow';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to execute workflow';
         setError(errorMessage);
         console.error('Failed to execute workflow:', err);
         return null;

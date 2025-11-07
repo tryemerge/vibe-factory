@@ -162,7 +162,10 @@ function CustomCanvas() {
     const { active, over } = event;
 
     // Only handle drops on the canvas
-    if (over?.id === 'factory-canvas' && active.data.current?.type === 'agent') {
+    if (
+      over?.id === 'factory-canvas' &&
+      active.data.current?.type === 'agent'
+    ) {
       const agent = active.data.current.agent as Agent;
 
       // Get cursor position relative to canvas
@@ -212,8 +215,8 @@ const { data: allAgents } = useQuery({
   queryFn: () => agentsApi.list(),
 });
 
-const filteredAgents = allAgents?.filter(agent =>
-  agent.executor === 'CLAUDE_CODE'
+const filteredAgents = allAgents?.filter(
+  (agent) => agent.executor === 'CLAUDE_CODE'
 );
 
 // Note: Current AgentPalette doesn't accept agents prop
@@ -232,12 +235,14 @@ useQuery({
 ```
 
 **Benefits:**
+
 - Automatic caching (no redundant API calls)
 - Automatic background refetching
 - Loading and error states handled
 - Shared cache across components using same query key
 
 **Refetching:**
+
 - When component mounts
 - When window regains focus
 - When network reconnects
@@ -247,11 +252,12 @@ useQuery({
 
 ```typescript
 interface AgentPaletteProps {
-  className?: string;  // Optional Tailwind classes for container styling
+  className?: string; // Optional Tailwind classes for container styling
 }
 ```
 
 **Minimal props by design:**
+
 - Component is self-contained
 - Parent doesn't need to manage agent data
 - Drop handling is parent's responsibility (via DndContext)
@@ -297,20 +303,24 @@ The component handles the following states:
 ## Troubleshooting
 
 ### "Agents not dragging"
+
 - Ensure parent is wrapped in `<DndContext>`
 - Check browser console for @dnd-kit errors
 
 ### "Drop not working"
+
 - Verify `onDragEnd` handler is implemented
 - Check that `active.data.current?.type === 'agent'`
 - Use `console.log(event)` to inspect drop event structure
 
 ### "Agents not loading"
+
 - Check network tab for `/api/agents` request
 - Verify backend is running
 - Check React Query devtools for query state
 
 ### "Search not working"
+
 - Search is case-insensitive and searches across: name, role, executor, description
 - Try clearing search with the X button
 - Check that agents have the fields you're searching for

@@ -1,10 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { workflowsApi } from '@/lib/api';
-import type {
-  Workflow,
-  CreateWorkflow,
-  UpdateWorkflow,
-} from 'shared/types';
+import type { Workflow, CreateWorkflow, UpdateWorkflow } from 'shared/types';
 import { useCallback, useEffect, useRef } from 'react';
 
 interface UseWorkflowOptions {

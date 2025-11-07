@@ -909,20 +909,18 @@ export const workflowsApi = {
   },
 
   getByProjectId: async (projectId: string): Promise<Workflow[]> => {
-    const response = await makeRequest(
-      `/api/projects/${projectId}/workflows`
-    );
+    const response = await makeRequest(`/api/projects/${projectId}/workflows`);
     return handleApiResponse<Workflow[]>(response);
   },
 
-  create: async (projectId: string, data: CreateWorkflow): Promise<Workflow> => {
-    const response = await makeRequest(
-      `/api/projects/${projectId}/workflows`,
-      {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }
-    );
+  create: async (
+    projectId: string,
+    data: CreateWorkflow
+  ): Promise<Workflow> => {
+    const response = await makeRequest(`/api/projects/${projectId}/workflows`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
     return handleApiResponse<Workflow>(response);
   },
 
@@ -945,9 +943,7 @@ export const workflowsApi = {
 // Workflow Station APIs
 export const workflowStationsApi = {
   getByWorkflowId: async (workflowId: string): Promise<WorkflowStation[]> => {
-    const response = await makeRequest(
-      `/api/workflows/${workflowId}/stations`
-    );
+    const response = await makeRequest(`/api/workflows/${workflowId}/stations`);
     return handleApiResponse<WorkflowStation[]>(response);
   },
 
@@ -991,9 +987,7 @@ export const workflowStationsApi = {
 
 // Station Transition APIs
 export const stationTransitionsApi = {
-  getByWorkflowId: async (
-    workflowId: string
-  ): Promise<StationTransition[]> => {
+  getByWorkflowId: async (workflowId: string): Promise<StationTransition[]> => {
     const response = await makeRequest(
       `/api/workflows/${workflowId}/transitions`
     );
@@ -1044,13 +1038,10 @@ export const workflowExecutionsApi = {
     workflowId: string,
     data: ExecuteWorkflowRequest
   ): Promise<ExecuteWorkflowResponse> => {
-    const response = await makeRequest(
-      `/api/workflows/${workflowId}/execute`,
-      {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }
-    );
+    const response = await makeRequest(`/api/workflows/${workflowId}/execute`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
     return handleApiResponse<ExecuteWorkflowResponse>(response);
   },
 };

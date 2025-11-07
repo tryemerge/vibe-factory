@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import ReactFlow, {
   Controls,
   Background,
@@ -14,10 +15,11 @@ import 'reactflow/dist/style.css';
 // Removed @dnd-kit/core - no longer using agent drag-and-drop
 import { useProject } from '@/contexts/project-context';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
+import { useTaskAttempt } from '@/hooks/useTaskAttempt';
 import { Loader } from '@/components/ui/loader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle, Plus, X } from 'lucide-react';
 import { TaskTrayCard } from '@/components/factory/TaskTrayCard';
 import { ProjectViewNav } from '@/components/projects/ProjectViewNav';
 import { WorkflowToolbar } from '@/components/factory/WorkflowToolbar';
@@ -30,6 +32,9 @@ import { useWorkflow } from '@/hooks/useWorkflow';
 import { useWorkflowStations } from '@/hooks/useWorkflowStations';
 import { useWorkflowTransitions } from '@/hooks/useWorkflowTransitions';
 import { useReactFlowSync } from '@/hooks/useReactFlowSync';
+import TaskAttemptPanel from '@/components/panels/TaskAttemptPanel';
+import { useNavigateWithSearch } from '@/hooks';
+import { paths } from '@/lib/paths';
 import NiceModal from '@ebay/nice-modal-react';
 
 // Custom node and edge types
@@ -47,9 +52,22 @@ function FactoryFloorContent() {
     isLoading: projectLoading,
     error: projectError,
   } = useProject();
-  const { tasks, isLoading: tasksLoading } = useProjectTasks(projectId || '');
+  const { taskId, attemptId } = useParams<{
+    taskId?: string;
+    attemptId?: string;
+  }>();
+  const navigate = useNavigateWithSearch();
+  const {
+    tasks,
+    tasksById,
+    isLoading: tasksLoading,
+  } = useProjectTasks(projectId || '');
   const reactFlowInstance = useReactFlow();
   const viewport = useViewport();
+
+  // Fetch selected task and attempt
+  const selectedTask = taskId ? tasksById[taskId] || null : null;
+  const { data: selectedAttempt } = useTaskAttempt(attemptId);
 
   // Workflow state - get all workflows for this project
   const {
@@ -102,26 +120,27 @@ function FactoryFloorContent() {
   });
 
   // React Flow sync
-  const { nodes, edges, onNodesChange, onEdgesChange, isValidConnection } = useReactFlowSync({
-    stations: stations || [],
-    transitions: transitions || [],
-    onStationUpdate: (id, data) => {
-      updateStation({
-        id,
-        data: {
-          name: null,
-          position: null,
-          description: null,
-          x_position: null,
-          y_position: null,
-          agent_id: null,
-          station_prompt: null,
-          output_context_keys: null,
-          ...data,
-        },
-      });
-    },
-  });
+  const { nodes, edges, onNodesChange, onEdgesChange, isValidConnection } =
+    useReactFlowSync({
+      stations: stations || [],
+      transitions: transitions || [],
+      onStationUpdate: (id, data) => {
+        updateStation({
+          id,
+          data: {
+            name: null,
+            position: null,
+            description: null,
+            x_position: null,
+            y_position: null,
+            agent_id: null,
+            station_prompt: null,
+            output_context_keys: null,
+            ...data,
+          },
+        });
+      },
+    });
 
   // UI state
   const [selectedStationId, setSelectedStationId] = useState<string | null>(
@@ -247,7 +266,12 @@ function FactoryFloorContent() {
       }
 
       // Validate connection with non-null source/target
-      if (!isValidConnection({ source: connection.source, target: connection.target })) {
+      if (
+        !isValidConnection({
+          source: connection.source,
+          target: connection.target,
+        })
+      ) {
         return;
       }
 
@@ -323,6 +347,13 @@ function FactoryFloorContent() {
     return tasks.filter((task) => task.status.toLowerCase() === 'inprogress');
   }, [tasks]);
 
+  // Handle closing the attempt panel
+  const handleCloseAttemptPanel = useCallback(() => {
+    if (projectId) {
+      navigate(paths.factory(projectId));
+    }
+  }, [projectId, navigate]);
+
   if (projectError) {
     return (
       <div className="p-4">
@@ -356,129 +387,159 @@ function FactoryFloorContent() {
       {/* Navigation */}
       <ProjectViewNav currentView="factory" />
 
-        {/* Workflow Toolbar */}
-        <WorkflowToolbar
-          workflows={workflows || []}
-          selectedWorkflowId={effectiveWorkflowId}
-          onSelectWorkflow={setSelectedWorkflowId}
-          onNewWorkflow={handleNewWorkflow}
-          onSave={handleSave}
-          onDelete={handleDeleteWorkflow}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onAutoLayout={handleAutoLayout}
-          onExportJson={handleExportJson}
-          hasUnsavedChanges={false} // Auto-save means no unsaved changes
-          disabled={workflowSaving}
-        />
+      {/* Workflow Toolbar */}
+      <WorkflowToolbar
+        workflows={workflows || []}
+        selectedWorkflowId={effectiveWorkflowId}
+        onSelectWorkflow={setSelectedWorkflowId}
+        onNewWorkflow={handleNewWorkflow}
+        onSave={handleSave}
+        onDelete={handleDeleteWorkflow}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onAutoLayout={handleAutoLayout}
+        onExportJson={handleExportJson}
+        hasUnsavedChanges={false} // Auto-save means no unsaved changes
+        disabled={workflowSaving}
+      />
 
-        {/* Main content area */}
-        <div className="flex-1 min-h-0 flex">
-          {/* React Flow Canvas */}
-          <div className="flex-1 min-w-0 relative bg-muted/10">
-            {!effectiveWorkflowId ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center max-w-md space-y-4">
-                  <p className="text-lg font-medium text-muted-foreground">
-                    No workflows yet
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Create a workflow to start building your agent pipeline
-                  </p>
-                </div>
+      {/* Main content area */}
+      <div className="flex-1 min-h-0 flex">
+        {/* React Flow Canvas */}
+        <div className="flex-1 min-w-0 relative bg-muted/10">
+          {!effectiveWorkflowId ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center max-w-md space-y-4">
+                <p className="text-lg font-medium text-muted-foreground">
+                  No workflows yet
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Create a workflow to start building your agent pipeline
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={handleNodeClick}
+              onEdgeClick={handleEdgeClick}
+              onConnect={handleConnect}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              nodesDraggable={true}
+              nodesConnectable={true}
+              elementsSelectable={true}
+              panOnDrag={false}
+              selectionOnDrag={true}
+              selectionMode={SelectionMode.Partial}
+              panOnScroll
+              zoomOnScroll
+              minZoom={0.1}
+              maxZoom={4}
+            >
+              <Controls />
+              <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+              <Panel
+                position="bottom-left"
+                className="bg-background/95 backdrop-blur-sm border rounded-md px-2 py-1 text-xs font-medium text-muted-foreground"
+              >
+                {Math.round(viewport.zoom * 100)}%
+              </Panel>
+              <Panel position="top-left" className="m-2">
+                <Button onClick={handleAddStation} size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Station
+                </Button>
+              </Panel>
+            </ReactFlow>
+          )}
+
+          {/* Empty state for workflow with no stations */}
+          {effectiveWorkflowId && nodes.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center max-w-md">
+                <p className="text-lg font-medium text-muted-foreground mb-2">
+                  No stations yet
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Click "Add Station" to create a station. Then configure the
+                  agent and prompt for each station. Connect stations by
+                  dragging from one station's handle to another.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Tray - In Progress Tasks */}
+      <div className="h-32 border-t bg-muted/30 flex flex-col shrink-0">
+        <div className="px-3 py-2 border-b bg-card">
+          <h2 className="font-semibold text-sm">In Progress</h2>
+          <p className="text-xs text-muted-foreground">
+            {inProgressTasks.length} tasks
+          </p>
+        </div>
+        <div className="flex-1 overflow-x-auto overflow-y-hidden p-2">
+          <div className="flex gap-2 h-full">
+            {inProgressTasks.length === 0 ? (
+              <div className="text-center text-sm text-muted-foreground p-4 w-full">
+                No tasks in progress
               </div>
             ) : (
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeClick={handleNodeClick}
-                onEdgeClick={handleEdgeClick}
-                onConnect={handleConnect}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                nodesDraggable={true}
-                nodesConnectable={true}
-                elementsSelectable={true}
-                panOnDrag={false}
-                selectionOnDrag={true}
-                selectionMode={SelectionMode.Partial}
-                panOnScroll
-                zoomOnScroll
-                minZoom={0.1}
-                maxZoom={4}
-              >
-                <Controls />
-                <Background
-                  variant={BackgroundVariant.Dots}
-                  gap={12}
-                  size={1}
+              inProgressTasks.map((task) => (
+                <TaskTrayCard
+                  key={task.id}
+                  task={task}
+                  horizontal
+                  projectId={projectId || undefined}
                 />
-                <Panel position="bottom-left" className="bg-background/95 backdrop-blur-sm border rounded-md px-2 py-1 text-xs font-medium text-muted-foreground">
-                  {Math.round(viewport.zoom * 100)}%
-                </Panel>
-                <Panel position="top-left" className="m-2">
-                  <Button
-                    onClick={handleAddStation}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Station
-                  </Button>
-                </Panel>
-              </ReactFlow>
-            )}
-
-            {/* Empty state for workflow with no stations */}
-            {effectiveWorkflowId && nodes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center max-w-md">
-                  <p className="text-lg font-medium text-muted-foreground mb-2">
-                    No stations yet
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Click "Add Station" to create a station. Then configure the
-                    agent and prompt for each station. Connect stations by dragging
-                    from one station's handle to another.
-                  </p>
-                </div>
-              </div>
+              ))
             )}
           </div>
         </div>
-
-        {/* Bottom Tray - In Progress Tasks */}
-        <div className="h-32 border-t bg-muted/30 flex flex-col shrink-0">
-          <div className="px-3 py-2 border-b bg-card">
-            <h2 className="font-semibold text-sm">In Progress</h2>
-            <p className="text-xs text-muted-foreground">
-              {inProgressTasks.length} tasks
-            </p>
-          </div>
-          <div className="flex-1 overflow-x-auto overflow-y-hidden p-2">
-            <div className="flex gap-2 h-full">
-              {inProgressTasks.length === 0 ? (
-                <div className="text-center text-sm text-muted-foreground p-4 w-full">
-                  No tasks in progress
-                </div>
-              ) : (
-                inProgressTasks.map((task) => (
-                  <TaskTrayCard key={task.id} task={task} horizontal projectId={projectId || undefined} />
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Station Config Panel (overlay) */}
-        <StationConfigPanel
-          station={selectedStation}
-          isOpen={!!selectedStationId}
-          onClose={() => setSelectedStationId(null)}
-        />
       </div>
+
+      {/* Station Config Panel (overlay) */}
+      <StationConfigPanel
+        station={selectedStation}
+        isOpen={!!selectedStationId}
+        onClose={() => setSelectedStationId(null)}
+      />
+
+      {/* Task Attempt Panel (right side panel) */}
+      {attemptId && (
+        <div className="fixed right-0 top-0 bottom-0 w-[600px] bg-background border-l shadow-lg z-50 flex flex-col">
+          {/* Panel Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-sm truncate">
+                {selectedTask?.title || 'Task'}
+              </h2>
+              <p className="text-xs text-muted-foreground">Attempt Logs</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCloseAttemptPanel}
+              className="shrink-0 ml-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Panel Content */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <TaskAttemptPanel attempt={selectedAttempt} task={selectedTask}>
+              {({ logs }) => <div className="h-full flex flex-col">{logs}</div>}
+            </TaskAttemptPanel>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

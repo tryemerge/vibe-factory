@@ -194,6 +194,14 @@ function AppContent() {
                   element={<FactoryFloorPage />}
                 />
                 <Route
+                  path="/projects/:projectId/factory/:taskId"
+                  element={<FactoryFloorPage />}
+                />
+                <Route
+                  path="/projects/:projectId/factory/:taskId/attempts/:attemptId"
+                  element={<FactoryFloorPage />}
+                />
+                <Route
                   path="/projects/:projectId/tasks"
                   element={<ProjectTasks />}
                 />
