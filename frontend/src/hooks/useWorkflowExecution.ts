@@ -12,7 +12,11 @@ interface UseWorkflowExecutionOptions {
 }
 
 /**
- * Hook to fetch and monitor workflow execution status
+ * Hook to monitor workflow execution status (READ-ONLY)
+ *
+ * ⚠️ NOTE: This is different from PR #37's useWorkflowExecution
+ * - PR #37: Action hook for EXECUTING workflows (POST request)
+ * - This hook: Monitoring hook for READING execution status (GET request + polling)
  *
  * Provides real-time updates on:
  * - Overall workflow execution status
@@ -20,6 +24,15 @@ interface UseWorkflowExecutionOptions {
  * - Individual station execution states
  *
  * Use with polling (refetchInterval) for real-time updates during execution
+ *
+ * Example:
+ * ```tsx
+ * const { stationStatusMap, progress, isRunning } = useWorkflowExecution({
+ *   executionId: 'uuid-here',
+ *   enabled: true,
+ *   refetchInterval: 2000, // Poll every 2 seconds
+ * });
+ * ```
  */
 export function useWorkflowExecution({
   executionId,

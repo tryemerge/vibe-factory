@@ -68,6 +68,11 @@ function FactoryFloorContent() {
 
   // Active workflow execution ID (if a workflow is currently running)
   // TODO: Wire this up to workflow execution start/stop actions
+  // When PR #37 (3.0a - Backend execution endpoint) is merged:
+  // 1. Add "Execute Workflow" button in WorkflowToolbar
+  // 2. Call workflowExecutionsApi.execute() on button click
+  // 3. Set activeExecutionId to response.workflow_execution_id
+  // 4. Add "Cancel" button to stop execution and clear activeExecutionId
   const [activeExecutionId] = useState<string | null>(
     null
   );

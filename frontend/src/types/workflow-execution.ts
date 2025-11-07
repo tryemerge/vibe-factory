@@ -1,6 +1,16 @@
 /**
- * Temporary type definitions for workflow execution
- * These should be generated from Rust via ts-rs in the future
+ * TEMPORARY type definitions for workflow execution
+ *
+ * These types are manually defined to match the Rust backend structs in:
+ * crates/server/src/routes/workflows/workflow_executions.rs
+ *
+ * ⚠️ TODO: DELETE THIS FILE after running `pnpm run generate-types`
+ *
+ * The Rust structs have #[ts(export)] annotations and should be automatically
+ * generated into shared/types.ts. Once generated, replace all imports from
+ * this file with imports from 'shared/types'.
+ *
+ * Related: PR #31 added these structs to generate_types.rs
  */
 
 export interface StationExecutionSummary {
