@@ -340,6 +340,22 @@ export type ExecuteWorkflowRequest = { task_id: string, base_branch: string, exe
 
 export type ExecuteWorkflowResponse = { workflow_execution_id: string, task_attempt_id: string, current_station_id: string | null, status: string, };
 
+export type WorkflowExecutionDetailsResponse = { id: string, workflow_id: string, task_id: string, task_attempt_id: string | null, current_station_id: string | null, status: string, started_at: string | null, completed_at: string | null, created_at: string, updated_at: string, stations: Array<StationExecutionSummary>, };
+
+export type StationExecutionSummary = { id: string, station_id: string, station_name: string | null, status: string, output_data: string | null, started_at: string | null, completed_at: string | null, };
+
+export type CancelWorkflowExecutionRequest = { 
+/**
+ * Optional reason for cancellation
+ */
+reason: string | null, };
+
+export type CancelWorkflowExecutionResponse = { workflow_execution_id: string, status: string, message: string, };
+
+export type RetryStationRequest = { station_execution_id: string, };
+
+export type RetryStationResponse = { workflow_execution_id: string, new_station_execution_id: string, status: string, message: string, };
+
 export type CommandExitStatus = { "type": "exit_code", code: number, } | { "type": "success", success: boolean, };
 
 export type CommandRunResult = { exit_status: CommandExitStatus | null, output: string | null, };
