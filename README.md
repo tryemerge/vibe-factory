@@ -41,6 +41,75 @@ npx vibe-kanban
 
 Please head to the [website](https://vibekanban.com/docs) for the latest documentation and user guides.
 
+## Railway Deployment
+
+Deploy Vibe Kanban to Railway for access from anywhere (mobile, tablet, etc.).
+
+### Quick Deploy
+
+**Option 1: One-Click Setup (Recommended)**
+
+Use our automated setup script for the easiest deployment experience:
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Run automated setup
+./scripts/railway-setup.sh
+
+# Deploy
+./scripts/deploy-to-railway.sh
+```
+
+**Option 2: Manual Setup**
+
+1. Create new project on [Railway](https://railway.app)
+2. Deploy from GitHub repo → Select your Vibe Kanban repository
+3. Railway auto-detects the Dockerfile and deploys
+4. (Optional) Add a volume for database persistence:
+   - Storage → New Volume → Mount at `/data`
+   - Set `DATABASE_URL=sqlite:///data/db.sqlite`
+
+### Quick Start Guide
+
+For a 5-minute deployment walkthrough, see **[docs/railway-quickstart.md](docs/railway-quickstart.md)**.
+
+### Complete Documentation
+
+- **[RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md)** - Comprehensive deployment guide with automation scripts
+- **[RAILWAY_ENVIRONMENT.md](RAILWAY_ENVIRONMENT.md)** - Complete environment variable reference
+- **[RAILWAY_DATABASE_GUIDE.md](RAILWAY_DATABASE_GUIDE.md)** - Database setup and backup procedures
+- **[RAILWAY_CLI_REFERENCE.md](RAILWAY_CLI_REFERENCE.md)** - Railway CLI command reference
+
+### Available Automation Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `railway-setup.sh` | Interactive setup for new Railway projects |
+| `deploy-to-railway.sh` | One-command deployment with safety checks |
+| `railway-logs.sh` | Stream and filter logs |
+| `railway-backup-db.sh` | Download database backup |
+| `railway-restore-db.sh` | Restore database from backup |
+
+### Key Features
+
+✅ **Zero-config deployment** - Works with Railway defaults
+✅ **Persistent database** - Optional volume for data persistence
+✅ **Automatic HTTPS** - Railway provides SSL certificates
+✅ **GitHub authentication** - Device Flow OAuth built-in
+✅ **Docker-based** - Uses existing Dockerfile
+
+### Cost Estimate
+
+- **Hobby Plan**: $5/month credit (testing/demos)
+- **Pro Plan**: $20-60/month (recommended for production)
+
+See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed resource requirements and cost breakdown.
+
 ## Support
 
 We use [GitHub Discussions](https://github.com/BloopAI/vibe-kanban/discussions) for feature requests. Please open a discussion to create a feature request. For bugs please open an issue on this repo.
