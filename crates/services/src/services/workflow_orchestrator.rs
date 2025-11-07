@@ -173,7 +173,9 @@ impl WorkflowOrchestrator {
             .ok_or(WorkflowOrchestratorError::AgentNotFound(agent_id))?;
 
         // Build the prompt: agent.system_prompt + station.station_prompt + context
-        let prompt = self.build_station_prompt(&agent, &station, context_data)?;
+        let prompt = self
+            .build_station_prompt(&agent, &station, context_data, workflow_execution_id)
+            .await?;
 
         // Create the station execution record directly as "running"
         let station_execution_id = Uuid::new_v4();
@@ -288,11 +290,12 @@ impl WorkflowOrchestrator {
     }
 
     /// Build the prompt for a station execution
-    fn build_station_prompt(
+    async fn build_station_prompt(
         &self,
         agent: &Agent,
         station: &WorkflowStation,
         context_data: Option<JsonValue>,
+        workflow_execution_id: Uuid,
     ) -> WorkflowOrchestratorResult<String> {
         let mut prompt = agent.system_prompt.clone();
 
@@ -303,16 +306,53 @@ impl WorkflowOrchestrator {
             prompt.push_str(station_prompt);
         }
 
-        // Add context data if available
+        // Add context data if available with better formatting
         if let Some(context) = context_data {
-            prompt.push_str("\n\n");
-            prompt.push_str("## Context from Previous Stations\n");
-            prompt.push_str(&serde_json::to_string_pretty(&context).map_err(|e| {
-                WorkflowOrchestratorError::OutputDataParseError(format!(
-                    "Failed to serialize context: {}",
-                    e
-                ))
-            })?);
+            if let Some(obj) = context.as_object() {
+                if !obj.is_empty() {
+                    prompt.push_str("\n\n");
+                    prompt.push_str("## Context from Previous Stations\n");
+
+                    // Get all completed station executions to show station names
+                    let station_executions =
+                        StationExecution::find_by_workflow_execution(self.pool(), workflow_execution_id)
+                            .await?;
+
+                    // Group outputs by station
+                    for station_execution in station_executions {
+                        if station_execution.status == "completed" {
+                            if let Some(output_data) = &station_execution.output_data {
+                                if let Ok(output) = serde_json::from_str::<JsonValue>(output_data) {
+                                    if let Some(output_obj) = output.as_object() {
+                                        if !output_obj.is_empty() {
+                                            // Load station name
+                                            if let Ok(Some(station)) = WorkflowStation::find_by_id(
+                                                self.pool(),
+                                                station_execution.station_id,
+                                            )
+                                            .await
+                                            {
+                                                prompt.push_str(&format!("\n### Station: \"{}\"\n", station.name));
+                                                for (key, value) in output_obj {
+                                                    // Format value nicely
+                                                    let formatted_value = match value {
+                                                        JsonValue::String(s) => format!("\"{}\"", s),
+                                                        JsonValue::Bool(b) => b.to_string(),
+                                                        JsonValue::Number(n) => n.to_string(),
+                                                        _ => serde_json::to_string_pretty(value)
+                                                            .unwrap_or_else(|_| "null".to_string()),
+                                                    };
+                                                    prompt.push_str(&format!("- {}: {}\n", key, formatted_value));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Add output expectations if output_context_keys are defined
@@ -327,10 +367,22 @@ impl WorkflowOrchestrator {
             if !output_keys.is_empty() {
                 prompt.push_str("\n\n");
                 prompt.push_str("## Expected Outputs\n");
-                prompt.push_str("Please provide the following outputs:\n");
-                for key in output_keys {
+                prompt.push_str(
+                    "Please provide the following outputs in a JSON code block (```json ... ```):\n",
+                );
+                for key in &output_keys {
                     prompt.push_str(&format!("- {}\n", key));
                 }
+                prompt.push_str("\nExample format:\n");
+                prompt.push_str("```json\n{\n");
+                for (i, key) in output_keys.iter().enumerate() {
+                    prompt.push_str(&format!("  \"{}\": \"your_value_here\"", key));
+                    if i < output_keys.len() - 1 {
+                        prompt.push_str(",");
+                    }
+                    prompt.push_str("\n");
+                }
+                prompt.push_str("}\n```\n");
             }
         }
 
@@ -478,8 +530,9 @@ impl WorkflowOrchestrator {
     /// 2. Checks if station succeeded/failed
     /// 3. Advances to next station or completes workflow
     /// 4. Moves task to "inreview" when all stations complete
-    pub async fn handle_station_completion(
+    pub async fn handle_station_completion<C: ContainerService + Sync>(
         &self,
+        container_service: &C,
         station_execution_id: Uuid,
         success: bool,
         output_data: Option<String>,
@@ -571,6 +624,29 @@ impl WorkflowOrchestrator {
                 tracing::info!(
                     "Advanced workflow execution {} to station {}",
                     workflow_execution.id,
+                    next_station_id
+                );
+
+                // Gather context from all completed stations
+                let context_data = self.gather_context_data(workflow_execution.id).await?;
+
+                // Get task_attempt_id from workflow execution
+                let task_attempt_id = workflow_execution
+                    .task_attempt_id
+                    .ok_or_else(|| anyhow!("Workflow execution has no task_attempt_id"))?;
+
+                // Start the next station execution with context
+                self.execute_station(
+                    container_service,
+                    workflow_execution.id,
+                    next_station_id,
+                    task_attempt_id,
+                    Some(context_data),
+                )
+                .await?;
+
+                tracing::info!(
+                    "Started next station execution for station {}",
                     next_station_id
                 );
             }
@@ -681,6 +757,82 @@ impl WorkflowOrchestrator {
         Ok(workflow_execution)
     }
 
+    /// Extract output data from agent response text
+    ///
+    /// This function implements Phase 1.1's manual extraction approach:
+    /// - Looks for JSON blocks in markdown (```json ... ```)
+    /// - Extracts keys specified in `output_context_keys`
+    /// - Returns a JSON object with those keys
+    ///
+    /// # Arguments
+    /// * `response_text` - The full agent response text (from MsgStore or logs)
+    /// * `output_context_keys` - Comma-separated list of keys to extract
+    ///
+    /// # Returns
+    /// JSON string containing the extracted key-value pairs, or None if no valid data found
+    pub fn extract_output_data(
+        &self,
+        response_text: &str,
+        output_context_keys: Option<&str>,
+    ) -> Option<String> {
+        let keys_to_extract = match output_context_keys {
+            Some(keys) if !keys.trim().is_empty() => {
+                keys.split(',').map(|k| k.trim().to_string()).collect::<Vec<_>>()
+            }
+            _ => return None, // No keys specified
+        };
+
+        // Look for JSON code blocks in markdown format
+        let json_block_pattern = regex::Regex::new(r"```json\s*([\s\S]*?)\s*```").ok()?;
+
+        // Try each JSON block until we find one that parses successfully
+        for captures in json_block_pattern.captures_iter(response_text) {
+            if let Some(json_content) = captures.get(1) {
+                // Try to parse as JSON
+                if let Ok(parsed) = serde_json::from_str::<JsonValue>(json_content.as_str()) {
+                    let mut extracted = serde_json::Map::new();
+
+                    // Extract only the specified keys
+                    if let Some(obj) = parsed.as_object() {
+                        for key in &keys_to_extract {
+                            if let Some(value) = obj.get(key) {
+                                extracted.insert(key.clone(), value.clone());
+                            }
+                        }
+                    }
+
+                    // If we found any matching keys, return the extracted data
+                    if !extracted.is_empty() {
+                        if let Ok(json_str) = serde_json::to_string(&JsonValue::Object(extracted)) {
+                            return Some(json_str);
+                        }
+                    }
+                }
+            }
+        }
+
+        // If no JSON blocks found, try parsing the entire response as JSON
+        if let Ok(parsed) = serde_json::from_str::<JsonValue>(response_text) {
+            let mut extracted = serde_json::Map::new();
+
+            if let Some(obj) = parsed.as_object() {
+                for key in &keys_to_extract {
+                    if let Some(value) = obj.get(key) {
+                        extracted.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+
+            if !extracted.is_empty() {
+                if let Ok(json_str) = serde_json::to_string(&JsonValue::Object(extracted)) {
+                    return Some(json_str);
+                }
+            }
+        }
+
+        None
+    }
+
     /// Gather context data from previous station executions
     ///
     /// This collects output_data from all completed stations in the workflow execution
@@ -744,6 +896,7 @@ impl WorkflowOrchestrator {
     /// It should be called after commit/next-action logic completes.
     ///
     /// # Arguments
+    /// * `container_service` - Container service for starting next station executions
     /// * `execution_process_id` - The completed ExecutionProcess ID
     /// * `success` - Whether the execution succeeded
     /// * `output_data` - Optional JSON output data extracted from the execution
@@ -759,15 +912,16 @@ impl WorkflowOrchestrator {
     ///     let output_data = None; // TODO: Implement output extraction
     ///
     ///     if let Err(e) = workflow_orchestrator
-    ///         .handle_station_completion(station_execution.id, success, output_data)
+    ///         .handle_station_completion(&container_service, station_execution.id, success, output_data)
     ///         .await
     ///     {
     ///         tracing::error!("Failed to handle workflow station completion: {}", e);
     ///     }
     /// }
     /// ```
-    pub async fn trigger_workflow_progression(
+    pub async fn trigger_workflow_progression<C: ContainerService + Sync>(
         &self,
+        container_service: &C,
         execution_process_id: Uuid,
         success: bool,
         output_data: Option<String>,
@@ -783,7 +937,7 @@ impl WorkflowOrchestrator {
             );
 
             // Handle the station completion and advance workflow
-            self.handle_station_completion(station_execution.id, success, output_data)
+            self.handle_station_completion(container_service, station_execution.id, success, output_data)
                 .await?;
         }
 
