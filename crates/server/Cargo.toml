@@ -49,6 +49,7 @@ dirs = "5.0"
 [dev-dependencies]
 tempfile = "3.8"
 tower = { version = "0.4", features = ["util"] }
+async-trait = "0.1"
 
 [build-dependencies]
 dotenv = "0.15"
