@@ -3,7 +3,7 @@ import { workflowExecutionsApi } from '@/lib/api';
 import type {
   WorkflowExecutionDetailsResponse,
   StationExecutionSummary,
-} from '@/types/workflow-execution';
+} from 'shared/types';
 
 interface UseWorkflowExecutionOptions {
   executionId?: string;
