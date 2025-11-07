@@ -52,9 +52,16 @@ RUN addgroup -g 1001 -S appgroup && \
 # Copy binary from builder
 COPY --from=builder /app/target/release/server /usr/local/bin/server
 
-# Create repos directory and set permissions
-RUN mkdir -p /repos && \
-    chown -R appuser:appgroup /repos
+# Copy database template for initialization
+COPY --from=builder /app/dev_assets_template /app/dev_assets_template
+
+# Copy entrypoint script
+COPY scripts/railway-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
+RUN chmod +x /usr/local/bin/railway-entrypoint.sh
+
+# Create directories and set permissions
+RUN mkdir -p /repos /data && \
+    chown -R appuser:appgroup /repos /data /app
 
 # Switch to non-root user
 USER appuser
@@ -71,6 +78,6 @@ WORKDIR /repos
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --quiet --tries=1 --spider "http://${HOST:-localhost}:${PORT:-3000}" || exit 1
 
-# Run the application
-ENTRYPOINT ["/sbin/tini", "--"]
+# Run the application with database initialization
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/railway-entrypoint.sh"]
 CMD ["server"]
