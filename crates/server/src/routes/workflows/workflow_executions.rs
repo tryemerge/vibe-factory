@@ -1,14 +1,16 @@
 use axum::{
     Extension, Json,
-    extract::State,
+    extract::{Path, State},
     response::Json as ResponseJson,
 };
 use chrono::Utc;
 use db::models::{
+    execution_process::ExecutionProcess,
+    station_execution::StationExecution,
     task::Task,
     task_attempt::{CreateTaskAttempt, TaskAttempt},
     workflow::Workflow,
-    workflow_execution::{CreateWorkflowExecution, WorkflowExecution},
+    workflow_execution::{CreateWorkflowExecution, UpdateWorkflowExecution, WorkflowExecution},
     workflow_station::WorkflowStation,
     station_transition::StationTransition,
 };
@@ -237,5 +239,407 @@ pub async fn execute_workflow(
         task_attempt_id: task_attempt.id,
         current_station_id: workflow_execution.current_station_id,
         status: workflow_execution.status,
+    })))
+}
+
+// ============================================================================
+// WORKFLOW EXECUTION MONITORING ENDPOINTS
+// ============================================================================
+
+/// Response for workflow execution with station details
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct WorkflowExecutionDetailsResponse {
+    pub id: uuid::Uuid,
+    pub workflow_id: uuid::Uuid,
+    pub task_id: uuid::Uuid,
+    pub task_attempt_id: Option<uuid::Uuid>,
+    pub current_station_id: Option<uuid::Uuid>,
+    pub status: String,
+    pub started_at: Option<chrono::DateTime<Utc>>,
+    pub completed_at: Option<chrono::DateTime<Utc>>,
+    pub created_at: chrono::DateTime<Utc>,
+    pub updated_at: chrono::DateTime<Utc>,
+    pub stations: Vec<StationExecutionSummary>,
+}
+
+/// Summary of a station execution for the workflow execution response
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct StationExecutionSummary {
+    pub id: uuid::Uuid,
+    pub station_id: uuid::Uuid,
+    pub station_name: Option<String>,
+    pub status: String,
+    pub output_data: Option<String>,
+    pub started_at: Option<chrono::DateTime<Utc>>,
+    pub completed_at: Option<chrono::DateTime<Utc>>,
+}
+
+/// Get workflow execution by ID with station details
+/// GET /api/workflow-executions/{id}
+pub async fn get_workflow_execution(
+    State(deployment): State<DeploymentImpl>,
+    Path(execution_id): Path<Uuid>,
+) -> Result<ResponseJson<ApiResponse<WorkflowExecutionDetailsResponse>>, ApiError> {
+    let pool = &deployment.db().pool;
+
+    // Load the workflow execution
+    let workflow_execution = WorkflowExecution::find_by_id(pool, execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    // Load all station executions for this workflow execution
+    let station_executions = StationExecution::find_by_workflow_execution(pool, execution_id).await?;
+
+    // Enrich station executions with station names
+    let mut stations = Vec::new();
+    for station_execution in station_executions {
+        let station = WorkflowStation::find_by_id(pool, station_execution.station_id).await?;
+        stations.push(StationExecutionSummary {
+            id: station_execution.id,
+            station_id: station_execution.station_id,
+            station_name: station.map(|s| s.name),
+            status: station_execution.status,
+            output_data: station_execution.output_data,
+            started_at: station_execution.started_at,
+            completed_at: station_execution.completed_at,
+        });
+    }
+
+    Ok(ResponseJson(ApiResponse::success(
+        WorkflowExecutionDetailsResponse {
+            id: workflow_execution.id,
+            workflow_id: workflow_execution.workflow_id,
+            task_id: workflow_execution.task_id,
+            task_attempt_id: workflow_execution.task_attempt_id,
+            current_station_id: workflow_execution.current_station_id,
+            status: workflow_execution.status,
+            started_at: workflow_execution.started_at,
+            completed_at: workflow_execution.completed_at,
+            created_at: workflow_execution.created_at,
+            updated_at: workflow_execution.updated_at,
+            stations,
+        },
+    )))
+}
+
+/// Get all station executions for a workflow execution
+/// GET /api/workflow-executions/{id}/stations
+pub async fn get_workflow_execution_stations(
+    State(deployment): State<DeploymentImpl>,
+    Path(execution_id): Path<Uuid>,
+) -> Result<ResponseJson<ApiResponse<Vec<StationExecutionSummary>>>, ApiError> {
+    let pool = &deployment.db().pool;
+
+    // Verify workflow execution exists
+    WorkflowExecution::find_by_id(pool, execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    // Load all station executions
+    let station_executions = StationExecution::find_by_workflow_execution(pool, execution_id).await?;
+
+    // Enrich station executions with station names
+    let mut stations = Vec::new();
+    for station_execution in station_executions {
+        let station = WorkflowStation::find_by_id(pool, station_execution.station_id).await?;
+        stations.push(StationExecutionSummary {
+            id: station_execution.id,
+            station_id: station_execution.station_id,
+            station_name: station.map(|s| s.name),
+            status: station_execution.status,
+            output_data: station_execution.output_data,
+            started_at: station_execution.started_at,
+            completed_at: station_execution.completed_at,
+        });
+    }
+
+    Ok(ResponseJson(ApiResponse::success(stations)))
+}
+
+/// Request body for cancelling a workflow execution
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub struct CancelWorkflowExecutionRequest {
+    /// Optional reason for cancellation
+    pub reason: Option<String>,
+}
+
+/// Response for cancelling a workflow execution
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct CancelWorkflowExecutionResponse {
+    pub workflow_execution_id: Uuid,
+    pub status: String,
+    pub message: String,
+}
+
+/// Cancel a running workflow execution
+/// POST /api/workflow-executions/{id}/cancel
+///
+/// # Transaction Safety
+///
+/// This operation is **NOT** fully transactional due to the need to stop external processes.
+/// The operation follows this sequence:
+///
+/// 1. Stop execution processes (external side effect - cannot be rolled back)
+/// 2. Update station executions to "cancelled" (database operation)
+/// 3. Update workflow execution to "cancelled" (database operation)
+///
+/// If the workflow execution update fails after stopping processes, the processes will
+/// remain stopped but the workflow status may not reflect this. This is acceptable because:
+/// - The processes are already stopped (desired state achieved)
+/// - A retry of the cancel operation will succeed (idempotent)
+/// - The system remains in a consistent state (processes stopped)
+///
+/// Recovery: If database updates fail, the workflow can be cancelled again.
+pub async fn cancel_workflow_execution(
+    State(deployment): State<DeploymentImpl>,
+    Path(execution_id): Path<Uuid>,
+    Json(request): Json<CancelWorkflowExecutionRequest>,
+) -> Result<ResponseJson<ApiResponse<CancelWorkflowExecutionResponse>>, ApiError> {
+    let pool = &deployment.db().pool;
+
+    // Load the workflow execution
+    let workflow_execution = WorkflowExecution::find_by_id(pool, execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    // Check if the workflow is in a cancellable state
+    if workflow_execution.status == "completed" || workflow_execution.status == "cancelled" {
+        return Err(ApiError::Validation(format!(
+            "Cannot cancel workflow execution in '{}' state",
+            workflow_execution.status
+        )));
+    }
+
+    // Find any running station executions
+    let station_executions = StationExecution::find_by_workflow_execution(pool, execution_id).await?;
+
+    // Stop all running execution processes first (cannot be rolled back)
+    for station_execution in &station_executions {
+        if station_execution.status == "running" {
+            // Find the execution process for this station
+            if let Some(execution_process_id) = station_execution.execution_process_id {
+                // Load the execution process
+                if let Some(execution_process) = ExecutionProcess::find_by_id(pool, execution_process_id).await? {
+                    // Stop the execution process if it's still running
+                    if execution_process.status == db::models::execution_process::ExecutionProcessStatus::Running {
+                        deployment.container().stop_execution(
+                            &execution_process,
+                            db::models::execution_process::ExecutionProcessStatus::Killed
+                        ).await?;
+                        tracing::info!("Stopped execution process {} for station execution {}", execution_process_id, station_execution.id);
+                    }
+                }
+            }
+        }
+    }
+
+    // Start a database transaction for updating statuses
+    let mut tx = pool.begin().await?;
+
+    // Update station execution statuses to cancelled
+    for station_execution in station_executions {
+        if station_execution.status == "running" {
+            sqlx::query!(
+                "UPDATE station_executions SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+                station_execution.id,
+                "cancelled"
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    // Update workflow execution status to cancelled
+    let completed_at = Utc::now();
+    sqlx::query!(
+        "UPDATE workflow_executions SET status = $2, completed_at = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+        execution_id,
+        "cancelled",
+        completed_at
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // Commit the transaction
+    tx.commit().await?;
+
+    // Reload the workflow execution to get updated values
+    let workflow_execution = WorkflowExecution::find_by_id(pool, execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    let message = if let Some(ref reason) = request.reason {
+        format!("Workflow execution cancelled: {}", reason)
+    } else {
+        "Workflow execution cancelled".to_string()
+    };
+
+    tracing::info!("Cancelled workflow execution {}: {}", execution_id, message);
+
+    // Track analytics
+    deployment
+        .track_if_analytics_allowed(
+            "workflow_execution_cancelled",
+            serde_json::json!({
+                "workflow_execution_id": execution_id.to_string(),
+                "workflow_id": workflow_execution.workflow_id.to_string(),
+                "reason": request.reason.as_ref().map(|s| s.as_str()),
+            }),
+        )
+        .await;
+
+    Ok(ResponseJson(ApiResponse::success(
+        CancelWorkflowExecutionResponse {
+            workflow_execution_id: execution_id,
+            status: workflow_execution.status,
+            message,
+        },
+    )))
+}
+
+/// Request body for retrying a failed station
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub struct RetryStationRequest {
+    pub station_execution_id: Uuid,
+}
+
+/// Response for retrying a station
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct RetryStationResponse {
+    pub workflow_execution_id: Uuid,
+    pub new_station_execution_id: Uuid,
+    pub status: String,
+    pub message: String,
+}
+
+/// Retry a failed station execution
+/// POST /api/workflow-executions/{id}/retry-station
+///
+/// # Transaction Safety
+///
+/// This operation involves multiple steps that cannot all be rolled back:
+///
+/// 1. Gather context from completed stations (read-only, safe)
+/// 2. Create new StationExecution record (database operation)
+/// 3. Start execution process (external side effect - cannot be rolled back)
+/// 4. Update workflow execution status (database operation)
+///
+/// The orchestrator.execute_station() method handles step 2 and 3 internally.
+/// If step 4 fails after the process is started, the process will continue running
+/// but the workflow status won't reflect this.
+///
+/// Recovery strategy:
+/// - If the update fails, the new station execution exists and process is running
+/// - The workflow orchestrator's completion handler will eventually update the workflow
+/// - Alternatively, the retry can be called again (it will fail validation but won't corrupt state)
+///
+/// This is acceptable because:
+/// - The new station execution is created and tracked in the database
+/// - The process will complete and trigger normal completion handlers
+/// - The system will eventually reach a consistent state
+pub async fn retry_station_execution(
+    State(deployment): State<DeploymentImpl>,
+    Path(execution_id): Path<Uuid>,
+    Json(request): Json<RetryStationRequest>,
+) -> Result<ResponseJson<ApiResponse<RetryStationResponse>>, ApiError> {
+    let pool = &deployment.db().pool;
+
+    // Load the workflow execution
+    let workflow_execution = WorkflowExecution::find_by_id(pool, execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    // Load the station execution to retry
+    let station_execution = StationExecution::find_by_id(pool, request.station_execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    // Verify the station execution belongs to this workflow execution
+    if station_execution.workflow_execution_id != execution_id {
+        return Err(ApiError::Validation(
+            "Station execution does not belong to this workflow execution".to_string(),
+        ));
+    }
+
+    // Check if the station is in a retryable state
+    if station_execution.status != "failed" {
+        return Err(ApiError::Validation(format!(
+            "Can only retry failed stations, current status is '{}'",
+            station_execution.status
+        )));
+    }
+
+    // Get the task attempt ID
+    let task_attempt_id = workflow_execution
+        .task_attempt_id
+        .ok_or_else(|| ApiError::Validation("Workflow execution has no task_attempt_id".to_string()))?;
+
+    // Load the workflow orchestrator
+    let orchestrator = services::services::workflow_orchestrator::WorkflowOrchestrator::new(
+        deployment.db().clone()
+    );
+
+    // Gather context from all previously completed stations
+    let context_data = orchestrator.gather_context_data(execution_id).await
+        .map_err(|e| ApiError::Validation(format!("Failed to gather context: {}", e)))?;
+
+    // Create a new station execution for the retry (this also starts the process)
+    // Note: This is not transactional with the workflow update below
+    let new_station_execution = orchestrator
+        .execute_station(
+            deployment.container(),
+            execution_id,
+            station_execution.station_id,
+            task_attempt_id,
+            Some(context_data),
+        )
+        .await
+        .map_err(|e| ApiError::Validation(format!("Failed to execute station: {}", e)))?;
+
+    // Update workflow execution to point to the retried station
+    // If this fails, the station execution still exists and will complete normally
+    WorkflowExecution::update(
+        pool,
+        execution_id,
+        UpdateWorkflowExecution {
+            current_station_id: Some(station_execution.station_id),
+            status: Some("running".to_string()),
+            started_at: None,
+            completed_at: None,
+        },
+    )
+    .await?;
+
+    tracing::info!(
+        "Retrying station execution {} for workflow execution {}, new station execution: {}",
+        request.station_execution_id,
+        execution_id,
+        new_station_execution.id
+    );
+
+    // Track analytics
+    deployment
+        .track_if_analytics_allowed(
+            "workflow_station_retried",
+            serde_json::json!({
+                "workflow_execution_id": execution_id.to_string(),
+                "station_execution_id": request.station_execution_id.to_string(),
+                "new_station_execution_id": new_station_execution.id.to_string(),
+                "station_id": station_execution.station_id.to_string(),
+            }),
+        )
+        .await;
+
+    Ok(ResponseJson(ApiResponse::success(RetryStationResponse {
+        workflow_execution_id: execution_id,
+        new_station_execution_id: new_station_execution.id,
+        status: "running".to_string(),
+        message: "Station execution retry started".to_string(),
     })))
 }

@@ -288,4 +288,9 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .route("/workflows/{workflow_id}/transitions", get(get_transitions_by_workflow).post(create_transition))
         // Workflow execution: POST /workflows/{workflow_id}/execute
         .nest("/workflows/{id}", workflow_id_router)
+        // Workflow execution monitoring endpoints
+        .route("/workflow-executions/{id}", get(workflow_executions::get_workflow_execution))
+        .route("/workflow-executions/{id}/stations", get(workflow_executions::get_workflow_execution_stations))
+        .route("/workflow-executions/{id}/cancel", post(workflow_executions::cancel_workflow_execution))
+        .route("/workflow-executions/{id}/retry-station", post(workflow_executions::retry_station_execution))
 }

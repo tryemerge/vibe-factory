@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE workflow_executions SET status = $2, completed_at = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "259c8a9787b393baf1064369b4a3144fa18cadbf456ac63c7bc446d8583692e7"
+}
