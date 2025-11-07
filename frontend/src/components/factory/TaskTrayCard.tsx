@@ -11,8 +11,8 @@ import {
 import { CheckCircle, Loader2, XCircle, Play, Eye } from 'lucide-react';
 import type { TaskWithAttemptStatus, Workflow } from 'shared/types';
 import { cn } from '@/lib/utils';
-import { workflowsApi, tasksApi } from '@/lib/api';
-import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
+import { workflowsApi } from '@/lib/api';
+import { useExecuteWorkflow } from '@/hooks/useExecuteWorkflow';
 
 type Task = TaskWithAttemptStatus;
 
@@ -26,7 +26,7 @@ export function TaskTrayCard({ task, horizontal = false, projectId }: TaskTrayCa
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
   const [isLoadingWorkflows, setIsLoadingWorkflows] = useState(false);
-  const { executeWorkflow, isExecuting, error } = useWorkflowExecution();
+  const { executeWorkflow, isExecuting, error, lastExecutionId } = useExecuteWorkflow();
 
   // Load workflows for the project
   useEffect(() => {
@@ -55,30 +55,15 @@ export function TaskTrayCard({ task, horizontal = false, projectId }: TaskTrayCa
   const handleStartWorkflow = async () => {
     if (!selectedWorkflowId) return;
 
-    const result = await executeWorkflow(selectedWorkflowId, {
+    await executeWorkflow(selectedWorkflowId, {
       task_id: task.id,
       base_branch: 'master', // TODO: Make this configurable or get from project settings
       executor_profile_id: null, // Use default executor
     });
 
-    if (result) {
-      // Update task status to in-progress
-      try {
-        await tasksApi.update(task.id, {
-          title: null,
-          description: null,
-          status: 'inprogress',
-          parent_task_attempt: null,
-          agent_id: null,
-          workflow_id: null,
-          current_station_id: null,
-          image_ids: null,
-        });
-        // The UI will update via the polling mechanism
-      } catch (err) {
-        console.error('Failed to update task status:', err);
-      }
-    }
+    // Note: Task status update (todo → inprogress) is handled automatically
+    // by the backend when workflow execution starts (via start_attempt() flow).
+    // The UI will update via the polling/refetch mechanism.
   };
 
   const hasWorkflows = workflows.length > 0;
@@ -161,7 +146,8 @@ export function TaskTrayCard({ task, horizontal = false, projectId }: TaskTrayCa
               variant="outline"
               onClick={() => {
                 // TODO: Navigate to execution view or open modal
-                console.log('View execution for task:', task.id);
+                // Use lastExecutionId for monitoring the current execution
+                console.log('View execution for task:', task.id, 'execution ID:', lastExecutionId);
               }}
               className="h-7 text-xs w-full"
             >
