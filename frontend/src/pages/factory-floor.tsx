@@ -534,7 +534,14 @@ function FactoryFloorContent() {
           {/* Panel Content */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <TaskAttemptPanel attempt={selectedAttempt} task={selectedTask}>
-              {({ logs }) => <div className="h-full flex flex-col">{logs}</div>}
+              {({ logs, followUp }) => (
+                <div className="h-full flex flex-col">
+                  <div className="flex-1 min-h-0 overflow-hidden">{logs}</div>
+                  {followUp && (
+                    <div className="border-t bg-background">{followUp}</div>
+                  )}
+                </div>
+              )}
             </TaskAttemptPanel>
           </div>
         </div>
