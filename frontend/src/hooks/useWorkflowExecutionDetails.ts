@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { workflowExecutionApi } from '@/lib/api';
+import { workflowExecutionsApi } from '@/lib/api';
 import type {
   WorkflowExecutionDetailsResponse,
   StationExecutionSummary,
 } from 'shared/types';
 
-interface UseWorkflowExecutionResult {
+interface UseWorkflowExecutionDetailsResult {
   execution: WorkflowExecutionDetailsResponse | null;
   stations: StationExecutionSummary[];
   currentStation: StationExecutionSummary | null;
@@ -15,12 +15,17 @@ interface UseWorkflowExecutionResult {
 }
 
 /**
- * Hook to fetch and monitor workflow execution progress
+ * Hook to fetch and monitor workflow execution progress for detail panel
+ *
+ * ⚠️ NOTE: This is different from useWorkflowExecution (from PR #38)
+ * - useWorkflowExecution: Factory Floor monitoring hook (React Query based)
+ * - useWorkflowExecutionDetails: Detail panel hook (useState/useEffect based)
+ *
  * Polls for updates every 2 seconds when workflow is running
  */
-export const useWorkflowExecution = (
+export const useWorkflowExecutionDetails = (
   executionId: string | undefined
-): UseWorkflowExecutionResult => {
+): UseWorkflowExecutionDetailsResult => {
   const [execution, setExecution] =
     useState<WorkflowExecutionDetailsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +38,7 @@ export const useWorkflowExecution = (
     }
 
     try {
-      const data = await workflowExecutionApi.getDetails(executionId);
+      const data = await workflowExecutionsApi.getById(executionId);
       setExecution(data);
       setError(null);
     } catch (err) {

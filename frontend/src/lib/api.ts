@@ -61,15 +61,13 @@ import {
   UpdateStationTransition,
   ExecuteWorkflowRequest,
   ExecuteWorkflowResponse,
-} from 'shared/types';
-import type {
   WorkflowExecutionDetailsResponse,
   StationExecutionSummary,
   CancelWorkflowExecutionRequest,
   CancelWorkflowExecutionResponse,
   RetryStationRequest,
   RetryStationResponse,
-} from '@/types/workflow-execution';
+} from 'shared/types';
 
 // Re-export types for convenience
 export type { RepositoryInfo } from 'shared/types';
