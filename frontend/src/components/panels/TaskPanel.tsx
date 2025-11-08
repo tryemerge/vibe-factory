@@ -84,7 +84,7 @@ const TaskPanel = ({ task, workflowContext }: TaskPanelProps) => {
   return (
     <>
       <NewCardContent>
-        <div className="p-6 flex flex-col h-full max-h-[calc(100vh-12rem)] text-sm">
+        <div className="p-6 flex flex-col h-full max-h-[calc(100vh-16rem)] text-sm">
           <div className="space-y-3 overflow-y-auto flex-shrink min-h-0">
             <MarkdownRenderer content={titleContent} />
             {descriptionContent && (
@@ -121,7 +121,7 @@ const TaskPanel = ({ task, workflowContext }: TaskPanelProps) => {
             )}
           </div>
 
-          <div className="mt-6 flex-shrink-0">
+          <div className="mt-6 mb-12 flex-shrink-0">
             {isAttemptsLoading && (
               <div className="text-muted-foreground">
                 {t('taskPanel.loadingAttempts')}
