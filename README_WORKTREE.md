@@ -2,7 +2,7 @@
 
 **YOU ARE WORKING IN A GIT WORKTREE**, not the main repository!
 
-This is an isolated development environment for task: `factory floor ag`
+This is an isolated development environment for task: `phase 5 11 test`
 
 ## 🚨 CRITICAL: Port Configuration
 
@@ -10,7 +10,7 @@ Your development environment has **dedicated ports** to avoid conflicts:
 
 ```
 Frontend Dev Server: 4500
-Backend Server:      4603
+Backend Server:      4600
 ```
 
 ### How to Start Development
@@ -50,12 +50,12 @@ The ports above are **already configured** in:
 
 This worktree is located at:
 ```
-/Users/the_dusky/code/emerge/vibe-factory-worktrees/162f-factory-floor-ag
+/private/var/folders/ts/3m_pg30j4zl9v3fqrdh4xqc40000gn/T/vibe-kanban-dev/worktrees/ee0c-phase-5-11-test
 ```
 
 Main repository is at:
 ```
-/Users/the_dusky/code/emerge/vibe-factory
+/private/var/folders/ts/3m_pg30j4zl9v3fqrdh4xqc40000gn/T/vibe-kanban-dev/worktrees/ee0c-phase-5-11-test
 ```
 
 ## 🔄 Database
@@ -69,9 +69,9 @@ This prevents you from interfering with the main repository's database.
 
 ## 🎯 Your Task
 
-**Task ID:** `emerge/162f`
-**Task Title:** `factory floor ag`
-**Branch:** `emerge/162f-factory-floor-ag`
+**Task ID:** `emerge/ee0c`
+**Task Title:** `phase 5 11 test`
+**Branch:** `emerge/ee0c-phase-5-11-test`
 
 ## 📚 Common Commands
 
@@ -110,7 +110,7 @@ sqlx migrate run
 - Check that `dev_assets/db.sqlite` exists
 
 **Problem: "Backend not responding"**
-- Verify backend is running on 4603
+- Verify backend is running on 4600
 - Check `vite.config.ts` proxy configuration
 
 ## 📖 Full Documentation
