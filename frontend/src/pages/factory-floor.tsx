@@ -532,7 +532,7 @@ function FactoryFloorContent() {
     if (isAttemptView && attempt) {
       // Show full agent experience with logs and follow-up
       return (
-        <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0" style={{ zoom: 1 }}>
+        <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0">
           <TaskAttemptPanel attempt={attempt} task={selectedTask}>
             {({ logs, followUp }) => (
               <Tabs defaultValue="logs" className="flex-1 flex flex-col min-h-0">
@@ -559,7 +559,7 @@ function FactoryFloorContent() {
 
     // Show task overview
     return (
-      <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0" style={{ zoom: 1 }}>
+      <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0">
         <TaskPanel task={selectedTask} workflowContext={selectedTaskWorkflowContext} />
       </NewCard>
     );
