@@ -178,6 +178,7 @@ function FactoryFloorContent() {
     edges,
     onNodesChange,
     onEdgesChange,
+    onNodeDragStart,
     onNodeDragStop,
     isValidConnection
   } = useReactFlowSync({
@@ -269,9 +270,12 @@ function FactoryFloorContent() {
   const zoomTimeoutRef = useRef<number | null>(null);
   const prevZoomRef = useRef<number | null>(null);
 
+  // Stable boolean for nodes existence (prevents thrashing from frequent length changes)
+  const hasNodes = nodes.length > 0;
+
   // Load saved viewport or fit view on first load
   useEffect(() => {
-    if (nodes.length > 0 && reactFlowInstance && !hasLoadedViewport && effectiveWorkflowId) {
+    if (hasNodes && reactFlowInstance && !hasLoadedViewport && effectiveWorkflowId) {
       // Try to load saved viewport from localStorage
       const savedViewportKey = `workflow-viewport-${effectiveWorkflowId}`;
       const savedViewport = localStorage.getItem(savedViewportKey);
@@ -292,7 +296,7 @@ function FactoryFloorContent() {
         setHasLoadedViewport(true);
       }, 100);
     }
-  }, [nodes.length, reactFlowInstance, hasLoadedViewport, effectiveWorkflowId]);
+  }, [hasNodes, reactFlowInstance, hasLoadedViewport, effectiveWorkflowId]);
 
   // Reset viewport state when workflow changes
   useEffect(() => {
@@ -750,6 +754,7 @@ function FactoryFloorContent() {
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
+                onNodeDragStart={onNodeDragStart}
                 onNodeDragStop={onNodeDragStop}
                 onNodeClick={handleNodeClick}
                 onEdgeClick={handleEdgeClick}

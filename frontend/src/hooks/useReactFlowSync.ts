@@ -77,39 +77,53 @@ function mapExecutionStatus(
 export function useReactFlowSync(options: UseReactFlowSyncOptions) {
   const { stations, transitions, stationStatusMap, stationTasksMap, onStationUpdate } = options;
 
+  // Memoize station structure separately (stable - only changes when stations are added/removed/renamed)
+  const stationStructure = useMemo(() =>
+    stations.map(s => ({
+      id: s.id,
+      name: s.name,
+      position: { x: s.x_position, y: s.y_position },
+      description: s.description,
+      agentId: s.agent_id,
+      stationPrompt: s.station_prompt,
+      outputContextKeys: s.output_context_keys,
+    })),
+    [stations]
+  );
+
   // Convert workflow stations to React Flow nodes format
+  // Only recalculates when structure changes OR execution data changes meaningfully
   const derivedNodes = useMemo<Node<StationNodeData>[]>(() => {
-    return stations.map((station) => {
+    return stationStructure.map((stationData, idx) => {
+      const fullStation = stations[idx]; // Get full object for StationNode
+
       // Get execution status for this station (if running)
-      const stationExecution = stationStatusMap?.[station.id];
+      const stationExecution = stationStatusMap?.[stationData.id];
       const status = stationExecution
         ? mapExecutionStatus(stationExecution.status)
         : 'idle';
 
       // Get active tasks for this station
-      const activeTasks = stationTasksMap?.get(station.id) || [];
+      const activeTasks = stationTasksMap?.get(stationData.id) || [];
 
       return {
-        id: station.id,
+        id: stationData.id,
         type: 'station',
-        position: {
-          x: station.x_position,
-          y: station.y_position,
-        },
+        position: stationData.position,
         data: {
-          station,  // Include full station object for StationNode component
-          label: station.name,
-          description: station.description,
-          agentId: station.agent_id,
-          stationPrompt: station.station_prompt,
-          outputContextKeys: station.output_context_keys,
-          stationId: station.id,
+          station: fullStation,
+          label: stationData.name,
+          description: stationData.description,
+          agentId: stationData.agentId,
+          stationPrompt: stationData.stationPrompt,
+          outputContextKeys: stationData.outputContextKeys,
+          stationId: stationData.id,
           status,
           activeTasks,
         },
       };
     });
-  }, [stations, stationStatusMap, stationTasksMap]);
+  }, [stationStructure, stations, stationStatusMap, stationTasksMap]);
 
   // Convert station transitions to React Flow edges format
   const derivedEdges = useMemo<Edge<TransitionEdgeData>[]>(() => {
@@ -133,9 +147,13 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
   // Local state for React Flow (enables dragging)
   const [nodes, setNodes] = useState<Node<StationNodeData>[]>(derivedNodes);
   const [edges, setEdges] = useState<Edge<TransitionEdgeData>[]>(derivedEdges);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Sync local state with server data when stations/transitions change
+  // Skip updates during active drag to prevent position resets
   useEffect(() => {
+    if (isDragging) return;
+
     setNodes((currentNodes) => {
       // Create a map of current node positions (preserve local drag state)
       const currentPositions = new Map(
@@ -159,7 +177,7 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
         return derivedNode;
       });
     });
-  }, [derivedNodes]);
+  }, [derivedNodes, isDragging]);
 
   useEffect(() => {
     setEdges(derivedEdges);
@@ -174,9 +192,15 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
     []
   );
 
+  // Handle drag start - prevent sync updates during drag
+  const onNodeDragStart = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
   // Handle drag end - persist final positions to backend
   const onNodeDragStop: NodeDragHandler = useCallback(
     (_event, node) => {
+      setIsDragging(false);
       if (onStationUpdate) {
         onStationUpdate(node.id, {
           x_position: node.position.x,
@@ -285,6 +309,7 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
     // Event handlers
     onNodesChange,
     onEdgesChange,
+    onNodeDragStart,
     onNodeDragStop,
 
     // Conversion utilities
