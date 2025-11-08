@@ -10,6 +10,7 @@ import { PlusIcon, Workflow, User } from 'lucide-react';
 import NiceModal from '@ebay/nice-modal-react';
 import MarkdownRenderer from '@/components/ui/markdown-renderer';
 import { Alert, AlertDescription } from '../ui/alert';
+import { useLocation } from 'react-router-dom';
 
 interface TaskPanelProps {
   task: TaskWithAttemptStatus | null;
@@ -23,6 +24,10 @@ const TaskPanel = ({ task, workflowContext }: TaskPanelProps) => {
   const { t } = useTranslation('tasks');
   const navigate = useNavigateWithSearch();
   const { projectId } = useProject();
+  const location = useLocation();
+
+  // Detect if we're on Factory Floor or Kanban view
+  const isFactoryFloor = location.pathname.includes('/factory');
 
   const {
     data: attempts = [],
@@ -174,9 +179,11 @@ const TaskPanel = ({ task, workflowContext }: TaskPanelProps) => {
                         tabIndex={0}
                         onClick={() => {
                           if (projectId && task.id && attempt.id) {
-                            navigate(
-                              paths.attempt(projectId, task.id, attempt.id)
-                            );
+                            // Navigate to attempt view in current context (Factory Floor or Kanban)
+                            const attemptPath = isFactoryFloor
+                              ? `/projects/${projectId}/factory/${task.id}/attempts/${attempt.id}`
+                              : paths.attempt(projectId, task.id, attempt.id);
+                            navigate(attemptPath);
                           }
                         }}
                       >

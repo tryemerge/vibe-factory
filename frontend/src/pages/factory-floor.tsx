@@ -26,9 +26,14 @@ import { ProjectViewNav } from '@/components/projects/ProjectViewNav';
 import { WorkflowToolbar } from '@/components/factory/WorkflowToolbar';
 import { TasksLayout } from '@/components/layout/TasksLayout';
 import TaskPanel from '@/components/panels/TaskPanel';
+import TaskAttemptPanel from '@/components/panels/TaskAttemptPanel';
 import { NewCard, NewCardHeader } from '@/components/ui/new-card';
 import { TaskPanelHeaderActions } from '@/components/panels/TaskPanelHeaderActions';
+import { AttemptHeaderActions } from '@/components/panels/AttemptHeaderActions';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTaskAttempt } from '@/hooks/useTaskAttempt';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import TodoPanel from '@/components/tasks/TodoPanel';
 import { StationConfigPanel } from '@/components/factory/StationConfigPanel';
 import { TransitionConfigDialog } from '@/components/factory/TransitionConfigDialog';
 import { WorkflowCreateDialog } from '@/components/factory/WorkflowCreateDialog';
@@ -58,9 +63,12 @@ function FactoryFloorContent() {
     isLoading: projectLoading,
     error: projectError,
   } = useProject();
-  const { taskId } = useParams();
+  const { taskId, attemptId } = useParams<{ taskId?: string; attemptId?: string }>();
   const navigate = useNavigate();
   const { tasks, isLoading: tasksLoading } = useProjectTasks(projectId || '');
+
+  // Fetch attempt data if attemptId is in URL
+  const { data: attempt, isLoading: attemptLoading } = useTaskAttempt(attemptId);
   const { data: agents } = useQuery({
     queryKey: ['agents'],
     queryFn: () => agentsApi.list(),
@@ -510,29 +518,101 @@ function FactoryFloorContent() {
     return tasks.filter((task) => task.status.toLowerCase() === 'todo');
   }, [tasks]);
 
-  // Right panel content
-  const rightPanelContent = selectedTask ? (
-    <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0">
-      <TaskPanel task={selectedTask} workflowContext={selectedTaskWorkflowContext} />
-    </NewCard>
-  ) : null;
+  // Determine if we're viewing attempt
+  const isAttemptView = !!taskId && !!attemptId;
 
-  // Right panel header
-  const rightPanelHeader = selectedTask ? (
-    <NewCardHeader
-      className="shrink-0"
-      actions={
-        <TaskPanelHeaderActions
-          task={selectedTask}
-          onClose={handleTaskDeselect}
-        />
-      }
-    >
-      <div className="mx-auto w-full text-sm font-medium truncate">
-        {selectedTask.title}
-      </div>
-    </NewCardHeader>
-  ) : null;
+  // Right panel content - switch between TaskPanel and TaskAttemptPanel
+  const rightPanelContent = useMemo(() => {
+    if (!selectedTask) return null;
+
+    if (isAttemptView && attempt) {
+      // Show full agent experience with logs and follow-up
+      return (
+        <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0">
+          <TaskAttemptPanel attempt={attempt} task={selectedTask}>
+            {({ logs, followUp }) => (
+              <Tabs defaultValue="logs" className="flex-1 flex flex-col min-h-0">
+                <TabsList className="shrink-0 mx-2 mt-2">
+                  <TabsTrigger value="logs">Logs</TabsTrigger>
+                  <TabsTrigger value="todos">Todos</TabsTrigger>
+                  <TabsTrigger value="followup">Follow-up</TabsTrigger>
+                </TabsList>
+                <TabsContent value="logs" className="flex-1 min-h-0 mt-0">
+                  {logs}
+                </TabsContent>
+                <TabsContent value="todos" className="flex-1 min-h-0 mt-0 overflow-auto">
+                  <TodoPanel />
+                </TabsContent>
+                <TabsContent value="followup" className="flex-1 min-h-0 mt-0 overflow-auto">
+                  {followUp}
+                </TabsContent>
+              </Tabs>
+            )}
+          </TaskAttemptPanel>
+        </NewCard>
+      );
+    }
+
+    // Show task overview
+    return (
+      <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0">
+        <TaskPanel task={selectedTask} workflowContext={selectedTaskWorkflowContext} />
+      </NewCard>
+    );
+  }, [selectedTask, isAttemptView, attempt, selectedTaskWorkflowContext]);
+
+  // Right panel header - different for task vs attempt view
+  const rightPanelHeader = useMemo(() => {
+    if (!selectedTask) return null;
+
+    if (isAttemptView && attempt) {
+      // Attempt view header with breadcrumb
+      return (
+        <NewCardHeader
+          className="shrink-0"
+          actions={
+            <AttemptHeaderActions
+              task={selectedTask}
+              attempt={attempt}
+              onClose={handleTaskDeselect}
+            />
+          }
+        >
+          <div className="mx-auto w-full text-sm font-medium truncate">
+            <button
+              onClick={() => {
+                if (projectId) {
+                  navigate(`/projects/${projectId}/factory/${selectedTask.id}`);
+                }
+              }}
+              className="hover:underline text-muted-foreground"
+            >
+              {selectedTask.title}
+            </button>
+            <span className="text-muted-foreground mx-2">›</span>
+            <span>{attempt.branch || 'Task Attempt'}</span>
+          </div>
+        </NewCardHeader>
+      );
+    }
+
+    // Task view header
+    return (
+      <NewCardHeader
+        className="shrink-0"
+        actions={
+          <TaskPanelHeaderActions
+            task={selectedTask}
+            onClose={handleTaskDeselect}
+          />
+        }
+      >
+        <div className="mx-auto w-full text-sm font-medium truncate">
+          {selectedTask.title}
+        </div>
+      </NewCardHeader>
+    );
+  }, [selectedTask, isAttemptView, attempt, projectId, navigate, handleTaskDeselect]);
 
   if (projectError) {
     return (
@@ -555,7 +635,8 @@ function FactoryFloorContent() {
     tasksLoading ||
     workflowsLoading ||
     stationsLoading ||
-    transitionsLoading
+    transitionsLoading ||
+    (attemptId && attemptLoading)
   ) {
     return (
       <Loader message="Loading factory floor..." size={32} className="py-8" />
