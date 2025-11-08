@@ -5,7 +5,7 @@ import type {
   CreateStationTransition,
   UpdateStationTransition,
 } from 'shared/types';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useMemo } from 'react';
 
 interface UseWorkflowTransitionsOptions {
   workflowId?: string;
@@ -205,9 +205,15 @@ export function useWorkflowTransitions(
     };
   }, []);
 
+  // Memoize transitions array to prevent infinite loops
+  const transitions = useMemo(
+    () => transitionsQuery.data ?? [],
+    [transitionsQuery.data]
+  );
+
   return {
     // Data
-    transitions: transitionsQuery.data ?? [],
+    transitions,
 
     // Loading states
     isLoading: transitionsQuery.isLoading,

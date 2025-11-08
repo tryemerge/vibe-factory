@@ -5,7 +5,7 @@ import type {
   CreateWorkflowStation,
   UpdateWorkflowStation,
 } from 'shared/types';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useMemo } from 'react';
 
 interface UseWorkflowStationsOptions {
   workflowId?: string;
@@ -304,9 +304,15 @@ export function useWorkflowStations(options: UseWorkflowStationsOptions = {}) {
     };
   }, []);
 
+  // Memoize stations array to prevent infinite loops
+  const stations = useMemo(
+    () => stationsQuery.data ?? [],
+    [stationsQuery.data]
+  );
+
   return {
     // Data
-    stations: stationsQuery.data ?? [],
+    stations,
 
     // Loading states
     isLoading: stationsQuery.isLoading,

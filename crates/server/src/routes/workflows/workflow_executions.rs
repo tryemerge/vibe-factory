@@ -358,6 +358,62 @@ pub async fn get_workflow_execution_stations(
     Ok(ResponseJson(ApiResponse::success(stations)))
 }
 
+/// Get active workflow execution for a task
+/// GET /api/tasks/{task_id}/workflow-execution
+pub async fn get_task_workflow_execution(
+    State(deployment): State<DeploymentImpl>,
+    Path(task_id): Path<Uuid>,
+) -> Result<ResponseJson<ApiResponse<Option<WorkflowExecutionDetailsResponse>>>, ApiError> {
+    let pool = &deployment.db().pool;
+
+    // Find all workflow executions for this task
+    let executions = WorkflowExecution::find_by_task(pool, task_id).await?;
+
+    // Find the first running execution (there should only be one)
+    let running_execution = executions
+        .into_iter()
+        .find(|e| e.status == "running");
+
+    if let Some(execution) = running_execution {
+        // Load all station executions
+        let station_executions = StationExecution::find_by_workflow_execution(pool, execution.id).await?;
+
+        // Enrich station executions with station names
+        let mut stations = Vec::new();
+        for station_execution in station_executions {
+            let station = WorkflowStation::find_by_id(pool, station_execution.station_id).await?;
+            stations.push(StationExecutionSummary {
+                id: station_execution.id,
+                station_id: station_execution.station_id,
+                station_name: station.map(|s| s.name),
+                status: station_execution.status,
+                output_data: station_execution.output_data,
+                started_at: station_execution.started_at,
+                completed_at: station_execution.completed_at,
+            });
+        }
+
+        let response = WorkflowExecutionDetailsResponse {
+            id: execution.id,
+            workflow_id: execution.workflow_id,
+            task_id: execution.task_id,
+            task_attempt_id: execution.task_attempt_id,
+            current_station_id: execution.current_station_id,
+            status: execution.status,
+            started_at: execution.started_at,
+            completed_at: execution.completed_at,
+            created_at: execution.created_at,
+            updated_at: execution.updated_at,
+            stations,
+        };
+
+        Ok(ResponseJson(ApiResponse::success(Some(response))))
+    } else {
+        // No running execution found
+        Ok(ResponseJson(ApiResponse::success(None)))
+    }
+}
+
 /// Request body for cancelling a workflow execution
 #[derive(Debug, Deserialize, TS)]
 #[ts(export)]

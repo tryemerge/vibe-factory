@@ -3,18 +3,23 @@ import { useProject } from '@/contexts/project-context';
 import { useTaskAttempts } from '@/hooks/useTaskAttempts';
 import { useNavigateWithSearch } from '@/hooks';
 import { paths } from '@/lib/paths';
-import type { TaskWithAttemptStatus } from 'shared/types';
+import type { TaskWithAttemptStatus, WorkflowStation, Agent } from 'shared/types';
 import { NewCardContent } from '../ui/new-card';
 import { Button } from '../ui/button';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, Workflow, User } from 'lucide-react';
 import NiceModal from '@ebay/nice-modal-react';
 import MarkdownRenderer from '@/components/ui/markdown-renderer';
+import { Alert, AlertDescription } from '../ui/alert';
 
 interface TaskPanelProps {
   task: TaskWithAttemptStatus | null;
+  workflowContext?: {
+    station: WorkflowStation | null;
+    agent: Agent | null;
+  };
 }
 
-const TaskPanel = ({ task }: TaskPanelProps) => {
+const TaskPanel = ({ task, workflowContext }: TaskPanelProps) => {
   const { t } = useTranslation('tasks');
   const navigate = useNavigateWithSearch();
   const { projectId } = useProject();
@@ -79,6 +84,35 @@ const TaskPanel = ({ task }: TaskPanelProps) => {
             <MarkdownRenderer content={titleContent} />
             {descriptionContent && (
               <MarkdownRenderer content={descriptionContent} />
+            )}
+
+            {/* Workflow Execution Context */}
+            {workflowContext && (workflowContext.station || workflowContext.agent) && (
+              <Alert className="mt-4 border-blue-200 bg-blue-50 dark:bg-blue-950">
+                <AlertDescription>
+                  <div className="flex flex-col gap-2">
+                    <div className="font-medium text-sm text-blue-900 dark:text-blue-100">
+                      Workflow Execution
+                    </div>
+                    {workflowContext.station && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Workflow className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-blue-800 dark:text-blue-200">
+                          <span className="font-medium">Station:</span> {workflowContext.station.name}
+                        </span>
+                      </div>
+                    )}
+                    {workflowContext.agent && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-blue-800 dark:text-blue-200">
+                          <span className="font-medium">Agent:</span> {workflowContext.agent.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
             )}
           </div>
 

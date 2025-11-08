@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -12,15 +12,23 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 // Removed @dnd-kit/core - no longer using agent drag-and-drop
+import { useQuery } from '@tanstack/react-query';
 import { useProject } from '@/contexts/project-context';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
+import { agentsApi } from '@/lib/api';
 import { Loader } from '@/components/ui/loader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { TaskTrayCard } from '@/components/factory/TaskTrayCard';
+import { InProgressTaskCard } from '@/components/factory/InProgressTaskCard';
 import { ProjectViewNav } from '@/components/projects/ProjectViewNav';
 import { WorkflowToolbar } from '@/components/factory/WorkflowToolbar';
+import { TasksLayout } from '@/components/layout/TasksLayout';
+import TaskPanel from '@/components/panels/TaskPanel';
+import { NewCard, NewCardHeader } from '@/components/ui/new-card';
+import { TaskPanelHeaderActions } from '@/components/panels/TaskPanelHeaderActions';
+import { useParams, useNavigate } from 'react-router-dom';
 import { StationConfigPanel } from '@/components/factory/StationConfigPanel';
 import { TransitionConfigDialog } from '@/components/factory/TransitionConfigDialog';
 import { WorkflowCreateDialog } from '@/components/factory/WorkflowCreateDialog';
@@ -29,9 +37,11 @@ import { TransitionEdge } from '@/components/factory/TransitionEdge';
 import { useWorkflow } from '@/hooks/useWorkflow';
 import { useWorkflowStations } from '@/hooks/useWorkflowStations';
 import { useWorkflowTransitions } from '@/hooks/useWorkflowTransitions';
+import { useWorkflowExecutions } from '@/hooks/useWorkflowExecutions';
 import { useReactFlowSync } from '@/hooks/useReactFlowSync';
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import NiceModal from '@ebay/nice-modal-react';
+import type { UpdateWorkflowStation } from 'shared/types';
 
 // Custom node and edge types
 const nodeTypes = {
@@ -48,9 +58,32 @@ function FactoryFloorContent() {
     isLoading: projectLoading,
     error: projectError,
   } = useProject();
+  const { taskId } = useParams();
+  const navigate = useNavigate();
   const { tasks, isLoading: tasksLoading } = useProjectTasks(projectId || '');
+  const { data: agents } = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => agentsApi.list(),
+  });
   const reactFlowInstance = useReactFlow();
   const viewport = useViewport();
+
+  // Selected task from URL or state
+  const selectedTask = useMemo(() => {
+    if (!taskId) return null;
+    return tasks.find(t => t.id === taskId) || null;
+  }, [taskId, tasks]);
+
+  // Create agent lookup map
+  const agentMap = useMemo(() => {
+    if (!agents) return new Map();
+    return new Map(agents.map(agent => [agent.id, agent]));
+  }, [agents]);
+
+  // Filter tasks by status
+  const inProgressTasks = useMemo(() => {
+    return tasks.filter((task) => task.status.toLowerCase() === 'inprogress');
+  }, [tasks]);
 
   // Workflow state - get all workflows for this project
   const {
@@ -125,26 +158,46 @@ function FactoryFloorContent() {
     workflowId: effectiveWorkflowId || undefined,
   });
 
+<<<<<<< Updated upstream
   // React Flow sync (with execution status)
   const { nodes, edges, onNodesChange, onEdgesChange, isValidConnection } = useReactFlowSync({
     stations: stations || [],
     transitions: transitions || [],
     stationStatusMap: stationStatusMap,
+=======
+  // Fetch workflow executions for in-progress tasks
+  const { stationTasksMap, executions } = useWorkflowExecutions(
+    effectiveWorkflowId,
+    inProgressTasks
+  );
+
+  // React Flow sync
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onNodeDragStop,
+    isValidConnection
+  } = useReactFlowSync({
+    stations: stations || [],
+    transitions: transitions || [],
+    stationTasksMap,
+>>>>>>> Stashed changes
     onStationUpdate: (id, data) => {
-      updateStation({
-        id,
-        data: {
-          name: null,
-          position: null,
-          description: null,
-          x_position: null,
-          y_position: null,
-          agent_id: null,
-          station_prompt: null,
-          output_context_keys: null,
-          ...data,
-        },
-      });
+      // Only send the fields that are actually being updated
+      const updateData: UpdateWorkflowStation = {
+        name: null,
+        position: null,
+        description: null,
+        x_position: data.x_position ?? null,
+        y_position: data.y_position ?? null,
+        agent_id: null,
+        station_prompt: null,
+        output_context_keys: null,
+      };
+
+      updateStation({ id, data: updateData });
     },
   });
 
@@ -158,6 +211,122 @@ function FactoryFloorContent() {
     if (!selectedStationId || !stations) return null;
     return stations.find((s) => s.id === selectedStationId) || null;
   }, [selectedStationId, stations]);
+
+  // Enrich in-progress task executions with station and agent data
+  const enrichedInProgressTasks = useMemo(() => {
+    if (!executions || !stations) return [];
+
+    return executions
+      .filter(({ execution }) => execution !== null)
+      .map(({ task, execution }) => {
+        const currentStation = execution!.current_station_id
+          ? stations.find(s => s.id === execution!.current_station_id)
+          : null;
+
+        const agent = currentStation?.agent_id
+          ? agentMap.get(currentStation.agent_id) || null
+          : null;
+
+        return {
+          task,
+          execution: execution!,
+          currentStation,
+          agent,
+        };
+      });
+  }, [executions, stations, agentMap]);
+
+  // Get workflow context for selected task
+  const selectedTaskWorkflowContext = useMemo(() => {
+    if (!selectedTask) return undefined;
+
+    const enriched = enrichedInProgressTasks.find(e => e.task.id === selectedTask.id);
+    if (!enriched) return undefined;
+
+    return {
+      station: enriched.currentStation || null,
+      agent: enriched.agent || null,
+    };
+  }, [selectedTask, enrichedInProgressTasks]);
+
+  // Handle task selection
+  const handleTaskSelect = useCallback((taskIdToSelect: string) => {
+    if (!projectId) return;
+    navigate(`/projects/${projectId}/factory/${taskIdToSelect}`);
+  }, [projectId, navigate]);
+
+  const handleTaskDeselect = useCallback(() => {
+    if (!projectId) return;
+    navigate(`/projects/${projectId}/factory`);
+  }, [projectId, navigate]);
+
+  // Track if we've loaded saved viewport for this workflow
+  const [hasLoadedViewport, setHasLoadedViewport] = useState(false);
+
+  // Zoom indicator visibility
+  const [showZoomIndicator, setShowZoomIndicator] = useState(false);
+  const zoomTimeoutRef = useRef<number | null>(null);
+  const prevZoomRef = useRef<number | null>(null);
+
+  // Load saved viewport or fit view on first load
+  useEffect(() => {
+    if (nodes.length > 0 && reactFlowInstance && !hasLoadedViewport && effectiveWorkflowId) {
+      // Try to load saved viewport from localStorage
+      const savedViewportKey = `workflow-viewport-${effectiveWorkflowId}`;
+      const savedViewport = localStorage.getItem(savedViewportKey);
+
+      setTimeout(() => {
+        if (savedViewport) {
+          try {
+            const { x, y, zoom } = JSON.parse(savedViewport);
+            reactFlowInstance.setViewport({ x, y, zoom });
+          } catch (e) {
+            // If parsing fails, fall back to fitView
+            reactFlowInstance.fitView({ padding: 0.2 });
+          }
+        } else {
+          // No saved viewport, fit to show all stations
+          reactFlowInstance.fitView({ padding: 0.2 });
+        }
+        setHasLoadedViewport(true);
+      }, 100);
+    }
+  }, [nodes.length, reactFlowInstance, hasLoadedViewport, effectiveWorkflowId]);
+
+  // Reset viewport state when workflow changes
+  useEffect(() => {
+    setHasLoadedViewport(false);
+  }, [effectiveWorkflowId]);
+
+  // Save viewport changes to localStorage
+  const handleViewportChange = useCallback(
+    (newViewport: { x: number; y: number; zoom: number }) => {
+      if (effectiveWorkflowId) {
+        const savedViewportKey = `workflow-viewport-${effectiveWorkflowId}`;
+        localStorage.setItem(savedViewportKey, JSON.stringify(newViewport));
+
+        // Only show zoom indicator if zoom level changed (not just pan)
+        if (prevZoomRef.current !== null && prevZoomRef.current !== newViewport.zoom) {
+          setShowZoomIndicator(true);
+
+          // Clear existing timeout
+          if (zoomTimeoutRef.current) {
+            clearTimeout(zoomTimeoutRef.current);
+          }
+
+          // Hide after 1.5 seconds
+          const timeout = setTimeout(() => {
+            setShowZoomIndicator(false);
+          }, 1500);
+          zoomTimeoutRef.current = timeout as unknown as number;
+        }
+
+        // Update previous zoom reference
+        prevZoomRef.current = newViewport.zoom;
+      }
+    },
+    [effectiveWorkflowId]
+  );
 
   // Handle new workflow creation
   const handleNewWorkflow = useCallback(() => {
@@ -343,10 +512,34 @@ function FactoryFloorContent() {
     URL.revokeObjectURL(url);
   }, [effectiveWorkflowId, workflows, stations, transitions]);
 
-  // Split tasks into in progress
-  const inProgressTasks = useMemo(() => {
-    return tasks.filter((task) => task.status.toLowerCase() === 'inprogress');
+  // Split tasks into todo
+  const todoTasks = useMemo(() => {
+    return tasks.filter((task) => task.status.toLowerCase() === 'todo');
   }, [tasks]);
+
+  // Right panel content
+  const rightPanelContent = selectedTask ? (
+    <NewCard className="h-full min-h-0 flex flex-col bg-diagonal-lines bg-muted border-0">
+      <TaskPanel task={selectedTask} workflowContext={selectedTaskWorkflowContext} />
+    </NewCard>
+  ) : null;
+
+  // Right panel header
+  const rightPanelHeader = selectedTask ? (
+    <NewCardHeader
+      className="shrink-0"
+      actions={
+        <TaskPanelHeaderActions
+          task={selectedTask}
+          onClose={handleTaskDeselect}
+        />
+      }
+    >
+      <div className="mx-auto w-full text-sm font-medium truncate">
+        {selectedTask.title}
+      </div>
+    </NewCardHeader>
+  ) : null;
 
   if (projectError) {
     return (
@@ -400,7 +593,70 @@ function FactoryFloorContent() {
         />
 
         {/* Main content area */}
-        <div className="flex-1 min-h-0 flex">
+        <TasksLayout
+          kanban={
+            <div className="flex h-full w-full">
+          {/* Left Sidebar - Task Lists */}
+          <div className="w-80 border-r bg-muted/30 flex flex-col shrink-0">
+            {/* To Do Section */}
+            <div className="flex flex-col shrink-0">
+              <div className="px-3 py-2 border-b bg-card">
+                <h2 className="font-semibold text-sm">To Do</h2>
+                <p className="text-xs text-muted-foreground">
+                  {todoTasks.length} tasks • Select workflow to start
+                </p>
+              </div>
+              <div className="max-h-[40vh] overflow-y-auto p-2">
+                <div className="space-y-2">
+                  {todoTasks.length === 0 ? (
+                    <div className="text-center text-sm text-muted-foreground p-4">
+                      No tasks to do
+                    </div>
+                  ) : (
+                    todoTasks.map((task) => (
+                      <TaskTrayCard
+                        key={task.id}
+                        task={task}
+                        projectId={projectId || undefined}
+                        onSelect={handleTaskSelect}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* In Progress Section */}
+            <div className="flex-1 flex flex-col min-h-0 border-t">
+              <div className="px-3 py-2 border-b bg-card shrink-0">
+                <h2 className="font-semibold text-sm">In Progress</h2>
+                <p className="text-xs text-muted-foreground">
+                  {enrichedInProgressTasks.length} tasks running
+                </p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2">
+                <div className="space-y-2">
+                  {enrichedInProgressTasks.length === 0 ? (
+                    <div className="text-center text-sm text-muted-foreground p-4">
+                      No tasks in progress
+                    </div>
+                  ) : (
+                    enrichedInProgressTasks.map(({ task, execution, currentStation, agent }) => (
+                      <InProgressTaskCard
+                        key={task.id}
+                        task={task}
+                        execution={execution}
+                        currentStation={currentStation}
+                        agent={agent}
+                        onSelect={handleTaskSelect}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* React Flow Canvas */}
           <div className="flex-1 min-w-0 relative bg-muted/10">
             {!effectiveWorkflowId ? (
@@ -420,9 +676,11 @@ function FactoryFloorContent() {
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
+                onNodeDragStop={onNodeDragStop}
                 onNodeClick={handleNodeClick}
                 onEdgeClick={handleEdgeClick}
                 onConnect={handleConnect}
+                onMove={(_event, newViewport) => handleViewportChange(newViewport)}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
                 nodesDraggable={true}
@@ -442,7 +700,12 @@ function FactoryFloorContent() {
                   gap={12}
                   size={1}
                 />
-                <Panel position="bottom-left" className="bg-background/95 backdrop-blur-sm border rounded-md px-2 py-1 text-xs font-medium text-muted-foreground">
+                <Panel
+                  position="bottom-left"
+                  className={`bg-background/95 backdrop-blur-sm border rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-opacity duration-300 ${
+                    showZoomIndicator ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
                   {Math.round(viewport.zoom * 100)}%
                 </Panel>
                 <Panel position="top-left" className="m-2">
@@ -474,30 +737,15 @@ function FactoryFloorContent() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Bottom Tray - In Progress Tasks */}
-        <div className="h-32 border-t bg-muted/30 flex flex-col shrink-0">
-          <div className="px-3 py-2 border-b bg-card">
-            <h2 className="font-semibold text-sm">In Progress</h2>
-            <p className="text-xs text-muted-foreground">
-              {inProgressTasks.length} tasks
-            </p>
-          </div>
-          <div className="flex-1 overflow-x-auto overflow-y-hidden p-2">
-            <div className="flex gap-2 h-full">
-              {inProgressTasks.length === 0 ? (
-                <div className="text-center text-sm text-muted-foreground p-4 w-full">
-                  No tasks in progress
-                </div>
-              ) : (
-                inProgressTasks.map((task) => (
-                  <TaskTrayCard key={task.id} task={task} horizontal projectId={projectId || undefined} />
-                ))
-              )}
             </div>
-          </div>
-        </div>
+          }
+          attempt={rightPanelContent}
+          aux={null}
+          isPanelOpen={!!selectedTask}
+          mode={null}
+          isMobile={false}
+          rightHeader={rightPanelHeader}
+        />
 
         {/* Station Config Panel (overlay) */}
         <StationConfigPanel

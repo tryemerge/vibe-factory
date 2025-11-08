@@ -9,6 +9,10 @@ export interface StationNodeData {
   station: WorkflowStation;
   agent?: Agent | null;
   status?: StationStatus;
+  activeTasks?: Array<{
+    id: string;
+    title: string;
+  }>;
 }
 
 export type StationStatus =
@@ -57,9 +61,10 @@ const statusConfig: Record<
 
 export const StationNode = memo(
   ({ data, selected }: NodeProps<StationNodeData>) => {
-    const { station, agent, status = 'idle' } = data;
+    const { station, agent, status = 'idle', activeTasks = [] } = data;
     const config = statusConfig[status];
     const Icon = config.icon;
+    const hasActiveTasks = activeTasks.length > 0;
 
     return (
       <div className="relative">
@@ -76,7 +81,8 @@ export const StationNode = memo(
             'cursor-grab active:cursor-grabbing',
             'border',
             'bg-card',
-            selected && 'ring-2 ring-primary ring-inset'
+            selected && 'ring-2 ring-primary ring-inset',
+            hasActiveTasks && 'ring-2 ring-blue-500'
           )}
         >
           <CardHeader className="p-3 space-y-2">
@@ -98,6 +104,23 @@ export const StationNode = memo(
               )}
             </div>
 
+            {/* Active Tasks */}
+            {hasActiveTasks && (
+              <div className="space-y-1">
+                {activeTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center gap-1.5 p-1.5 bg-blue-50 dark:bg-blue-950 rounded text-xs border border-blue-200 dark:border-blue-800"
+                  >
+                    <Loader2 className="h-3 w-3 text-blue-500 shrink-0 animate-spin" />
+                    <span className="text-blue-700 dark:text-blue-300 truncate font-medium">
+                      {task.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Agent Assignment */}
             {agent && (
               <div className="flex items-center gap-1.5">
@@ -109,7 +132,7 @@ export const StationNode = memo(
             )}
 
             {/* Station Prompt */}
-            {station.station_prompt && (
+            {station.station_prompt && !hasActiveTasks && (
               <p className="text-xs text-muted-foreground line-clamp-2">
                 {station.station_prompt}
               </p>

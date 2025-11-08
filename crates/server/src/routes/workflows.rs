@@ -3,7 +3,7 @@ use axum::{
     extract::State,
     middleware::from_fn_with_state,
     response::Json as ResponseJson,
-    routing::{get, post},
+    routing::{get, post, put, delete},
 };
 use db::models::{
     workflow::{Workflow, CreateWorkflow, UpdateWorkflow},
@@ -14,7 +14,15 @@ use deployment::Deployment;
 use utils::response::ApiResponse;
 use uuid::Uuid;
 
-use crate::{DeploymentImpl, error::ApiError, middleware::load_workflow_middleware};
+use crate::{
+    DeploymentImpl,
+    error::ApiError,
+    middleware::{
+        load_workflow_middleware,
+        load_workflow_station_middleware,
+        load_station_transition_middleware,
+    }
+};
 
 pub mod workflow_executions;
 
@@ -272,25 +280,54 @@ pub async fn delete_transition(
 pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     // Workflow ID-based routes with middleware
     let workflow_id_router = Router::new()
+        .route("/", get(get_workflow))
+        .route("/", put(update_workflow))
+        .route("/", delete(delete_workflow))
         .route("/execute", post(workflow_executions::execute_workflow))
         .layer(from_fn_with_state(
             deployment.clone(),
             load_workflow_middleware,
         ));
 
+    // Station ID-based routes with middleware
+    let station_id_router = Router::new()
+        .route("/", get(get_station))
+        .route("/", put(update_station))
+        .route("/", delete(delete_station))
+        .layer(from_fn_with_state(
+            deployment.clone(),
+            load_workflow_station_middleware,
+        ));
+
+    // Transition ID-based routes with middleware
+    let transition_id_router = Router::new()
+        .route("/", get(get_transition))
+        .route("/", put(update_transition))
+        .route("/", delete(delete_transition))
+        .layer(from_fn_with_state(
+            deployment.clone(),
+            load_station_transition_middleware,
+        ));
+
     Router::new()
         // Workflows by project: GET/POST /projects/{project_id}/workflows (per spec)
         .route("/projects/{project_id}/workflows",
                get(get_workflows_by_project).post(create_workflow))
+        // Workflow operations by ID: GET/PUT/DELETE /workflows/{workflow_id} + execution
+        .nest("/workflows/{workflow_id}", workflow_id_router)
         // Stations by workflow: GET/POST /workflows/{workflow_id}/stations
         .route("/workflows/{workflow_id}/stations", get(get_stations_by_workflow).post(create_station))
         // Transitions by workflow: GET/POST /workflows/{workflow_id}/transitions
         .route("/workflows/{workflow_id}/transitions", get(get_transitions_by_workflow).post(create_transition))
-        // Workflow execution: POST /workflows/{workflow_id}/execute
-        .nest("/workflows/{id}", workflow_id_router)
+        // Station operations by ID: GET/PUT/DELETE /stations/{id}
+        .nest("/stations/{id}", station_id_router)
+        // Transition operations by ID: GET/PUT/DELETE /transitions/{id}
+        .nest("/transitions/{id}", transition_id_router)
         // Workflow execution monitoring endpoints
         .route("/workflow-executions/{id}", get(workflow_executions::get_workflow_execution))
         .route("/workflow-executions/{id}/stations", get(workflow_executions::get_workflow_execution_stations))
         .route("/workflow-executions/{id}/cancel", post(workflow_executions::cancel_workflow_execution))
         .route("/workflow-executions/{id}/retry-station", post(workflow_executions::retry_station_execution))
+        // Get active workflow execution for a task
+        .route("/tasks/{task_id}/workflow-execution", get(workflow_executions::get_task_workflow_execution))
 }

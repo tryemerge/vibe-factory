@@ -13,6 +13,8 @@ import type { TaskWithAttemptStatus, Workflow } from 'shared/types';
 import { cn } from '@/lib/utils';
 import { workflowsApi } from '@/lib/api';
 import { useExecuteWorkflow } from '@/hooks/useExecuteWorkflow';
+import { WorkflowExecutionDialog } from '@/components/factory/WorkflowExecutionDialog';
+import NiceModal from '@ebay/nice-modal-react';
 
 type Task = TaskWithAttemptStatus;
 
@@ -20,9 +22,10 @@ interface TaskTrayCardProps {
   task: Task;
   horizontal?: boolean;
   projectId?: string;
+  onSelect?: (taskId: string) => void;
 }
 
-export function TaskTrayCard({ task, horizontal = false, projectId }: TaskTrayCardProps) {
+export function TaskTrayCard({ task, horizontal = false, projectId, onSelect }: TaskTrayCardProps) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
   const [isLoadingWorkflows, setIsLoadingWorkflows] = useState(false);
@@ -75,8 +78,10 @@ export function TaskTrayCard({ task, horizontal = false, projectId }: TaskTrayCa
       className={cn(
         'p-3 hover:shadow-md transition-shadow',
         horizontal ? 'min-w-[200px] h-full' : 'w-full',
-        !showWorkflowControls && !hasActiveWorkflow && 'cursor-grab active:cursor-grabbing'
+        !showWorkflowControls && !hasActiveWorkflow && 'cursor-grab active:cursor-grabbing',
+        onSelect && 'cursor-pointer'
       )}
+      onClick={() => onSelect?.(task.id)}
     >
       <div className="flex flex-col gap-2 h-full">
         <div className="flex items-start justify-between gap-2">
@@ -106,7 +111,10 @@ export function TaskTrayCard({ task, horizontal = false, projectId }: TaskTrayCa
 
         {/* Workflow Controls */}
         {showWorkflowControls && (
-          <div className="flex flex-col gap-2 mt-2 pt-2 border-t">
+          <div
+            className="flex flex-col gap-2 mt-2 pt-2 border-t"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Select
               value={selectedWorkflowId}
               onValueChange={setSelectedWorkflowId}
@@ -140,14 +148,18 @@ export function TaskTrayCard({ task, horizontal = false, projectId }: TaskTrayCa
 
         {/* View Execution Button (when task is running) */}
         {hasActiveWorkflow && (
-          <div className="mt-2 pt-2 border-t">
+          <div
+            className="mt-2 pt-2 border-t"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                // TODO: Navigate to execution view or open modal
-                // Use lastExecutionId for monitoring the current execution
-                console.log('View execution for task:', task.id, 'execution ID:', lastExecutionId);
+                NiceModal.show(WorkflowExecutionDialog, {
+                  taskId: task.id,
+                  workflowExecutionId: lastExecutionId || undefined,
+                });
               }}
               className="h-7 text-xs w-full"
             >

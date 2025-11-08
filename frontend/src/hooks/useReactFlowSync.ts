@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
-import type { Node, Edge, NodeChange, EdgeChange } from 'reactflow';
+import type { Node, Edge, NodeChange, EdgeChange, NodeDragHandler } from 'reactflow';
 import { applyNodeChanges, applyEdgeChanges } from 'reactflow';
 import type {
   WorkflowStation,
@@ -19,6 +19,10 @@ export interface StationNodeData {
   outputContextKeys?: string | null;
   stationId: string;
   status?: StationStatus;
+  activeTasks?: Array<{
+    id: string;
+    title: string;
+  }>;
 }
 
 export interface TransitionEdgeData {
@@ -38,7 +42,11 @@ export type StationPositionUpdate = Partial<UpdateWorkflowStation> & {
 interface UseReactFlowSyncOptions {
   stations: WorkflowStation[];
   transitions: StationTransition[];
+<<<<<<< Updated upstream
   stationStatusMap?: Record<string, StationExecutionSummary>;
+=======
+  stationTasksMap?: Map<string, Array<{ id: string; title: string }>>;
+>>>>>>> Stashed changes
   onStationUpdate?: (id: string, data: StationPositionUpdate) => void;
   onTransitionUpdate?: (id: string, data: UpdateStationTransition) => void;
 }
@@ -70,6 +78,7 @@ function mapExecutionStatus(
 }
 
 export function useReactFlowSync(options: UseReactFlowSyncOptions) {
+<<<<<<< Updated upstream
   const { stations, transitions, stationStatusMap, onStationUpdate } = options;
 
   // Convert workflow stations to React Flow nodes format
@@ -101,6 +110,31 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
       };
     });
   }, [stations, stationStatusMap]);
+=======
+  const { stations, transitions, stationTasksMap, onStationUpdate } = options;
+
+  // Convert workflow stations to React Flow nodes format
+  const derivedNodes = useMemo<Node<StationNodeData>[]>(() => {
+    return stations.map((station) => ({
+      id: station.id,
+      type: 'station',
+      position: {
+        x: station.x_position,
+        y: station.y_position,
+      },
+      data: {
+        station,  // Include full station object for StationNode component
+        label: station.name,
+        description: station.description,
+        agentId: station.agent_id,
+        stationPrompt: station.station_prompt,
+        outputContextKeys: station.output_context_keys,
+        stationId: station.id,
+        activeTasks: stationTasksMap?.get(station.id) || [],
+      },
+    }));
+  }, [stations, stationTasksMap]);
+>>>>>>> Stashed changes
 
   // Convert station transitions to React Flow edges format
   const derivedEdges = useMemo<Edge<TransitionEdgeData>[]>(() => {
@@ -161,17 +195,17 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
     (changes: NodeChange[]) => {
       // Apply changes to local state immediately (enables dragging)
       setNodes((nds) => applyNodeChanges(changes, nds));
+    },
+    []
+  );
 
-      // Persist position changes to backend when drag ends
+  // Handle drag end - persist final positions to backend
+  const onNodeDragStop: NodeDragHandler = useCallback(
+    (_event, node) => {
       if (onStationUpdate) {
-        changes.forEach((change) => {
-          if (change.type === 'position' && change.position && !change.dragging) {
-            // Only persist when drag ends
-            onStationUpdate(change.id, {
-              x_position: change.position.x,
-              y_position: change.position.y,
-            });
-          }
+        onStationUpdate(node.id, {
+          x_position: node.position.x,
+          y_position: node.position.y,
         });
       }
     },
@@ -276,6 +310,7 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
     // Event handlers
     onNodesChange,
     onEdgesChange,
+    onNodeDragStop,
 
     // Conversion utilities
     nodeToStationUpdate,

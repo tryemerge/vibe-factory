@@ -62,11 +62,14 @@ import {
   ExecuteWorkflowRequest,
   ExecuteWorkflowResponse,
   WorkflowExecutionDetailsResponse,
+<<<<<<< Updated upstream
   StationExecutionSummary,
   CancelWorkflowExecutionRequest,
   CancelWorkflowExecutionResponse,
   RetryStationRequest,
   RetryStationResponse,
+=======
+>>>>>>> Stashed changes
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -102,6 +105,17 @@ const makeRequest = async (url: string, options: RequestInit = {}) => {
   return fetch(url, {
     ...options,
     headers,
+  });
+};
+
+// Helper function to serialize data with BigInt conversion
+const serializeWithBigInt = (data: unknown): string => {
+  return JSON.stringify(data, (_key, value) => {
+    // Convert BigInt to number for JSON serialization
+    if (typeof value === 'bigint') {
+      return Number(value);
+    }
+    return value;
   });
 };
 
@@ -970,7 +984,7 @@ export const workflowStationsApi = {
       `/api/workflows/${workflowId}/stations`,
       {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: serializeWithBigInt(data),
       }
     );
     return handleApiResponse<WorkflowStation>(response);
@@ -982,7 +996,7 @@ export const workflowStationsApi = {
   ): Promise<WorkflowStation> => {
     const response = await makeRequest(`/api/stations/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: serializeWithBigInt(data),
     });
     return handleApiResponse<WorkflowStation>(response);
   },
@@ -1060,15 +1074,27 @@ export const workflowExecutionsApi = {
     return handleApiResponse<ExecuteWorkflowResponse>(response);
   },
 
+<<<<<<< Updated upstream
   getById: async (
     executionId: string
   ): Promise<WorkflowExecutionDetailsResponse> => {
     const response = await makeRequest(
       `/api/workflow-executions/${executionId}`
+=======
+  getExecution: async (
+    executionId: string
+  ): Promise<WorkflowExecutionDetailsResponse> => {
+    const response = await makeRequest(
+      `/api/workflow-executions/${executionId}`,
+      {
+        method: 'GET',
+      }
+>>>>>>> Stashed changes
     );
     return handleApiResponse<WorkflowExecutionDetailsResponse>(response);
   },
 
+<<<<<<< Updated upstream
   getStations: async (
     executionId: string
   ): Promise<StationExecutionSummary[]> => {
@@ -1104,5 +1130,17 @@ export const workflowExecutionsApi = {
       }
     );
     return handleApiResponse<RetryStationResponse>(response);
+=======
+  getTaskExecution: async (
+    taskId: string
+  ): Promise<WorkflowExecutionDetailsResponse | null> => {
+    const response = await makeRequest(
+      `/api/tasks/${taskId}/workflow-execution`,
+      {
+        method: 'GET',
+      }
+    );
+    return handleApiResponse<WorkflowExecutionDetailsResponse | null>(response);
+>>>>>>> Stashed changes
   },
 };
