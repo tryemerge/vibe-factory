@@ -158,20 +158,13 @@ function FactoryFloorContent() {
     workflowId: effectiveWorkflowId || undefined,
   });
 
-<<<<<<< Updated upstream
-  // React Flow sync (with execution status)
-  const { nodes, edges, onNodesChange, onEdgesChange, isValidConnection } = useReactFlowSync({
-    stations: stations || [],
-    transitions: transitions || [],
-    stationStatusMap: stationStatusMap,
-=======
   // Fetch workflow executions for in-progress tasks
   const { stationTasksMap, executions } = useWorkflowExecutions(
     effectiveWorkflowId,
     inProgressTasks
   );
 
-  // React Flow sync
+  // React Flow sync (with both execution status and active tasks)
   const {
     nodes,
     edges,
@@ -182,8 +175,8 @@ function FactoryFloorContent() {
   } = useReactFlowSync({
     stations: stations || [],
     transitions: transitions || [],
+    stationStatusMap: stationStatusMap,
     stationTasksMap,
->>>>>>> Stashed changes
     onStationUpdate: (id, data) => {
       // Only send the fields that are actually being updated
       const updateData: UpdateWorkflowStation = {
@@ -220,7 +213,7 @@ function FactoryFloorContent() {
       .filter(({ execution }) => execution !== null)
       .map(({ task, execution }) => {
         const currentStation = execution!.current_station_id
-          ? stations.find(s => s.id === execution!.current_station_id)
+          ? stations.find(s => s.id === execution!.current_station_id) || null
           : null;
 
         const agent = currentStation?.agent_id

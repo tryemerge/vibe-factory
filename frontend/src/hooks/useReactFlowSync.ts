@@ -42,11 +42,8 @@ export type StationPositionUpdate = Partial<UpdateWorkflowStation> & {
 interface UseReactFlowSyncOptions {
   stations: WorkflowStation[];
   transitions: StationTransition[];
-<<<<<<< Updated upstream
   stationStatusMap?: Record<string, StationExecutionSummary>;
-=======
   stationTasksMap?: Map<string, Array<{ id: string; title: string }>>;
->>>>>>> Stashed changes
   onStationUpdate?: (id: string, data: StationPositionUpdate) => void;
   onTransitionUpdate?: (id: string, data: UpdateStationTransition) => void;
 }
@@ -78,8 +75,7 @@ function mapExecutionStatus(
 }
 
 export function useReactFlowSync(options: UseReactFlowSyncOptions) {
-<<<<<<< Updated upstream
-  const { stations, transitions, stationStatusMap, onStationUpdate } = options;
+  const { stations, transitions, stationStatusMap, stationTasksMap, onStationUpdate } = options;
 
   // Convert workflow stations to React Flow nodes format
   const derivedNodes = useMemo<Node<StationNodeData>[]>(() => {
@@ -89,6 +85,9 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
       const status = stationExecution
         ? mapExecutionStatus(stationExecution.status)
         : 'idle';
+
+      // Get active tasks for this station
+      const activeTasks = stationTasksMap?.get(station.id) || [];
 
       return {
         id: station.id,
@@ -106,35 +105,11 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
           outputContextKeys: station.output_context_keys,
           stationId: station.id,
           status,
+          activeTasks,
         },
       };
     });
-  }, [stations, stationStatusMap]);
-=======
-  const { stations, transitions, stationTasksMap, onStationUpdate } = options;
-
-  // Convert workflow stations to React Flow nodes format
-  const derivedNodes = useMemo<Node<StationNodeData>[]>(() => {
-    return stations.map((station) => ({
-      id: station.id,
-      type: 'station',
-      position: {
-        x: station.x_position,
-        y: station.y_position,
-      },
-      data: {
-        station,  // Include full station object for StationNode component
-        label: station.name,
-        description: station.description,
-        agentId: station.agent_id,
-        stationPrompt: station.station_prompt,
-        outputContextKeys: station.output_context_keys,
-        stationId: station.id,
-        activeTasks: stationTasksMap?.get(station.id) || [],
-      },
-    }));
-  }, [stations, stationTasksMap]);
->>>>>>> Stashed changes
+  }, [stations, stationStatusMap, stationTasksMap]);
 
   // Convert station transitions to React Flow edges format
   const derivedEdges = useMemo<Edge<TransitionEdgeData>[]>(() => {

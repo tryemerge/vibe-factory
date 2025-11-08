@@ -62,14 +62,11 @@ import {
   ExecuteWorkflowRequest,
   ExecuteWorkflowResponse,
   WorkflowExecutionDetailsResponse,
-<<<<<<< Updated upstream
   StationExecutionSummary,
   CancelWorkflowExecutionRequest,
   CancelWorkflowExecutionResponse,
   RetryStationRequest,
   RetryStationResponse,
-=======
->>>>>>> Stashed changes
 } from 'shared/types';
 
 // Re-export types for convenience
@@ -1074,14 +1071,7 @@ export const workflowExecutionsApi = {
     return handleApiResponse<ExecuteWorkflowResponse>(response);
   },
 
-<<<<<<< Updated upstream
   getById: async (
-    executionId: string
-  ): Promise<WorkflowExecutionDetailsResponse> => {
-    const response = await makeRequest(
-      `/api/workflow-executions/${executionId}`
-=======
-  getExecution: async (
     executionId: string
   ): Promise<WorkflowExecutionDetailsResponse> => {
     const response = await makeRequest(
@@ -1089,12 +1079,10 @@ export const workflowExecutionsApi = {
       {
         method: 'GET',
       }
->>>>>>> Stashed changes
     );
     return handleApiResponse<WorkflowExecutionDetailsResponse>(response);
   },
 
-<<<<<<< Updated upstream
   getStations: async (
     executionId: string
   ): Promise<StationExecutionSummary[]> => {
@@ -1130,7 +1118,8 @@ export const workflowExecutionsApi = {
       }
     );
     return handleApiResponse<RetryStationResponse>(response);
-=======
+  },
+
   getTaskExecution: async (
     taskId: string
   ): Promise<WorkflowExecutionDetailsResponse | null> => {
@@ -1141,6 +1130,5 @@ export const workflowExecutionsApi = {
       }
     );
     return handleApiResponse<WorkflowExecutionDetailsResponse | null>(response);
->>>>>>> Stashed changes
   },
 };
