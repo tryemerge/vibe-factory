@@ -16,5 +16,6 @@ pub mod github_service;
 pub mod image;
 pub mod notification;
 pub mod pr_monitor;
+pub mod transition_evaluator;
 pub mod workflow_orchestrator;
 pub mod worktree_manager;
