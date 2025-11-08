@@ -55,12 +55,85 @@
 //! 4. Returns None if no transitions exist (workflow complete)
 //! 5. Returns error if no transitions match (workflow stuck)
 //!
+//! ## ⚠️ Important Limitations
+//!
+//! ### Context Accumulation
+//!
+//! **Current behavior:** Conditional expressions only evaluate against the **current station's**
+//! `output_data`. They cannot access outputs from previous stations in the workflow.
+//!
+//! **Example limitation:**
+//! ```text
+//! Station A outputs: {"design_approved": true}
+//! Station B outputs: {"code_complete": true}
+//!
+//! At Station C, you CANNOT evaluate:
+//! condition_value: {"key": "design_approved", "value": true}
+//! → This will return false because "design_approved" is not in Station C's output
+//! ```
+//!
+//! **Workaround:** Context accumulation is handled by `WorkflowOrchestrator::gather_context_data()`
+//! before executing each station. The orchestrator merges outputs from all previous stations and
+//! passes them to the agent prompt. Agents can then include relevant context in their own
+//! `output_data` for downstream transitions.
+//!
+//! **Future enhancement:** Add `evaluate_with_context()` method that accepts merged context data.
+//!
+//! ### Circular Workflow Detection
+//!
+//! **Current behavior:** The `detect_circular_workflow()` method **prevents all loops**,
+//! including intentional retry workflows.
+//!
+//! **Example limitation:**
+//! ```text
+//! Station A (Code Review) → Station B (Fix Issues, on failure) → Station A (retry review)
+//! → This will error with CircularWorkflow when trying to return to Station A
+//! ```
+//!
+//! **Impact:** Users designing retry workflows will hit this error unexpectedly.
+//!
+//! **Workaround:** Currently, retry logic must be implemented at a higher level (e.g., retry
+//! entire workflow execution) rather than within the workflow graph.
+//!
+//! **Future enhancement (documented in Phase 2.3):** Add `allow_revisit` and `max_retries`
+//! flags to transitions:
+//! ```rust
+//! if visited_stations.contains(&next_station_id) {
+//!     if !transition.allow_revisit.unwrap_or(false) {
+//!         return Err(CircularWorkflow);
+//!     }
+//!
+//!     let retry_count = visited_stations.iter()
+//!         .filter(|id| *id == &next_station_id)
+//!         .count();
+//!     if retry_count >= transition.max_retries.unwrap_or(3) {
+//!         return Err(RetryLimitExceeded);
+//!     }
+//! }
+//! ```
+//!
+//! ### Unknown Condition Types
+//!
+//! **Current behavior:** Unknown `condition_type` values (e.g., typo like `"succes"` instead
+//! of `"success"`) are caught by validation and return `InvalidTransitionSyntax` error.
+//!
+//! **Best practice:** Validate transitions when creating them (API layer) to catch errors
+//! before workflows run. This provides better UX with immediate feedback.
+//!
+//! **Recommendation:** Add validation to transition creation API:
+//! ```rust
+//! POST /api/workflows/{id}/transitions
+//! → Validate condition_type and condition_value
+//! → Return 400 Bad Request if invalid
+//! ```
+//!
 //! ## Error Handling
 //!
 //! - `NoValidTransition`: No transitions matched the current state
 //! - `InvalidTransitionSyntax`: Malformed condition_value or unknown condition_type
 //! - `OutputDataParseError`: Station output_data is not valid JSON
 //! - `TransitionEvaluationError`: Condition expression evaluation failed
+//! - `CircularWorkflow`: Station was already visited (prevents infinite loops)
 
 use anyhow::Result;
 use db::models::{
