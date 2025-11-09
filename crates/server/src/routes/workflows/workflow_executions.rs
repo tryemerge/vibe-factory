@@ -29,52 +29,71 @@ use crate::{DeploymentImpl, error::ApiError};
 // WORKFLOW EXECUTION ENDPOINT
 // ============================================================================
 //
-// This module implements the endpoint to start workflow execution for a task.
+// This module implements workflow execution with full transition logic and terminator handling.
 //
-// ## Workflow Execution Model
+// ## Workflow Execution Model (Phase 4.8 - COMPLETE)
 //
-// ### Phase 1.0: Single TaskAttempt Per Workflow (Current Implementation)
+// ### Architecture Overview
 //
-// In the initial implementation, a workflow execution uses **ONE TaskAttempt for the entire workflow**:
+// A workflow execution uses **ONE TaskAttempt for the entire workflow**:
 //
 // ```text
 // Workflow Execution
 //   └─ TaskAttempt (single git branch for all stations)
-//       └─ ExecutionProcess (coding agent runs continuously)
+//       └─ StationExecution 1 → ExecutionProcess 1
+//       └─ StationExecution 2 → ExecutionProcess 2
+//       └─ ...
+//       └─ Terminator Station → PR Creation
 // ```
 //
-// **How it works:**
-// 1. When a workflow is started, we create a single TaskAttempt with its own git branch
-// 2. The first station begins execution immediately via `container.start_attempt()`
-// 3. The coding agent works on the task continuously across all stations
-// 4. Station progression (moving from one station to the next) is tracked via:
-//    - `workflow_executions.current_station_id` - tracks which station is active
-//    - Station transitions are evaluated to determine the next station
-//    - When a station completes, the workflow orchestrator advances to the next station
+// ### Workflow Progression (Phase 4.8 Implementation)
 //
-// **Station execution tracking:**
-// - Each station execution is tracked in the `task_station_executions` table
-// - Links to `execution_processes` to track which agent runs are part of each station
-// - The same git branch is used throughout the workflow
+// **1. Initialization (execute_workflow)**
+// - Creates TaskAttempt with git branch
+// - Creates WorkflowExecution record
+// - Starts first station via WorkflowOrchestrator.execute_station()
 //
-// ### Future Phases (Not Yet Implemented)
+// **2. Station Execution**
+// - Each station has:
+//   - agent_id: Which agent executes this station
+//   - station_prompt: Station-specific instructions
+//   - output_context_keys: Expected outputs for transitions
+// - WorkflowOrchestrator builds prompt: agent.system_prompt + station.station_prompt + context
+// - Context includes outputs from all previously completed stations
 //
-// **Phase 2.0: Multi-Station Orchestration**
-// - Station transition logic to automatically advance between stations
-// - Conditional transitions based on station outcomes
-// - Context passing between stations
+// **3. Station Completion (complete_station endpoint)**
+// - Agent calls completion endpoint with status ("completed"/"failed") and output_data
+// - TransitionEvaluator determines next station based on:
+//   - Transition conditions (success/failure/conditional)
+//   - Station output_data evaluation
+// - Three outcomes:
+//   a) Next station exists (non-terminator) → Start next station execution
+//   b) Next station is terminator → Execute TerminatorHandler (creates PR)
+//   c) No next station → Mark workflow as complete
 //
-// **Phase 3.0: Advanced Features**
-// - Parallel station execution
-// - Human-in-the-loop approvals between stations
-// - Station-specific executor profiles
+// **4. Terminator Handling (Phase 3.7)**
+// - Terminator stations trigger PR creation
+// - TerminatorHandler creates GitHub PR
+// - Workflow marked as "completed"
+// - Task moved to "inreview" status
+//
+// **5. Error Handling**
+// - Failed stations can trigger failure transitions
+// - No matching transition → workflow halts with error
+// - Retry endpoint allows retrying failed stations
 //
 // ### First Station Determination
 //
 // The first station is determined by finding the station with the **lowest `position` value**.
 // - If multiple stations have `position = 0`, `min_by_key()` will select the first one encountered
 // - In practice, station positions should be unique and sequential (0, 1, 2, ...)
-// - Future enhancement: Add explicit `is_start_station` flag for clarity
+//
+// ### Future Enhancements
+//
+// - Parallel station execution
+// - Human-in-the-loop approvals between stations
+// - Station-specific executor profiles
+// - Retry limits and circular workflow handling
 // ============================================================================
 
 #[derive(Debug, Deserialize, Serialize, TS)]
@@ -200,15 +219,22 @@ pub async fn execute_workflow(
     )
     .await?;
 
-    // 7. Start execution for the first station using existing infrastructure
-    // NOTE: This starts the coding agent immediately for the first station
-    // Station progression (advancing to subsequent stations) will be handled by
-    // the workflow orchestrator based on station transitions (Phase 2.0)
-    // For now, the agent runs continuously on the same TaskAttempt/git branch
-    let _execution_process = deployment
-        .container()
-        .start_attempt(&task_attempt, executor_profile_id.clone())
-        .await?;
+    // 7. Start execution for the first station using WorkflowOrchestrator
+    // This creates a StationExecution record and starts the agent with proper context
+    let orchestrator = services::services::workflow_orchestrator::WorkflowOrchestrator::new(
+        deployment.db().clone()
+    );
+
+    let _station_execution = orchestrator
+        .execute_station(
+            deployment.container(),
+            workflow_execution.id,
+            first_station.id,
+            task_attempt.id,
+            None, // No context for first station
+        )
+        .await
+        .map_err(|e| ApiError::Validation(format!("Failed to start first station: {}", e)))?;
 
     // Track analytics
     deployment
