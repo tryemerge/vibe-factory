@@ -451,7 +451,7 @@ impl LocalContainerService {
                 // Create workflow orchestrator and check if this execution is part of a workflow
                 let workflow_orchestrator = services::services::workflow_orchestrator::WorkflowOrchestrator::new(db.clone());
 
-                if let Ok(Some((_station_execution, _))) = workflow_orchestrator
+                if let Ok(Some((station_execution, _))) = workflow_orchestrator
                     .check_execution_for_workflow(exec_id, success)
                     .await
                 {
@@ -460,10 +460,25 @@ impl LocalContainerService {
                         exec_id
                     );
 
+                    // Extract output data from agent response (Phase 4.10)
+                    let output_data = container.extract_workflow_output_data(&exec_id, &station_execution).await;
+
+                    if let Some(ref data) = output_data {
+                        tracing::debug!(
+                            "Extracted output data for station execution {}: {}",
+                            station_execution.id,
+                            data
+                        );
+                    } else {
+                        tracing::debug!(
+                            "No output data extracted for station execution {}",
+                            station_execution.id
+                        );
+                    }
+
                     // Trigger workflow progression (this will handle station completion and advance workflow)
-                    // Note: output_data extraction is Phase 1.1 manual for now
                     if let Err(e) = workflow_orchestrator
-                        .trigger_workflow_progression(&container, exec_id, success, None)
+                        .trigger_workflow_progression(&container, exec_id, success, output_data)
                         .await
                     {
                         tracing::error!("Failed to handle workflow station completion: {}", e);
@@ -1127,6 +1142,109 @@ impl LocalContainerService {
         }
 
         None
+    }
+
+    /// Extract workflow output data from agent execution logs
+    ///
+    /// This function implements Phase 4.10's automatic output extraction:
+    /// 1. Gets the full agent response from MsgStore
+    /// 2. Loads the station to get expected output_context_keys
+    /// 3. Uses WorkflowOrchestrator.extract_output_data() to parse the response
+    ///
+    /// # Arguments
+    /// * `exec_id` - The execution process ID
+    /// * `station_execution` - The station execution record
+    ///
+    /// # Returns
+    /// JSON string containing extracted key-value pairs, or None if extraction failed
+    async fn extract_workflow_output_data(
+        &self,
+        exec_id: &Uuid,
+        station_execution: &db::models::station_execution::StationExecution,
+    ) -> Option<String> {
+        // Load the station to get output_context_keys
+        let station = match db::models::workflow_station::WorkflowStation::find_by_id(
+            &self.db.pool,
+            station_execution.station_id,
+        )
+        .await
+        {
+            Ok(Some(station)) => station,
+            Ok(None) => {
+                tracing::warn!(
+                    "Station {} not found for station execution {}",
+                    station_execution.station_id,
+                    station_execution.id
+                );
+                return None;
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to load station {} for output extraction: {}",
+                    station_execution.station_id,
+                    e
+                );
+                return None;
+            }
+        };
+
+        // If no output keys are defined, skip extraction
+        let output_context_keys = station.output_context_keys.as_deref()?;
+
+        // Get the full agent response from MsgStore
+        let agent_response = {
+            // Get all assistant messages and concatenate them
+            let msg_stores = self.msg_stores.try_read().ok()?;
+            let msg_store = msg_stores.get(exec_id)?;
+            let history = msg_store.get_history();
+
+            let mut full_response = String::new();
+            for msg in history.iter() {
+                if let LogMsg::JsonPatch(patch) = msg {
+                    if let Some((_, entry)) = extract_normalized_entry_from_patch(patch)
+                        && matches!(entry.entry_type, NormalizedEntryType::AssistantMessage)
+                    {
+                        if !full_response.is_empty() {
+                            full_response.push('\n');
+                        }
+                        full_response.push_str(&entry.content);
+                    }
+                }
+            }
+
+            if full_response.is_empty() {
+                tracing::debug!(
+                    "No assistant messages found in execution {} for output extraction",
+                    exec_id
+                );
+                return None;
+            }
+
+            full_response
+        };
+
+        // Use WorkflowOrchestrator to extract the output data
+        let workflow_orchestrator =
+            services::services::workflow_orchestrator::WorkflowOrchestrator::new(self.db.clone());
+
+        match workflow_orchestrator.extract_output_data(&agent_response, Some(output_context_keys)) {
+            Some(output_data) => {
+                tracing::info!(
+                    "Successfully extracted output data for station execution {}: {} bytes",
+                    station_execution.id,
+                    output_data.len()
+                );
+                Some(output_data)
+            }
+            None => {
+                tracing::debug!(
+                    "No output data extracted from agent response for station execution {} (expected keys: {})",
+                    station_execution.id,
+                    output_context_keys
+                );
+                None
+            }
+        }
     }
 
     /// Update the executor session summary with the final assistant message
