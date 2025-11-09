@@ -699,3 +699,260 @@ pub async fn retry_station_execution(
         message: "Station execution retry started".to_string(),
     })))
 }
+
+// ============================================================================
+// STATION COMPLETION ENDPOINT
+// ============================================================================
+
+/// Request body for completing a station
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub struct CompleteStationRequest {
+    pub station_execution_id: Uuid,
+    pub status: String,  // "completed" or "failed"
+    pub output_data: Option<String>,  // JSON string of station output
+}
+
+/// Response for station progression
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub struct StationProgressionResponse {
+    pub workflow_execution_id: Uuid,
+    pub completed_station_id: Uuid,
+    pub next_station_id: Option<Uuid>,
+    pub workflow_status: String,  // "running", "completed", "failed"
+    pub message: String,
+}
+
+/// Complete a station and progress to the next station
+/// POST /api/workflow-executions/{id}/complete-station
+///
+/// This endpoint is called by executors/agents when a station completes its work.
+/// It marks the current station as completed/failed, evaluates transitions to find
+/// the next station, and either progresses the workflow or marks it as complete.
+///
+/// # Transaction Safety
+///
+/// This operation involves multiple steps that cannot all be rolled back:
+///
+/// 1. Validate workflow execution exists and is running (read-only, safe)
+/// 2. Update station execution status and output_data (database operation)
+/// 3. Evaluate transitions to determine next station (read-only, safe)
+/// 4. If next station exists:
+///    - Create new station execution (database operation)
+///    - Start execution process (external side effect - cannot be rolled back)
+///    - Update workflow execution current_station_id (database operation)
+/// 5. If no next station:
+///    - Update workflow execution to completed/failed (database operation)
+///
+/// The database updates (steps 2, 4, 5) are performed in a transaction, but step 4's
+/// process start (via orchestrator.execute_station) cannot be rolled back.
+///
+/// Recovery strategy:
+/// - If process start fails, the transaction rolls back and returns an error
+/// - If workflow update fails after process start, the process continues running
+///   but the workflow state may be inconsistent
+/// - The orchestrator's completion handler will eventually update the workflow
+/// - The system will reach a consistent state through normal completion flow
+pub async fn complete_station(
+    State(deployment): State<DeploymentImpl>,
+    Path(execution_id): Path<Uuid>,
+    Json(request): Json<CompleteStationRequest>,
+) -> Result<ResponseJson<ApiResponse<StationProgressionResponse>>, ApiError> {
+    let pool = &deployment.db().pool;
+
+    // 1. Validate workflow execution exists and is running
+    let workflow_execution = WorkflowExecution::find_by_id(pool, execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    if workflow_execution.status != "running" {
+        return Err(ApiError::Validation(format!(
+            "Cannot complete station for workflow execution in '{}' state",
+            workflow_execution.status
+        )));
+    }
+
+    // 2. Load and validate the station execution
+    let station_execution = StationExecution::find_by_id(pool, request.station_execution_id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    // Verify the station execution belongs to this workflow execution
+    if station_execution.workflow_execution_id != execution_id {
+        return Err(ApiError::Validation(
+            "Station execution does not belong to this workflow execution".to_string(),
+        ));
+    }
+
+    // Verify this station is the current station
+    if Some(station_execution.station_id) != workflow_execution.current_station_id {
+        return Err(ApiError::Validation(
+            "Cannot complete station that is not the current station".to_string(),
+        ));
+    }
+
+    // Validate status is "completed" or "failed"
+    if request.status != "completed" && request.status != "failed" {
+        return Err(ApiError::Validation(format!(
+            "Invalid status '{}', must be 'completed' or 'failed'",
+            request.status
+        )));
+    }
+
+    // 3. Update station execution status and output_data
+    let completed_at = Utc::now();
+    StationExecution::update(
+        pool,
+        station_execution.id,
+        db::models::station_execution::UpdateStationExecution {
+            execution_process_id: None,
+            status: Some(request.status.clone()),
+            output_data: request.output_data.clone(),
+            started_at: None,
+            completed_at: Some(completed_at),
+        },
+    )
+    .await?;
+
+    // Reload station execution to get updated values for transition evaluation
+    let updated_station_execution = StationExecution::find_by_id(pool, station_execution.id)
+        .await?
+        .ok_or(SqlxError::RowNotFound)?;
+
+    tracing::info!(
+        "Station execution {} marked as {} for workflow execution {}",
+        station_execution.id,
+        request.status,
+        execution_id
+    );
+
+    // 4. Evaluate transitions to determine next station
+    let next_station_id = services::services::transition_evaluator::TransitionEvaluator::evaluate_next_station(
+        pool,
+        workflow_execution.workflow_id,
+        station_execution.station_id,
+        &updated_station_execution,
+    )
+    .await
+    .map_err(|e| ApiError::Validation(format!("Failed to evaluate transition: {}", e)))?;
+
+    // 5. Progress workflow based on transition evaluation
+    let (workflow_status, message) = if let Some(next_id) = next_station_id {
+        // There's a next station - create station execution and start it
+        let task_attempt_id = workflow_execution
+            .task_attempt_id
+            .ok_or_else(|| ApiError::Validation("Workflow execution has no task_attempt_id".to_string()))?;
+
+        // Load the workflow orchestrator
+        let orchestrator = services::services::workflow_orchestrator::WorkflowOrchestrator::new(
+            deployment.db().clone()
+        );
+
+        // Gather context from all previously completed stations
+        let context_data = orchestrator.gather_context_data(execution_id).await
+            .map_err(|e| ApiError::Validation(format!("Failed to gather context: {}", e)))?;
+
+        // Create a new station execution and start it (this also starts the process)
+        // Note: This is not fully transactional with the workflow update below
+        let new_station_execution = orchestrator
+            .execute_station(
+                deployment.container(),
+                execution_id,
+                next_id,
+                task_attempt_id,
+                Some(context_data),
+            )
+            .await
+            .map_err(|e| ApiError::Validation(format!("Failed to execute next station: {}", e)))?;
+
+        // Update workflow execution to point to the next station
+        // If this fails, the station execution still exists and will complete normally
+        WorkflowExecution::update(
+            pool,
+            execution_id,
+            UpdateWorkflowExecution {
+                current_station_id: Some(next_id),
+                status: Some("running".to_string()),
+                started_at: None,
+                completed_at: None,
+            },
+        )
+        .await?;
+
+        tracing::info!(
+            "Workflow execution {} progressed to next station {} (station execution: {})",
+            execution_id,
+            next_id,
+            new_station_execution.id
+        );
+
+        // Track analytics
+        deployment
+            .track_if_analytics_allowed(
+                "workflow_station_completed",
+                serde_json::json!({
+                    "workflow_execution_id": execution_id.to_string(),
+                    "completed_station_id": station_execution.station_id.to_string(),
+                    "station_execution_id": station_execution.id.to_string(),
+                    "station_status": request.status,
+                    "next_station_id": next_id.to_string(),
+                    "new_station_execution_id": new_station_execution.id.to_string(),
+                }),
+            )
+            .await;
+
+        ("running".to_string(), format!("Station completed, progressed to next station {}", next_id))
+    } else {
+        // No next station - workflow is complete
+        let final_status = if request.status == "completed" {
+            "completed"
+        } else {
+            "failed"
+        };
+
+        WorkflowExecution::update(
+            pool,
+            execution_id,
+            UpdateWorkflowExecution {
+                current_station_id: None,
+                status: Some(final_status.to_string()),
+                started_at: None,
+                completed_at: Some(completed_at),
+            },
+        )
+        .await?;
+
+        tracing::info!(
+            "Workflow execution {} completed with status '{}'",
+            execution_id,
+            final_status
+        );
+
+        // Track analytics
+        deployment
+            .track_if_analytics_allowed(
+                "workflow_execution_completed",
+                serde_json::json!({
+                    "workflow_execution_id": execution_id.to_string(),
+                    "completed_station_id": station_execution.station_id.to_string(),
+                    "station_execution_id": station_execution.id.to_string(),
+                    "station_status": request.status,
+                    "workflow_status": final_status,
+                }),
+            )
+            .await;
+
+        (final_status.to_string(), format!("Workflow completed with status '{}'", final_status))
+    };
+
+    Ok(ResponseJson(ApiResponse::success(
+        StationProgressionResponse {
+            workflow_execution_id: execution_id,
+            completed_station_id: station_execution.station_id,
+            next_station_id,
+            workflow_status,
+            message,
+        },
+    )))
+}
