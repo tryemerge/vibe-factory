@@ -1,5 +1,6 @@
 use chrono::Utc;
 use db::models::{
+    station_execution::{CreateStationExecution, StationExecution},
     task::{Task, TaskStatus},
     task_attempt::TaskAttempt,
     workflow_execution::WorkflowExecution,
@@ -7,6 +8,7 @@ use db::models::{
 };
 use thiserror::Error;
 use tracing::{error, info};
+use uuid::Uuid;
 
 use super::github_service::{CreatePrRequest, GitHubService, GitHubServiceError};
 
@@ -38,10 +40,11 @@ impl TerminatorHandler {
     ///
     /// This method:
     /// 1. Verifies the station is a terminator
-    /// 2. Creates or updates GitHub PR for the task attempt
-    /// 3. Updates task status to "inreview"
-    /// 4. Marks workflow execution as completed
-    /// 5. Logs terminator execution
+    /// 2. Creates or updates GitHub PR for the task attempt (non-blocking)
+    /// 3. Creates station execution record for audit trail
+    /// 4. Updates task status to "inreview"
+    /// 5. Marks workflow execution as completed
+    /// 6. Logs terminator execution
     ///
     /// # Error Handling
     /// - GitHub API failures are logged but don't fail the workflow
@@ -85,8 +88,37 @@ impl TerminatorHandler {
         )
         .await;
 
-        // 3. Start database transaction for task and workflow updates
+        // 3. Start database transaction for station execution, task, and workflow updates
         let mut tx = pool.begin().await?;
+
+        // Create station execution record for terminator (for audit trail)
+        let completed_at = Utc::now();
+        let station_execution_id = Uuid::new_v4();
+        let station_execution = StationExecution::create(
+            pool,
+            CreateStationExecution {
+                workflow_execution_id: workflow_execution.id,
+                station_id: station.id,
+                status: "completed".to_string(),
+                execution_process_id: None,
+            },
+            station_execution_id,
+        )
+        .await?;
+
+        // Update station execution to mark as completed immediately
+        sqlx::query!(
+            "UPDATE station_executions SET started_at = $2, completed_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+            station_execution.id,
+            completed_at
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        info!(
+            "Created completed station execution {} for terminator station {}",
+            station_execution.id, station.id
+        );
 
         // Update task status to "inreview"
         sqlx::query!(
@@ -102,11 +134,11 @@ impl TerminatorHandler {
             task.id, station.id
         );
 
-        // 4. Mark workflow execution as completed
-        let completed_at = Utc::now();
+        // 5. Mark workflow execution as completed and update current_station_id to terminator
         sqlx::query!(
-            "UPDATE workflow_executions SET status = $2, completed_at = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+            "UPDATE workflow_executions SET current_station_id = $2, status = $3, completed_at = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
             workflow_execution.id,
+            station.id,
             "completed",
             completed_at
         )
@@ -121,7 +153,7 @@ impl TerminatorHandler {
         // Commit the transaction
         tx.commit().await?;
 
-        // 5. Log terminator execution completion
+        // 6. Log terminator execution completion
         info!(
             "Terminator station {} execution completed for workflow {} (task: {}, attempt: {})",
             station.id,

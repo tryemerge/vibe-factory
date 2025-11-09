@@ -846,6 +846,14 @@ pub async fn complete_station(
 
         // Check if the next station is a terminator
         if next_station.is_terminator {
+            // Validate workflow is in running state before executing terminator
+            if workflow_execution.status != "running" {
+                return Err(ApiError::Validation(format!(
+                    "Cannot reach terminator station: workflow must be running, current status is '{}'",
+                    workflow_execution.status
+                )));
+            }
+
             // This is a terminator station - execute terminator actions
             let task_attempt_id = workflow_execution
                 .task_attempt_id
@@ -885,7 +893,10 @@ pub async fn complete_station(
                 &task_attempt,
             )
             .await
-            .map_err(|e| ApiError::Validation(format!("Terminator handler failed: {}", e)))?;
+            .map_err(|e| ApiError::Validation(format!(
+                "Terminator handler failed for station {} (workflow execution {}): {}",
+                next_station.id, execution_id, e
+            )))?;
 
             tracing::info!(
                 "Workflow execution {} completed at terminator station {}",
@@ -893,7 +904,22 @@ pub async fn complete_station(
                 next_id
             );
 
-            // Track analytics
+            // Track station completion analytics (for consistency with normal flow)
+            deployment
+                .track_if_analytics_allowed(
+                    "workflow_station_completed",
+                    serde_json::json!({
+                        "workflow_execution_id": execution_id.to_string(),
+                        "completed_station_id": station_execution.station_id.to_string(),
+                        "station_execution_id": station_execution.id.to_string(),
+                        "station_status": request.status,
+                        "next_station_id": next_id.to_string(),
+                        "is_terminator": true,
+                    }),
+                )
+                .await;
+
+            // Track workflow completion analytics
             deployment
                 .track_if_analytics_allowed(
                     "workflow_execution_completed",
