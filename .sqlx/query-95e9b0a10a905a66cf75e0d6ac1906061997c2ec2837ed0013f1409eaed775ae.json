@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO workflow_stations (id, workflow_id, name, position, description, x_position, y_position, agent_id, station_prompt, output_context_keys)\n               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n               RETURNING\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                station_prompt,\n                output_context_keys,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"",
+  "query": "SELECT\n                id as \"id!: Uuid\",\n                workflow_id as \"workflow_id!: Uuid\",\n                name,\n                position,\n                description,\n                x_position,\n                y_position,\n                agent_id as \"agent_id: Uuid\",\n                station_prompt,\n                output_context_keys,\n                is_terminator as \"is_terminator!: bool\",\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at!: DateTime<Utc>\"\n               FROM workflow_stations\n               WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -54,18 +54,23 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at!: DateTime<Utc>",
+        "name": "is_terminator!: bool",
         "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 11,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at!: DateTime<Utc>",
-        "ordinal": 11,
+        "ordinal": 12,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 10
+      "Right": 1
     },
     "nullable": [
       true,
@@ -79,8 +84,9 @@
       true,
       true,
       false,
+      false,
       false
     ]
   },
-  "hash": "40dfe20a8256bfd030120bb0177433ea019adade06d7550b9eb1f0b5fac0af4c"
+  "hash": "95e9b0a10a905a66cf75e0d6ac1906061997c2ec2837ed0013f1409eaed775ae"
 }
