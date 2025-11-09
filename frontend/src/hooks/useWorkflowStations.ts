@@ -150,10 +150,7 @@ export function useWorkflowStations(options: UseWorkflowStationsOptions = {}) {
                     data.output_context_keys !== undefined
                       ? data.output_context_keys
                       : station.output_context_keys,
-                  is_terminator:
-                    data.is_terminator !== undefined && data.is_terminator !== null
-                      ? data.is_terminator
-                      : station.is_terminator,
+                  is_terminator: data.is_terminator ?? station.is_terminator,
                 }
               : station
           )

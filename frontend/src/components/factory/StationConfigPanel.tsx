@@ -36,6 +36,7 @@ export function StationConfigPanel({
   const [outputContextKeys, setOutputContextKeys] = useState('');
   const [xPosition, setXPosition] = useState('0');
   const [yPosition, setYPosition] = useState('0');
+  const [isTerminator, setIsTerminator] = useState(false);
 
   // Validation state
   const [errors, setErrors] = useState<{
@@ -53,6 +54,7 @@ export function StationConfigPanel({
       setOutputContextKeys(station.output_context_keys || '');
       setXPosition(String(station.x_position || 0));
       setYPosition(String(station.y_position || 0));
+      setIsTerminator(station.is_terminator || false);
       setErrors({});
     }
   }, [station]);
@@ -96,7 +98,7 @@ export function StationConfigPanel({
       agent_id: agentId,
       station_prompt: stationPrompt.trim() || null,
       output_context_keys: outputContextKeys.trim() || null,
-      is_terminator: null, // Phase 3.6: Not changed in this form
+      is_terminator: isTerminator,
     };
 
     updateStation({ id: station.id, data });
@@ -224,6 +226,27 @@ export function StationConfigPanel({
                 <p className="text-xs text-muted-foreground mt-1">
                   Comma-separated keys for data this station produces
                 </p>
+              </div>
+
+              {/* Terminator Status */}
+              <div className="flex items-start gap-3 p-3 border rounded-md bg-muted/30">
+                <input
+                  id="is-terminator"
+                  type="checkbox"
+                  checked={isTerminator}
+                  onChange={(e) => setIsTerminator(e.target.checked)}
+                  disabled={isSaving}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="is-terminator" className="text-sm font-medium cursor-pointer">
+                    Workflow Terminator
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Mark this station as a workflow terminator. When execution reaches this station,
+                    it can trigger final actions like PR creation or workflow completion.
+                  </p>
+                </div>
               </div>
 
               {/* Position Fields */}
