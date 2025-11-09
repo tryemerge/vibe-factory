@@ -300,11 +300,11 @@ export type CreateWorkflow = { project_id: string, name: string, description: st
 
 export type UpdateWorkflow = { name: string | null, description: string | null, };
 
-export type WorkflowStation = { id: string, workflow_id: string, name: string, position: bigint, description: string | null, x_position: number, y_position: number, agent_id: string | null, station_prompt: string | null, output_context_keys: string | null, created_at: string, updated_at: string, };
+export type WorkflowStation = { id: string, workflow_id: string, name: string, position: bigint, description: string | null, x_position: number, y_position: number, agent_id: string | null, station_prompt: string | null, output_context_keys: string | null, is_terminator: boolean, created_at: string, updated_at: string, };
 
-export type CreateWorkflowStation = { workflow_id: string, name: string, position: bigint, description: string | null, x_position: number | null, y_position: number | null, agent_id: string | null, station_prompt: string | null, output_context_keys: string | null, };
+export type CreateWorkflowStation = { workflow_id: string, name: string, position: bigint, description: string | null, x_position: number | null, y_position: number | null, agent_id: string | null, station_prompt: string | null, output_context_keys: string | null, is_terminator: boolean | null, };
 
-export type UpdateWorkflowStation = { name: string | null, position: bigint | null, description: string | null, x_position: number | null, y_position: number | null, agent_id: string | null, station_prompt: string | null, output_context_keys: string | null, };
+export type UpdateWorkflowStation = { name: string | null, position: bigint | null, description: string | null, x_position: number | null, y_position: number | null, agent_id: string | null, station_prompt: string | null, output_context_keys: string | null, is_terminator: boolean | null, };
 
 export type StationContext = { id: string, task_id: string, station_id: string, context_key: string, context_value: string, context_type: string, created_by_agent_id: string | null, created_at: string, };
 
