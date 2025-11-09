@@ -839,70 +839,142 @@ pub async fn complete_station(
 
     // 5. Progress workflow based on transition evaluation
     let (workflow_status, message) = if let Some(next_id) = next_station_id {
-        // There's a next station - create station execution and start it
-        let task_attempt_id = workflow_execution
-            .task_attempt_id
-            .ok_or_else(|| ApiError::Validation("Workflow execution has no task_attempt_id".to_string()))?;
+        // Load the next station to check if it's a terminator
+        let next_station = WorkflowStation::find_by_id(pool, next_id)
+            .await?
+            .ok_or(ApiError::Validation(format!("Next station {} not found", next_id)))?;
 
-        // Load the workflow orchestrator
-        let orchestrator = services::services::workflow_orchestrator::WorkflowOrchestrator::new(
-            deployment.db().clone()
-        );
+        // Check if the next station is a terminator
+        if next_station.is_terminator {
+            // This is a terminator station - execute terminator actions
+            let task_attempt_id = workflow_execution
+                .task_attempt_id
+                .ok_or_else(|| ApiError::Validation("Workflow execution has no task_attempt_id".to_string()))?;
 
-        // Gather context from all previously completed stations
-        let context_data = orchestrator.gather_context_data(execution_id).await
-            .map_err(|e| ApiError::Validation(format!("Failed to gather context: {}", e)))?;
+            // Load task and task attempt for terminator handler
+            let task = Task::find_by_id(pool, workflow_execution.task_id)
+                .await?
+                .ok_or(ApiError::Validation("Task not found".to_string()))?;
 
-        // Create a new station execution and start it (this also starts the process)
-        // Note: This is not fully transactional with the workflow update below
-        let new_station_execution = orchestrator
-            .execute_station(
-                deployment.container(),
-                execution_id,
-                next_id,
-                task_attempt_id,
-                Some(context_data),
+            let task_attempt = TaskAttempt::find_by_id(pool, task_attempt_id)
+                .await?
+                .ok_or(ApiError::Validation("Task attempt not found".to_string()))?;
+
+            // Get project for git repository path
+            let project = db::models::project::Project::find_by_id(pool, task.project_id)
+                .await?
+                .ok_or(ApiError::Validation("Project not found".to_string()))?;
+
+            let git_repo_path = project.git_repo_path
+                .to_str()
+                .ok_or_else(|| ApiError::Validation("Invalid git repository path".to_string()))?
+                .to_string();
+
+            // Get GitHub token (if available)
+            let github_config = deployment.config().read().await.github.clone();
+            let github_token = github_config.token();
+
+            // Execute terminator handler
+            services::services::terminator_handler::TerminatorHandler::execute(
+                pool,
+                github_token,
+                git_repo_path,
+                &task,
+                &workflow_execution,
+                &next_station,
+                &task_attempt,
             )
             .await
-            .map_err(|e| ApiError::Validation(format!("Failed to execute next station: {}", e)))?;
+            .map_err(|e| ApiError::Validation(format!("Terminator handler failed: {}", e)))?;
 
-        // Update workflow execution to point to the next station
-        // If this fails, the station execution still exists and will complete normally
-        WorkflowExecution::update(
-            pool,
-            execution_id,
-            UpdateWorkflowExecution {
-                current_station_id: Some(next_id),
-                status: Some("running".to_string()),
-                started_at: None,
-                completed_at: None,
-            },
-        )
-        .await?;
+            tracing::info!(
+                "Workflow execution {} completed at terminator station {}",
+                execution_id,
+                next_id
+            );
 
-        tracing::info!(
-            "Workflow execution {} progressed to next station {} (station execution: {})",
-            execution_id,
-            next_id,
-            new_station_execution.id
-        );
+            // Track analytics
+            deployment
+                .track_if_analytics_allowed(
+                    "workflow_execution_completed",
+                    serde_json::json!({
+                        "workflow_execution_id": execution_id.to_string(),
+                        "completed_station_id": station_execution.station_id.to_string(),
+                        "station_execution_id": station_execution.id.to_string(),
+                        "station_status": request.status,
+                        "terminator_station_id": next_id.to_string(),
+                        "workflow_status": "completed",
+                    }),
+                )
+                .await;
 
-        // Track analytics
-        deployment
-            .track_if_analytics_allowed(
-                "workflow_station_completed",
-                serde_json::json!({
-                    "workflow_execution_id": execution_id.to_string(),
-                    "completed_station_id": station_execution.station_id.to_string(),
-                    "station_execution_id": station_execution.id.to_string(),
-                    "station_status": request.status,
-                    "next_station_id": next_id.to_string(),
-                    "new_station_execution_id": new_station_execution.id.to_string(),
-                }),
+            ("completed".to_string(), format!("Workflow completed at terminator station {}", next_id))
+        } else {
+            // There's a next station (non-terminator) - create station execution and start it
+            let task_attempt_id = workflow_execution
+                .task_attempt_id
+                .ok_or_else(|| ApiError::Validation("Workflow execution has no task_attempt_id".to_string()))?;
+
+            // Load the workflow orchestrator
+            let orchestrator = services::services::workflow_orchestrator::WorkflowOrchestrator::new(
+                deployment.db().clone()
+            );
+
+            // Gather context from all previously completed stations
+            let context_data = orchestrator.gather_context_data(execution_id).await
+                .map_err(|e| ApiError::Validation(format!("Failed to gather context: {}", e)))?;
+
+            // Create a new station execution and start it (this also starts the process)
+            // Note: This is not fully transactional with the workflow update below
+            let new_station_execution = orchestrator
+                .execute_station(
+                    deployment.container(),
+                    execution_id,
+                    next_id,
+                    task_attempt_id,
+                    Some(context_data),
+                )
+                .await
+                .map_err(|e| ApiError::Validation(format!("Failed to execute next station: {}", e)))?;
+
+            // Update workflow execution to point to the next station
+            // If this fails, the station execution still exists and will complete normally
+            WorkflowExecution::update(
+                pool,
+                execution_id,
+                UpdateWorkflowExecution {
+                    current_station_id: Some(next_id),
+                    status: Some("running".to_string()),
+                    started_at: None,
+                    completed_at: None,
+                },
             )
-            .await;
+            .await?;
 
-        ("running".to_string(), format!("Station completed, progressed to next station {}", next_id))
+            tracing::info!(
+                "Workflow execution {} progressed to next station {} (station execution: {})",
+                execution_id,
+                next_id,
+                new_station_execution.id
+            );
+
+            // Track analytics
+            deployment
+                .track_if_analytics_allowed(
+                    "workflow_station_completed",
+                    serde_json::json!({
+                        "workflow_execution_id": execution_id.to_string(),
+                        "completed_station_id": station_execution.station_id.to_string(),
+                        "station_execution_id": station_execution.id.to_string(),
+                        "station_status": request.status,
+                        "next_station_id": next_id.to_string(),
+                        "new_station_execution_id": new_station_execution.id.to_string(),
+                    }),
+                )
+                .await;
+
+            ("running".to_string(), format!("Station completed, progressed to next station {}", next_id))
+        }
     } else {
         // No next station - workflow is complete
         let final_status = if request.status == "completed" {
