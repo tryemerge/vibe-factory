@@ -197,6 +197,7 @@ function FactoryFloorContent() {
         agent_id: null,
         station_prompt: null,
         output_context_keys: null,
+        is_terminator: null,
       };
 
       updateStation({ id, data: updateData });
@@ -396,6 +397,7 @@ function FactoryFloorContent() {
         agent_id: null,
         station_prompt: null,
         output_context_keys: null,
+        is_terminator: null,
       },
     });
   }, [effectiveWorkflowId, stations, viewport, createStation]);

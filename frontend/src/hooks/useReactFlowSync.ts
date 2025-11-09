@@ -232,6 +232,7 @@ export function useReactFlowSync(options: UseReactFlowSyncOptions) {
         agent_id: node.data.agentId ?? null,
         station_prompt: node.data.stationPrompt ?? null,
         output_context_keys: node.data.outputContextKeys ?? null,
+        is_terminator: null, // Phase 3.6: Not changed by position updates
       };
     },
     []

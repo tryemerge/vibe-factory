@@ -47,6 +47,7 @@ const mockStation1: WorkflowStation = {
   agent_id: mockAgent.id,
   station_prompt: 'Create high-level design and wireframes for the feature',
   output_context_keys: null,
+  is_terminator: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -62,6 +63,7 @@ const mockStation2: WorkflowStation = {
   agent_id: mockAgent.id,
   station_prompt: 'Implement the feature according to design specifications',
   output_context_keys: null,
+  is_terminator: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -77,6 +79,7 @@ const mockStation3: WorkflowStation = {
   agent_id: null,
   station_prompt: 'Write and execute comprehensive test suite',
   output_context_keys: null,
+  is_terminator: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -92,6 +95,7 @@ const mockStation4: WorkflowStation = {
   agent_id: mockAgent.id,
   station_prompt: 'Deploy the feature to production with proper monitoring',
   output_context_keys: null,
+  is_terminator: true, // Phase 3.6: Deployment is a terminator station
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

@@ -96,6 +96,7 @@ export function StationConfigPanel({
       agent_id: agentId,
       station_prompt: stationPrompt.trim() || null,
       output_context_keys: outputContextKeys.trim() || null,
+      is_terminator: null, // Phase 3.6: Not changed in this form
     };
 
     updateStation({ id: station.id, data });
