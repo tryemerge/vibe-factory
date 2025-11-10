@@ -16,7 +16,7 @@ pub struct WorkflowStation {
     pub agent_id: Option<Uuid>, // Phase 1.1: One agent per station
     pub station_prompt: Option<String>, // Phase 1.1: Instructions for this station's agent
     pub output_context_keys: Option<String>, // JSON array: ["design_doc", "api_spec"]
-    pub is_terminator: bool, // Phase 5: Terminator stations trigger PR creation
+    pub is_terminator: bool, // Phase 3.6: Marks final stations that trigger workflow completion
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

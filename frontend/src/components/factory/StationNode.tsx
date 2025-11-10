@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Card, CardHeader } from '@/components/ui/card';
-import { CheckCircle, Loader2, XCircle, Circle, User } from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, Circle, User, FlagTriangleRight } from 'lucide-react';
 import type { WorkflowStation, Agent } from 'shared/types';
 import { cn } from '@/lib/utils';
 
@@ -82,15 +82,24 @@ export const StationNode = memo(
             'border',
             'bg-card',
             selected && 'ring-2 ring-primary ring-inset',
-            hasActiveTasks && 'ring-2 ring-blue-500'
+            hasActiveTasks && 'ring-2 ring-blue-500',
+            station.is_terminator && 'border-green-500 border-2'
           )}
         >
           <CardHeader className="p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex items-center gap-1.5">
                 <h4 className="text-sm font-medium line-clamp-1 text-foreground">
                   {station.name}
                 </h4>
+                {station.is_terminator && (
+                  <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 shrink-0">
+                    <FlagTriangleRight className="h-2.5 w-2.5 text-green-700 dark:text-green-400" />
+                    <span className="text-[10px] font-semibold text-green-700 dark:text-green-400 uppercase">
+                      End
+                    </span>
+                  </div>
+                )}
               </div>
               {status !== 'idle' && (
                 <Icon

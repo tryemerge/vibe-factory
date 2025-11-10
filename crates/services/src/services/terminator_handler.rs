@@ -1,101 +1,243 @@
-//! Terminator Handler Service
-//!
-//! Placeholder for handling workflow termination by automatically creating pull requests
-//! when a workflow reaches a terminator station.
-//!
-//! Phase 5.11: This is a stub implementation for testing. Full PR creation will be
-//! implemented in a future phase.
-
-use anyhow::{anyhow, Result};
-use db::{
-    DBService,
-    models::{
-        task::Task,
-        task_attempt::TaskAttempt,
-        workflow_execution::WorkflowExecution,
-    },
+use chrono::Utc;
+use db::models::{
+    station_execution::{CreateStationExecution, StationExecution},
+    task::{Task, TaskStatus},
+    task_attempt::TaskAttempt,
+    workflow_execution::WorkflowExecution,
+    workflow_station::WorkflowStation,
 };
+use thiserror::Error;
+use tracing::{error, info};
 use uuid::Uuid;
 
-/// Result type for terminator handler operations
-pub type TerminatorHandlerResult<T> = Result<T, TerminatorHandlerError>;
+use super::github_service::{CreatePrRequest, GitHubService, GitHubServiceError};
 
-/// Errors that can occur during terminator handling
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
 pub enum TerminatorHandlerError {
+    #[error("Station is not a terminator station")]
+    InvalidTerminatorStation,
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
-
-    #[error("Task attempt not found: {0}")]
-    TaskAttemptNotFound(Uuid),
-
-    #[error("Task not found: {0}")]
-    TaskNotFound(Uuid),
-
-    #[error("Other error: {0}")]
-    Other(#[from] anyhow::Error),
+    #[error("GitHub service error: {0}")]
+    GitHub(#[from] GitHubServiceError),
+    #[error("Task attempt not found for workflow execution")]
+    TaskAttemptNotFound,
+    #[error("Task not found")]
+    TaskNotFound,
+    #[error("Workflow execution not found")]
+    WorkflowExecutionNotFound,
+    #[error("No GitHub token available")]
+    NoGitHubToken,
+    #[error("Project has no git repository configured")]
+    NoGitRepository,
 }
 
-/// Service for handling workflow termination
-pub struct TerminatorHandler {
-    db: DBService,
-}
+/// Service to handle workflow completion actions when execution reaches a terminator station
+pub struct TerminatorHandler;
 
 impl TerminatorHandler {
-    /// Create a new terminator handler
-    pub fn new(db: DBService) -> Self {
-        Self { db }
-    }
+    /// Execute terminator actions when workflow reaches a terminator station
+    ///
+    /// This method:
+    /// 1. Verifies the station is a terminator
+    /// 2. Creates or updates GitHub PR for the task attempt (non-blocking)
+    /// 3. Creates station execution record for audit trail
+    /// 4. Updates task status to "inreview"
+    /// 5. Marks workflow execution as completed
+    /// 6. Logs terminator execution
+    ///
+    /// # Error Handling
+    /// - GitHub API failures are logged but don't fail the workflow
+    /// - Task update failures will rollback and return error
+    /// - Allows graceful degradation for PR creation
+    ///
+    /// # Parameters
+    /// - `pool`: Database connection pool
+    /// - `github_token`: Optional GitHub token for PR creation
+    /// - `git_repo_path`: Path to the git repository
+    /// - `task`: The task being executed
+    /// - `workflow_execution`: The workflow execution
+    /// - `station`: The terminator station
+    /// - `task_attempt`: The task attempt
+    pub async fn execute(
+        pool: &sqlx::SqlitePool,
+        github_token: Option<String>,
+        git_repo_path: String,
+        task: &Task,
+        workflow_execution: &WorkflowExecution,
+        station: &WorkflowStation,
+        task_attempt: &TaskAttempt,
+    ) -> Result<(), TerminatorHandlerError> {
 
-    /// Handle terminator station reached
-    ///
-    /// Phase 5.11: Stub implementation - just logs the termination.
-    /// Full PR creation will be implemented in a future phase.
-    ///
-    /// # Arguments
-    /// * `workflow_execution_id` - The workflow execution that completed
-    /// * `task_attempt_id` - The task attempt that was executing
-    ///
-    /// # Returns
-    /// * `Ok(())` - Always succeeds for now
-    pub async fn handle_termination(
-        &self,
-        workflow_execution_id: Uuid,
-        task_attempt_id: Uuid,
-    ) -> TerminatorHandlerResult<()> {
-        tracing::info!(
-            workflow_execution_id = ?workflow_execution_id,
-            task_attempt_id = ?task_attempt_id,
-            "Terminator handler invoked (stub - PR creation not yet implemented)"
+        // 1. Verify station is a terminator
+        if !station.is_terminator {
+            return Err(TerminatorHandlerError::InvalidTerminatorStation);
+        }
+
+        info!(
+            "Executing terminator station {} for workflow execution {}",
+            station.id, workflow_execution.id
         );
 
-        // Load workflow execution
-        let workflow_execution = WorkflowExecution::find_by_id(&self.db.pool, workflow_execution_id)
-            .await?
-            .ok_or_else(|| anyhow!("Workflow execution not found: {}", workflow_execution_id))?;
+        // 2. Create or update GitHub PR for the task attempt (non-blocking)
+        let pr_url = Self::create_pull_request_safe(
+            github_token,
+            &git_repo_path,
+            task,
+            task_attempt,
+        )
+        .await;
 
-        // Load task attempt
-        let task_attempt = TaskAttempt::find_by_id(&self.db.pool, task_attempt_id)
-            .await?
-            .ok_or(TerminatorHandlerError::TaskAttemptNotFound(task_attempt_id))?;
+        // 3. Start database transaction for station execution, task, and workflow updates
+        let mut tx = pool.begin().await?;
 
-        // Load task
-        let task = Task::find_by_id(&self.db.pool, workflow_execution.task_id)
-            .await?
-            .ok_or(TerminatorHandlerError::TaskNotFound(workflow_execution.task_id))?;
+        // Create station execution record for terminator (for audit trail)
+        let completed_at = Utc::now();
+        let station_execution_id = Uuid::new_v4();
+        let station_execution = StationExecution::create(
+            pool,
+            CreateStationExecution {
+                workflow_execution_id: workflow_execution.id,
+                station_id: station.id,
+                status: "completed".to_string(),
+                execution_process_id: None,
+            },
+            station_execution_id,
+        )
+        .await?;
 
-        tracing::info!(
-            task_id = ?task.id,
-            task_title = %task.title,
-            branch = %task_attempt.branch,
-            "Terminator station reached - in production this would create a PR"
+        // Update station execution to mark as completed immediately
+        sqlx::query!(
+            "UPDATE station_executions SET started_at = $2, completed_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+            station_execution.id,
+            completed_at
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        info!(
+            "Created completed station execution {} for terminator station {}",
+            station_execution.id, station.id
         );
 
-        // TODO: Implement actual PR creation in future phase:
-        // 1. Push branch to remote
-        // 2. Create GitHub PR via API
-        // 3. Update task_attempt with PR URL
+        // Update task status to "inreview"
+        sqlx::query!(
+            "UPDATE tasks SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+            task.id,
+            TaskStatus::InReview as TaskStatus
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        info!(
+            "Updated task {} status to InReview for terminator station {}",
+            task.id, station.id
+        );
+
+        // 5. Mark workflow execution as completed and update current_station_id to terminator
+        sqlx::query!(
+            "UPDATE workflow_executions SET current_station_id = $2, status = $3, completed_at = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+            workflow_execution.id,
+            station.id,
+            "completed",
+            completed_at
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        info!(
+            "Marked workflow execution {} as completed at terminator station {}",
+            workflow_execution.id, station.id
+        );
+
+        // Commit the transaction
+        tx.commit().await?;
+
+        // 6. Log terminator execution completion
+        info!(
+            "Terminator station {} execution completed for workflow {} (task: {}, attempt: {})",
+            station.id,
+            workflow_execution.id,
+            task.id,
+            task_attempt.id
+        );
+
+        if let Some(url) = pr_url {
+            info!("Created GitHub PR: {}", url);
+        }
 
         Ok(())
+    }
+
+    /// Create GitHub PR for completed workflow (with error handling)
+    ///
+    /// This method attempts to create a GitHub PR but logs errors instead of failing.
+    /// Returns the PR URL if successful, None if it fails.
+    async fn create_pull_request_safe(
+        github_token: Option<String>,
+        git_repo_path: &str,
+        task: &Task,
+        task_attempt: &TaskAttempt,
+    ) -> Option<String> {
+        match Self::create_pull_request(github_token, git_repo_path, task, task_attempt).await {
+            Ok(url) => Some(url),
+            Err(e) => {
+                error!(
+                    "Failed to create GitHub PR for task attempt {} (task: {}): {}",
+                    task_attempt.id, task.id, e
+                );
+                None
+            }
+        }
+    }
+
+    /// Create GitHub PR for completed workflow
+    ///
+    /// Creates a PR from the task attempt branch to the base branch.
+    /// - PR title is from task title
+    /// - PR body is from task description (if available)
+    /// - Base branch comes from task_attempt.target_branch
+    async fn create_pull_request(
+        github_token: Option<String>,
+        git_repo_path: &str,
+        task: &Task,
+        task_attempt: &TaskAttempt,
+    ) -> Result<String, TerminatorHandlerError> {
+        // Get GitHub token
+        let github_token = github_token.ok_or(TerminatorHandlerError::NoGitHubToken)?;
+
+        // Get GitHub repository info
+        let git_service = super::git::GitService::new();
+        let repo_info = git_service
+            .get_github_repo_info(std::path::Path::new(git_repo_path))
+            .map_err(|e| {
+                GitHubServiceError::Repository(format!("Failed to get GitHub repo info: {}", e))
+            })?;
+
+        // Create GitHub service
+        let github_service = GitHubService::new(&github_token)?;
+
+        // Prepare PR request
+        let pr_title = task.title.clone();
+        let pr_body = task.description.clone();
+        let head_branch = task_attempt.branch.clone();
+        let base_branch = task_attempt.target_branch.clone();
+
+        let pr_request = CreatePrRequest {
+            title: pr_title,
+            body: pr_body,
+            head_branch,
+            base_branch,
+        };
+
+        // Create the pull request
+        let pr_info = github_service.create_pr(&repo_info, &pr_request).await?;
+
+        info!(
+            "Created GitHub PR #{} for task attempt {} (task: {}): {}",
+            pr_info.number, task_attempt.id, task.id, pr_info.url
+        );
+
+        Ok(pr_info.url)
     }
 }

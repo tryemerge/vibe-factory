@@ -328,6 +328,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .route("/workflow-executions/{id}/stations", get(workflow_executions::get_workflow_execution_stations))
         .route("/workflow-executions/{id}/cancel", post(workflow_executions::cancel_workflow_execution))
         .route("/workflow-executions/{id}/retry-station", post(workflow_executions::retry_station_execution))
+        .route("/workflow-executions/{id}/complete-station", post(workflow_executions::complete_station))
         // Get active workflow execution for a task
         .route("/tasks/{task_id}/workflow-execution", get(workflow_executions::get_task_workflow_execution))
 }

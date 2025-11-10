@@ -67,6 +67,7 @@ export function useWorkflowStations(options: UseWorkflowStationsOptions = {}) {
         agent_id: data.agent_id,
         station_prompt: data.station_prompt,
         output_context_keys: data.output_context_keys,
+        is_terminator: data.is_terminator ?? false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -129,7 +130,6 @@ export function useWorkflowStations(options: UseWorkflowStationsOptions = {}) {
             station.id === id
               ? {
                   ...station,
-                  ...data,
                   name: data.name ?? station.name,
                   position: data.position ?? station.position,
                   description:
@@ -150,6 +150,7 @@ export function useWorkflowStations(options: UseWorkflowStationsOptions = {}) {
                     data.output_context_keys !== undefined
                       ? data.output_context_keys
                       : station.output_context_keys,
+                  is_terminator: data.is_terminator ?? station.is_terminator,
                 }
               : station
           )
