@@ -56,7 +56,7 @@
       {
         "name": "is_terminator!: bool",
         "ordinal": 10,
-        "type_info": "Integer"
+        "type_info": "Bool"
       },
       {
         "name": "created_at!: DateTime<Utc>",
