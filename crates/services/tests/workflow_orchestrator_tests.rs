@@ -148,6 +148,7 @@ async fn test_transition_always_succeeds(pool: SqlitePool) -> Result<(), Box<dyn
             agent_id: Some(agent.id),
             station_prompt: Some("Test prompt".to_string()),
             output_context_keys: None,
+            is_terminator: Some(false),
         },
         station1_id,
     )
@@ -166,6 +167,7 @@ async fn test_transition_always_succeeds(pool: SqlitePool) -> Result<(), Box<dyn
             agent_id: Some(agent.id),
             station_prompt: Some("Test prompt 2".to_string()),
             output_context_keys: None,
+            is_terminator: Some(false),
         },
         station2_id,
     )
@@ -268,6 +270,7 @@ async fn test_transition_success_condition_with_completed_station(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: None,
+            is_terminator: Some(false),
         },
         station1_id,
     )
@@ -286,6 +289,7 @@ async fn test_transition_success_condition_with_completed_station(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: None,
+            is_terminator: Some(false),
         },
         station2_id,
     )
@@ -388,6 +392,7 @@ async fn test_transition_success_condition_with_failed_station(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: None,
+            is_terminator: Some(false),
         },
         station1_id,
     )
@@ -406,6 +411,7 @@ async fn test_transition_success_condition_with_failed_station(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: None,
+            is_terminator: Some(false),
         },
         station2_id,
     )
@@ -513,6 +519,7 @@ async fn test_conditional_transition_evaluation(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: Some(r#"["test_key"]"#.to_string()),
+            is_terminator: Some(false),
         },
         station1_id,
     )
@@ -531,6 +538,7 @@ async fn test_conditional_transition_evaluation(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: None,
+            is_terminator: Some(false),
         },
         station2_id,
     )
@@ -654,6 +662,7 @@ async fn test_gather_context_data_from_multiple_stations(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: Some(r#"["key1"]"#.to_string()),
+            is_terminator: Some(false),
         },
         station1_id,
     )
@@ -672,6 +681,7 @@ async fn test_gather_context_data_from_multiple_stations(
             agent_id: Some(agent.id),
             station_prompt: None,
             output_context_keys: Some(r#"["key2"]"#.to_string()),
+            is_terminator: Some(false),
         },
         station2_id,
     )
