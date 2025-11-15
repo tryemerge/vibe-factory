@@ -46,7 +46,7 @@ import { useWorkflowExecutions } from '@/hooks/useWorkflowExecutions';
 import { useReactFlowSync } from '@/hooks/useReactFlowSync';
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import NiceModal from '@ebay/nice-modal-react';
-import type { UpdateWorkflowStation } from 'shared/types';
+import type { UpdateWorkflowStation, StationTransition } from 'shared/types';
 
 // Custom node and edge types
 const nodeTypes = {
@@ -152,6 +152,7 @@ function FactoryFloorContent() {
     isLoading: stationsLoading,
     createStation,
     updateStation,
+    deleteStation,
   } = useWorkflowStations({
     workflowId: effectiveWorkflowId || undefined,
   });
@@ -172,22 +173,39 @@ function FactoryFloorContent() {
     inProgressTasks
   );
 
-  // React Flow sync (with both execution status and active tasks)
-  const {
-    nodes,
-    edges,
-    onNodesChange,
-    onEdgesChange,
-    onNodeDragStart,
-    onNodeDragStop,
-    isValidConnection
-  } = useReactFlowSync({
-    stations: stations || [],
-    transitions: transitions || [],
-    stationStatusMap: stationStatusMap,
-    stationTasksMap,
-    onStationUpdate: (id, data) => {
-      // Only send the fields that are actually being updated
+  // Handle transition edit (from edge button or edge click)
+  const handleTransitionEdit = useCallback(
+    (transition: StationTransition) => {
+      const sourceStation = stations?.find(
+        (s) => s.id === transition.source_station_id
+      );
+      const targetStation = stations?.find(
+        (s) => s.id === transition.target_station_id
+      );
+
+      if (!sourceStation || !targetStation) return;
+
+      NiceModal.show(TransitionConfigDialog, {
+        transition,
+        sourceStation,
+        targetStation,
+        onUpdate: (data) => {
+          updateTransition({
+            id: transition.id,
+            data,
+          });
+        },
+        onDelete: () => {
+          deleteTransition(transition.id);
+        },
+      });
+    },
+    [stations, updateTransition, deleteTransition]
+  );
+
+  // Stable callback for station updates
+  const handleStationUpdate = useCallback(
+    (id: string, data: { x_position?: number; y_position?: number }) => {
       const updateData: UpdateWorkflowStation = {
         name: null,
         position: null,
@@ -202,6 +220,71 @@ function FactoryFloorContent() {
 
       updateStation({ id, data: updateData });
     },
+    [updateStation]
+  );
+
+  // Stable callback for station edit
+  const handleStationEdit = useCallback(
+    (stationId: string) => {
+      setSelectedStationId(stationId);
+    },
+    []
+  );
+
+  // Stable callback for station delete
+  const handleStationDelete = useCallback(
+    (stationId: string) => {
+      deleteStation(stationId);
+    },
+    [deleteStation]
+  );
+
+  // Stable callback for transition delete
+  const handleTransitionDelete = useCallback(
+    (transitionId: string) => {
+      deleteTransition(transitionId);
+    },
+    [deleteTransition]
+  );
+
+  // Memoize arrays to prevent infinite loops (new array references trigger re-renders)
+  const stationsArray = useMemo(() => stations || [], [stations]);
+  const transitionsArray = useMemo(() => transitions || [], [transitions]);
+
+  // Memoize Maps and objects with deep comparison to prevent infinite loops
+  // These hooks return new Map/object references on every render, causing derivedNodes to recalculate
+  // Use JSON serialization to compare content, not reference
+  const memoizedStationStatusMap = useMemo(() => stationStatusMap || {}, [
+    JSON.stringify(stationStatusMap)
+  ]);
+
+  const memoizedStationTasksMap = useMemo(() => {
+    if (!stationTasksMap) return new Map();
+    return stationTasksMap;
+  }, [
+    // Convert Map to array for serialization
+    JSON.stringify(stationTasksMap ? Array.from(stationTasksMap.entries()) : [])
+  ]);
+
+  // React Flow sync (with both execution status and active tasks)
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onNodeDragStart,
+    onNodeDragStop,
+    isValidConnection
+  } = useReactFlowSync({
+    stations: stationsArray,
+    transitions: transitionsArray,
+    stationStatusMap: memoizedStationStatusMap,
+    stationTasksMap: memoizedStationTasksMap,
+    onStationUpdate: handleStationUpdate,
+    onStationEdit: handleStationEdit,
+    onStationDelete: handleStationDelete,
+    onTransitionEdit: handleTransitionEdit,
+    onTransitionDelete: handleTransitionDelete,
   });
 
   // UI state
@@ -402,13 +485,8 @@ function FactoryFloorContent() {
     });
   }, [effectiveWorkflowId, stations, viewport, createStation]);
 
-  // Handle station node click
-  const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, node: { id: string }) => {
-      setSelectedStationId(node.id);
-    },
-    []
-  );
+  // Station edit is handled by the edit button in StationNode component
+  // Cards are not directly clickable - only draggable
 
   // Handle edge click - open transition dialog
   const handleEdgeClick = useCallback(
@@ -416,28 +494,9 @@ function FactoryFloorContent() {
       const transition = transitions?.find((t) => t.id === edge.id);
       if (!transition) return;
 
-      const sourceStation = stations?.find(
-        (s) => s.id === transition.source_station_id
-      );
-      const targetStation = stations?.find(
-        (s) => s.id === transition.target_station_id
-      );
-
-      if (!sourceStation || !targetStation) return;
-
-      NiceModal.show(TransitionConfigDialog, {
-        transition,
-        sourceStation,
-        targetStation,
-        onSave: async (data) => {
-          await updateTransition({ id: transition.id, data });
-        },
-        onRemove: async () => {
-          await deleteTransition(transition.id);
-        },
-      });
+      handleTransitionEdit(transition);
     },
-    [transitions, stations, updateTransition, deleteTransition]
+    [transitions, handleTransitionEdit]
   );
 
   // Handle new connection
@@ -758,7 +817,6 @@ function FactoryFloorContent() {
                 onEdgesChange={onEdgesChange}
                 onNodeDragStart={onNodeDragStart}
                 onNodeDragStop={onNodeDragStop}
-                onNodeClick={handleNodeClick}
                 onEdgeClick={handleEdgeClick}
                 onConnect={handleConnect}
                 onMove={(_event, newViewport) => handleViewportChange(newViewport)}
@@ -767,8 +825,9 @@ function FactoryFloorContent() {
                 nodesDraggable={true}
                 nodesConnectable={true}
                 elementsSelectable={true}
-                panOnDrag={false}
-                selectionOnDrag={true}
+                panOnDrag={true}
+                selectionOnDrag={false}
+                selectionKeyCode="Shift"
                 selectionMode={SelectionMode.Partial}
                 panOnScroll
                 zoomOnScroll

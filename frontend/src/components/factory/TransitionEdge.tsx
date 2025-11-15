@@ -140,19 +140,7 @@ export const TransitionEdge = memo(
 
     return (
       <>
-        {/* Invisible wider path for better click detection */}
-        {onEdit && (
-          <path
-            d={edgePath}
-            fill="none"
-            stroke="transparent"
-            strokeWidth={20}
-            style={{ cursor: 'pointer' }}
-            onClick={handleClick}
-            className="react-flow__edge-interaction"
-          />
-        )}
-        {/* Visible edge */}
+        {/* Visible edge - React Flow handles clicks via onEdgeClick prop */}
         <BaseEdge
           id={id}
           path={edgePath}
@@ -160,38 +148,55 @@ export const TransitionEdge = memo(
           style={{
             ...style,
             stroke: edgeColor,
-            strokeWidth: 2,
+            strokeWidth: 3,
             strokeDasharray: isFailureCondition ? '5,5' : undefined,
-            pointerEvents: 'none', // Let the invisible path handle clicks
             animation: isActive
               ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
               : undefined,
           }}
         />
-        {labelText && (
-          <EdgeLabelRenderer>
-            <div
-              style={{
-                position: 'absolute',
-                transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-                pointerEvents: 'all',
-              }}
-              className="nodrag nopan"
-            >
+
+        {/* Label or edit button at midpoint */}
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              pointerEvents: 'all',
+            }}
+            className="nodrag nopan"
+          >
+            {labelText ? (
               <button
                 onClick={handleClick}
-                className="px-2 py-1 text-xs font-medium rounded-md shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+                className="px-2 py-1 text-xs font-medium rounded-md shadow-sm border cursor-pointer hover:shadow-md transition-shadow bg-white"
                 style={{
-                  backgroundColor: 'white',
                   borderColor: edgeColor,
                   color: edgeColor,
                 }}
               >
                 {labelText}
               </button>
-            </div>
-          </EdgeLabelRenderer>
-        )}
+            ) : (
+              <button
+                onClick={handleClick}
+                className="w-8 h-8 rounded-full border-2 bg-white shadow-lg hover:shadow-xl hover:scale-125 transition-all flex items-center justify-center"
+                style={{
+                  borderColor: edgeColor,
+                  zIndex: 9999,
+                }}
+                title="Click to edit or delete transition"
+              >
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: edgeColor,
+                  }}
+                />
+              </button>
+            )}
+          </div>
+        </EdgeLabelRenderer>
         <style>{`
           @keyframes pulse {
             0%, 100% {
