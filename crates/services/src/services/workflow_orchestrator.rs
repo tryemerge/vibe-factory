@@ -1049,6 +1049,21 @@ impl WorkflowOrchestrator {
                 )
                 .await?;
 
+                // Check if this is a terminator station - if so, trigger PR creation
+                let current_station = WorkflowStation::find_by_id(self.pool(), station_execution.station_id)
+                    .await?
+                    .ok_or(WorkflowOrchestratorError::StationNotFound(station_execution.station_id))?;
+
+                if current_station.is_terminator {
+                    tracing::info!(
+                        "Workflow execution {} reached terminator station {}, will trigger PR creation",
+                        workflow_execution.id,
+                        current_station.id
+                    );
+                    // Note: PR creation will be handled by terminator_handler in the next phase
+                    // For now, we just mark the task as InReview
+                }
+
                 // Move task to "inreview"
                 Task::update_status(self.pool(), workflow_execution.task_id, TaskStatus::InReview)
                     .await?;
